@@ -6813,23 +6813,55 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
         });
       }
     });
-      app.put('/api/live-classes/:id',  async (req, res) => {
+
+
+
+    app.put('/api/live-classes/:id',  async (req, res) => {
       try {
-        const liveClass = await LiveClass.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          { new: true }
-        )
-          .populate('class')
-          .populate('teacher')
-          .populate('classroom')
-          .populate('attendance.student');
+        const liveClassId = req.params.id;
         
-        res.json(liveClass);
+        if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'معرف الحصة غير صالح'
+          });
+        }
+        
+        const { status, endTime, notes } = req.body;
+        
+        const updatedLiveClass = await LiveClass.findByIdAndUpdate(
+          liveClassId,
+          { status, endTime, notes },
+          { new: true, runValidators: true }
+        )
+        .populate('class')
+        .populate('teacher')
+        .populate('classroom')
+        .populate('attendance.student');
+        
+        if (!updatedLiveClass) {
+          return res.status(404).json({
+            success: false,
+            error: 'الحصة الحية غير موجودة'
+          });
+        }
+        
+        res.json({
+          success: true,
+          message: 'تم تحديث الحصة بنجاح',
+          data: updatedLiveClass
+        });
+        
       } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error('❌ خطأ في تحديث الحصة الحية:', err);
+        res.status(500).json({
+          success: false,
+          error: err.message
+        });
       }
     });
+
+    
 
     app.get('/api/live-classes/:id',  async (req, res) => {
       try {
@@ -6847,341 +6879,854 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
       }
     });
 
+    
 
-    // Auto Mark Absent , student hows not attendance  on lesson 
+app.post('/api/live-classes/:id/auto-mark-absent', async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    const { sendSMS = true, customMessage } = req.body;
 
-  // في server.js، قم بتحديث هذا الكود
-  // تغيير هذا الكود في server.js
-  // تغيير هذا الكود في server.js
-  app.post('/api/live-classes/:id/auto-mark-absent', async (req, res) => {
-    try {
-      const liveClassId = req.params.id;
-      const { autoSendSMS = true, customMessage } = req.body;
-      
-      console.log(`=== تسجيل الغياب التلقائي وإرسال رسائل ${liveClassId} ===`);
+    console.log(`🤖 [تلقائي] بدء تسجيل الغياب التلقائي للحصة: ${liveClassId}`);
 
-      // الحصول على الحصة الحية
-      const liveClass = await LiveClass.findById(liveClassId)
-        .populate({
-          path: 'class',
-          populate: {
-            path: 'students',
-            model: 'Student',
-            select: 'name studentId parentPhone parentEmail academicYear'
-          }
-        })
-        .populate('teacher');
+    // جلب الحصة الحية
+    const liveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('teacher', 'name phone');
 
-      if (!liveClass) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة' 
-        });
-      }
+    if (!liveClass) {
+      return res.status(404).json({ success: false, error: 'الحصة الحية غير موجودة' });
+    }
 
-      // جلب جميع الطلاب المسجلين
-      const classObj = await Class.findById(liveClass.class._id)
-        .populate('students', 'name studentId parentPhone parentEmail academicYear');
+    // جلب الحصة الأصلية مع جميع الطلاب
+    const classObj = await Class.findById(liveClass.class._id)
+      .populate('students', 'name studentId parentPhone parentEmail academicYear');
 
-      if (!classObj) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة الأصلية غير موجودة' 
-        });
-      }
+    if (!classObj) {
+      return res.status(404).json({ success: false, error: 'الحصة الأصلية غير موجودة' });
+    }
 
-      const allStudents = classObj.students;
-      const presentStudents = liveClass.attendance
-        .filter(att => att.status === 'present' || att.status === 'late')
-        .map(att => att.student._id.toString());
+    // تحديد الطلاب الحاضرين والمتأخرين
+    const presentStudentIds = new Set();
+    const lateStudentIds = new Set();
 
-      // تحديد الطلاب الغائبين
-      const absentStudents = allStudents.filter(student => 
-        !presentStudents.includes(student._id.toString())
-      );
-
-      // إرسال رسائل للغائبين إذا كان الخيار مفعلاً
-      const results = {
-        totalStudents: allStudents.length,
-        presentCount: presentStudents.length,
-        absentCount: absentStudents.length,
-        absentStudents: [],
-        messagesSent: 0,
-        failedMessages: []
-      };
-
-      if (autoSendSMS && absentStudents.length > 0) {
-        console.log(`📱 إرسال رسائل للطلاب الغائبين...`);
-
-        for (const student of absentStudents) {
-          try {
-            if (student.parentPhone) {
-              // نص الرسالة الافتراضي أو المخصص
-              const message = customMessage || 
-                `عزيزي ولي أمر الطالب ${student.name}، نود إعلامكم أن الطالب غائب عن حصة ${liveClass.class.name} بتاريخ ${new Date(liveClass.date).toLocaleDateString('ar-EG')}. نرجو التواصل مع الإدارة لمعرفة السبب.`;
-
-              // إرسال الرسالة
-              const smsResult = await smsGateway.sendIndividualSMS(
-                student.parentPhone,
-                message
-              );
-
-              // حفظ سجل الرسالة في قاعدة البيانات
-              const messageRecord = new Message({
-                sender: req.user.id,
-                recipients: [{
-                  student: student._id,
-                  parentPhone: student.parentPhone,
-                  parentEmail: student.parentEmail
-                }],
-                class: liveClass.class._id,
-                content: message,
-                messageType: 'individual',
-                status: smsResult.success ? 'sent' : 'failed'
-              });
-              await messageRecord.save();
-
-              results.absentStudents.push({
-                studentId: student._id,
-                name: student.name,
-                parentPhone: student.parentPhone,
-                messageSent: smsResult.success,
-                message: smsResult.success ? 'تم الإرسال' : 'فشل الإرسال'
-              });
-
-              if (smsResult.success) {
-                results.messagesSent++;
-              } else {
-                results.failedMessages.push({
-                  student: student.name,
-                  phone: student.parentPhone,
-                  error: smsResult.error
-                });
-              }
-            }
-          } catch (error) {
-            console.error(`❌ خطأ في إرسال رسالة للطالب ${student.name}:`, error);
-            results.failedMessages.push({
-              student: student.name,
-              phone: student.parentPhone,
-              error: error.message
-            });
-          }
+    if (liveClass.attendance && liveClass.attendance.length > 0) {
+      liveClass.attendance.forEach(att => {
+        if (att.status === 'present') {
+          presentStudentIds.add(att.student.toString());
+        } else if (att.status === 'late') {
+          lateStudentIds.add(att.student.toString());
         }
-      }
-
-      // ... باقي الكود ...
-      
-    } catch (err) {
-      console.error('❌ خطأ في تسجيل الغياب التلقائي:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
       });
     }
-  });
 
-  // في server.js، تحديث نقطة النهاية /api/live-classes/:id/attendance
-  // تحديث نقطة النهاية لتسجيل الغياب وإرسال SMS
-  const axios = require('axios');
+    // تحديد الطلاب الغائبين
+    const allStudents = classObj.students;
+    const absentStudents = allStudents.filter(student => 
+      !presentStudentIds.has(student._id.toString()) && 
+      !lateStudentIds.has(student._id.toString())
+    );
 
-  app.post('/api/live-classes/:id/attendance', async (req, res) => {
-    try {
-      const liveClassId = req.params.id;
-      const { studentId, status, method, sendSMS = true, customMessage } = req.body;
+    console.log(`📊 إحصائيات الحصة:`);
+    console.log(`   - إجمالي الطلاب: ${allStudents.length}`);
+    console.log(`   - الحاضرون: ${presentStudentIds.size}`);
+    console.log(`   - المتأخرون: ${lateStudentIds.size}`);
+    console.log(`   - الغائبون: ${absentStudents.length}`);
 
-      console.log(`📝 تسجيل حضور/غياب للحصة ${liveClassId} للطالب ${studentId} - الحالة: ${status}`);
-      
-      // التحقق من صحة الـ ID
-      if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'معرف الحصة غير صالح'
+    // ==============================================
+    // إنشاء سجلات في Attendance Schema للطلاب الغائبين
+    // ==============================================
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let updatedCount = 0;
+    const attendanceRecords = [];
+
+    for (const student of absentStudents) {
+      // البحث عن سجل حضور موجود لهذا الطالب في هذا اليوم
+      let attendanceRecord = await Attendance.findOne({
+        student: student._id,
+        class: liveClass.class._id,
+        date: {
+          $gte: today,
+          $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        }
+      });
+
+      if (!attendanceRecord) {
+        // إنشاء سجل غياب جديد
+        attendanceRecord = new Attendance({
+          student: student._id,
+          class: liveClass.class._id,
+          date: liveClass.date,
+          status: 'absent',
+          recordedBy: req.user?.id || null
         });
+        await attendanceRecord.save();
+        attendanceRecords.push(attendanceRecord);
+        updatedCount++;
       }
 
-      // البحث عن الحصة الحية
-      const liveClass = await LiveClass.findById(liveClassId)
-        .populate('class', 'name subject')
-        .populate('teacher', 'name');
-
-      if (!liveClass) {
-        return res.status(404).json({
-          success: false,
-          error: 'الحصة الحية غير موجودة'
-        });
-      }
-
-      // العثور على الطالب
-      let student;
-      if (method === 'rfid') {
-        const card = await Card.findOne({ uid: studentId }).populate('student');
-        if (!card) {
-          return res.status(404).json({
-            success: false,
-            error: 'البطاقة غير مسجلة'
-          });
-        }
-        student = card.student;
-      } else {
-        student = await Student.findById(studentId);
-        if (!student) {
-          return res.status(404).json({
-            success: false,
-            error: 'الطالب غير موجود'
-          });
-        }
-      }
-
-      // التحقق من تسجيل الطالب في الحصة
-      if (liveClass.class) {
-        const classObj = await Class.findById(liveClass.class._id);
-        if (classObj) {
-          const isEnrolled = classObj.students.some((s) =>
-            s.toString() === student._id.toString()
-          );
-          
-          if (!isEnrolled) {
-            return res.status(400).json({
-              success: false,
-              error: 'الطالب غير مسجل في هذه الحصة'
-            });
-          }
-        }
-      }
-
-      // إنشاء أو تحديث سجل الحضور
-      const existingIndex = liveClass.attendance.findIndex((a) =>
-        a.student.toString() === student._id.toString()
+      // تحديث LiveClass.attendance
+      const existingAttendance = liveClass.attendance.find(
+        att => att.student.toString() === student._id.toString()
       );
 
-      const attendanceRecord = {
-        student: student._id,
-        status: status || 'present',
-        method: method || 'manual',
-        timestamp: new Date(),
-        joinedAt: (status === 'present' || status === 'late') ? new Date() : null
-      };
-
-      if (existingIndex >= 0) {
-        liveClass.attendance[existingIndex] = attendanceRecord;
-      } else {
-        liveClass.attendance.push(attendanceRecord);
+      if (!existingAttendance) {
+        liveClass.attendance.push({
+          student: student._id,
+          status: 'absent',
+          joinedAt: null,
+          leftAt: null,
+          autoMarked: true,
+          markedAt: new Date(),
+          attendanceSchemaId: attendanceRecord._id
+        });
       }
+    }
 
-      await liveClass.save();
+    await liveClass.save();
+    console.log(`✅ تم تحديث سجلات الحضور: تمت إضافة ${updatedCount} طالب كغائبين في Attendance Schema`);
 
-      // إرسال SMS في حالة الغياب
-      const smsResult = {
-        sent: false,
-        error: null,
-        message: null
-      };
+    // ==============================================
+    // إرسال رسائل SMS للطلاب الغائبين
+    // ==============================================
+    const smsResults = { sent: 0, failed: 0, details: [] };
 
-      if (sendSMS && status === 'absent' && student.parentPhone) {
-        try {
-          const cleanPhone = student.parentPhone.trim();
-          let formattedPhone = cleanPhone;
-          
-          // تنسيق رقم الهاتف
-          if (!formattedPhone.startsWith('+')) {
-            if (formattedPhone.startsWith('0')) {
-              formattedPhone = '+213' + formattedPhone.substring(1);
-            } else {
-              formattedPhone = '+213' + formattedPhone;
+    if (sendSMS && absentStudents.length > 0) {
+      console.log(`📱 جاري إرسال رسائل للطلاب الغائبين...`);
+      
+      for (const student of absentStudents) {
+        if (student.parentPhone) {
+          try {
+            let cleanPhone = student.parentPhone.trim();
+            if (!cleanPhone.startsWith('+')) {
+              if (cleanPhone.startsWith('0')) {
+                cleanPhone = '+213' + cleanPhone.substring(1);
+              } else {
+                cleanPhone = '+213' + cleanPhone;
+              }
             }
-          }
 
-          // إنشاء نص الرسالة
-          const smsMessage = customMessage || `Absence Notice: Dear parent of ${student.name}, student was absent from ${liveClass.class?.name || 'school'} class on ${new Date(liveClass.date).toLocaleDateString('en-GB')} at ${liveClass.startTime}. Teacher: ${liveClass.teacher?.name || 'N/A'}. Please contact administration.`;
-          console.log(`📱 إرسال رسالة غياب إلى: ${formattedPhone}`);
+            const smsMessage = customMessage || 
+              `📚 إشعار غياب\n` +
+              `عزيزي ولي أمر الطالب ${student.name}\n` +
+              `يؤسفنا إعلامكم بأن الطالب غائب عن حصة ${liveClass.class?.name || 'المدرسة'}\n` +
+              `📅 التاريخ: ${new Date(liveClass.date).toLocaleDateString('ar-EG')}\n` +
+              `⏰ الوقت: ${liveClass.startTime}\n` +
+              `👨‍🏫 المعلم: ${liveClass.teacher?.name || 'غير محدد'}\n` +
+              `📞 نرجو التواصل مع الإدارة.`;
 
-          // إرسال الرسالة باستخدام Infobip
-          const smsResponse = await smsGateway.sendIndividualSMS(formattedPhone, smsMessage);
-
-          if (smsResponse.success) {
-            smsResult.sent = true;
-            console.log(`✅ تم إرسال رسالة الغياب بنجاح`);
-
-            // حفظ سجل الرسالة
-            try {
+            const smsResult = await smsGateway.sendIndividualSMS(cleanPhone, smsMessage);
+            
+            if (smsResult.success) {
+              smsResults.sent++;
+              smsResults.details.push({ student: student.name, success: true });
+              
+              // حفظ سجل الرسالة
               const messageRecord = new Message({
-                sender: null,
-                recipients: [{
-                  student: student._id,
-                  parentPhone: formattedPhone
-                }],
-                class: liveClass.class?._id,
+                sender: req.user?.id || null,
+                recipients: [{ student: student._id, parentPhone: cleanPhone }],
+                class: liveClass.class._id,
                 content: smsMessage,
                 messageType: 'individual',
                 status: 'sent'
               });
               await messageRecord.save({ validateBeforeSave: false });
-            } catch (saveError) {
-              console.error('⚠️ خطأ في حفظ سجل الرسالة:', saveError);
+            } else {
+              smsResults.failed++;
+              smsResults.details.push({ student: student.name, success: false, error: smsResult.error });
             }
-          } else {
-            smsResult.error = smsResponse.error;
-            console.error('❌ فشل إرسال رسالة الغياب:', smsResponse.error);
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (err) {
+            smsResults.failed++;
+            smsResults.details.push({ student: student.name, success: false, error: err.message });
           }
-        } catch (smsError) {
-          smsResult.error = smsError.message;
-          console.error('❌ خطأ في إرسال SMS:', smsError);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `✅ تم تسجيل ${absentStudents.length} طالب كغائبين في Attendance Schema${sendSMS ? ` وإرسال ${smsResults.sent} رسالة إشعار` : ''}`,
+      data: {
+        liveClassId: liveClass._id,
+        className: liveClass.class?.name,
+        classDate: liveClass.date,
+        statistics: {
+          totalStudents: allStudents.length,
+          present: presentStudentIds.size,
+          late: lateStudentIds.size,
+          absent: absentStudents.length,
+          newlyMarkedAbsent: updatedCount
+        },
+        absentStudents: absentStudents.map(s => ({
+          _id: s._id,
+          name: s.name,
+          studentId: s.studentId,
+          parentPhone: s.parentPhone
+        })),
+        smsResults: sendSMS ? smsResults : null
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الغياب التلقائي:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+app.get('/api/live-classes/:id/absence-stats', async (req, res) => {
+  try {
+      const liveClass = await LiveClass.findById(req.params.id)
+          .populate('class', 'name')
+          .populate('attendance.student', 'name studentId');
+          
+      if (!liveClass) {
+          return res.status(404).json({ error: 'الحصة غير موجودة' });
+      }
+      
+      const stats = {
+          present: liveClass.attendance.filter(a => a.status === 'present').length,
+          late: liveClass.attendance.filter(a => a.status === 'late').length,
+          absent: liveClass.attendance.filter(a => a.status === 'absent').length,
+          total: liveClass.attendance.length
+      };
+      
+      res.json({ success: true, stats });
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+});
+app.post('/api/live-classes/:id/complete-and-mark-absent', async (req, res) => {
+  try {
+      const liveClassId = req.params.id;
+      
+      // تحديث حالة الحصة إلى مكتملة
+      const liveClass = await LiveClass.findByIdAndUpdate(
+          liveClassId,
+          { status: 'completed', endTime: new Date().toLocaleTimeString() },
+          { new: true }
+      );
+      
+      if (!liveClass) {
+          return res.status(404).json({ error: 'الحصة غير موجودة' });
+      }
+      
+      // ثم استدعاء دالة تسجيل الغياب
+      const autoMarkResult = await fetch(`${process.env.API_URL}/api/live-classes/${liveClassId}/auto-mark-absent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sendSMS: true })
+      });
+      
+      const result = await autoMarkResult.json();
+      
+      res.json({
+          success: true,
+          message: 'تم إنهاء الحصة وتسجيل الغياب بنجاح',
+          liveClass,
+          autoMark: result
+      });
+      
+  } catch (err) {
+      res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================
+// نقطة نهاية للحصول على غيابات طالب معين (بدون مصادقة)
+// ==============================================
+// ==============================================
+// نقطة نهاية محسنة لجلب غيابات الطالب من Attendance Schema
+// ==============================================
+app.get('/api/students/:studentId/absences', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { startDate, endDate, limit = 50 } = req.query;
+
+    console.log(`📊 جلب غيابات الطالب من Attendance Schema: ${studentId}`);
+
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({ success: false, error: 'معرف الطالب غير صالح' });
+    }
+
+    // التحقق من وجود الطالب
+    const student = await Student.findById(studentId)
+      .select('name studentId academicYear parentName parentPhone');
+    
+    if (!student) {
+      return res.status(404).json({ success: false, error: 'الطالب غير موجود' });
+    }
+
+    // بناء استعلام التاريخ
+    let dateQuery = {};
+    const now = new Date();
+    
+    if (startDate && endDate) {
+      dateQuery = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    } else {
+      // افتراضي: آخر 90 يوم
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      dateQuery = {
+        $gte: ninetyDaysAgo,
+        $lte: now
+      };
+    }
+
+    // ==============================================
+    // جلب سجلات الحضور من Attendance Schema
+    // ==============================================
+    const attendanceRecords = await Attendance.find({
+      student: studentId,
+      date: dateQuery
+    })
+      .populate('class', 'name subject')
+      .populate('recordedBy', 'username fullName')
+      .sort({ date: -1 });
+
+    console.log(`📊 تم العثور على ${attendanceRecords.length} سجل حضور للطالب`);
+
+    // ==============================================
+    // الحصول على جميع الحصص التي الطالب مسجل فيها
+    // ==============================================
+    const studentClasses = await Class.find({ students: studentId })
+      .select('_id name subject');
+
+    // ==============================================
+    // بناء قائمة بجميع الأيام التي توجد فيها حصص
+    // (للحصول على إحصائيات دقيقة، نحتاج إلى LiveClass)
+    // ==============================================
+    const classIds = studentClasses.map(c => c._id);
+    
+    const liveClasses = await LiveClass.find({
+      class: { $in: classIds },
+      date: dateQuery,
+      status: { $in: ['completed', 'ongoing'] }
+    })
+      .populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .sort({ date: -1 });
+
+    // ==============================================
+    // إنشاء خريطة لسجلات الحضور من Attendance Schema
+    // ==============================================
+    const attendanceMap = new Map();
+    attendanceRecords.forEach(record => {
+      const key = `${record.class._id.toString()}_${record.date.toISOString().split('T')[0]}`;
+      attendanceMap.set(key, record);
+    });
+
+    // ==============================================
+    // بناء قائمة الحضور/الغياب لكل حصة حية
+    // ==============================================
+    const absenceRecords = [];
+    let totalPresent = 0, totalAbsent = 0, totalLate = 0;
+
+    for (const liveClass of liveClasses) {
+      const dateKey = liveClass.date.toISOString().split('T')[0];
+      const classKey = `${liveClass.class._id.toString()}_${dateKey}`;
+      const attendanceRecord = attendanceMap.get(classKey);
+      
+      // تحديد الحالة: إذا كان هناك سجل في Attendance نأخذ منه، وإلا غائب
+      let status = 'absent';
+      if (attendanceRecord) {
+        status = attendanceRecord.status;
+      } else {
+        // إذا لم يكن هناك سجل، نتحقق من LiveClass.attendance كبديل
+        const liveClassRecord = liveClass.attendance.find(
+          att => att.student.toString() === studentId
+        );
+        if (liveClassRecord) {
+          status = liveClassRecord.status;
         }
       }
 
-      // إرسال إشعار إذا كان عبر RFID وتم الحضور
-      if (method === 'rfid' && (status === 'present' || status === 'late') && student.parentPhone) {
-        try {
-          const smsContent = `تم تسجيل ${status === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name} في حصة ${liveClass.class?.name || 'غير محدد'} في ${new Date().toLocaleString('ar-EG')}`;
-          await smsGateway.sendIndividualSMS(student.parentPhone, smsContent);
+      // تحديث الإحصائيات
+      if (status === 'present') totalPresent++;
+      else if (status === 'absent') totalAbsent++;
+      else if (status === 'late') totalLate++;
+
+      // تنسيق السجل للعرض
+      absenceRecords.push({
+        _id: liveClass._id,
+        attendanceSchemaId: attendanceRecord?._id || null,
+        date: liveClass.date,
+        dateFormatted: new Date(liveClass.date).toLocaleDateString('ar-EG'),
+        dayName: new Date(liveClass.date).toLocaleDateString('ar-EG', { weekday: 'long' }),
+        startTime: liveClass.startTime,
+        endTime: liveClass.endTime,
+        status: status,
+        statusText: status === 'present' ? 'حاضر' : (status === 'late' ? 'متأخر' : 'غائب'),
+        className: liveClass.class?.name || 'غير محدد',
+        subject: liveClass.class?.subject || 'غير محدد',
+        teacherName: liveClass.teacher?.name || 'غير محدد',
+        classroom: liveClass.classroom?.name || 'غير محدد',
+        notes: liveClass.notes,
+        joinedAt: attendanceRecord?.date || liveClass.attendance.find(a => a.student.toString() === studentId)?.joinedAt,
+        recordedBy: attendanceRecord?.recordedBy?.username || 'تلقائي',
+        autoMarked: !attendanceRecord
+      });
+    }
+
+    const totalClasses = liveClasses.length;
+    const attendanceRate = totalClasses > 0 
+      ? Math.round(((totalPresent + totalLate) / totalClasses) * 100) 
+      : 100;
+
+    // تجميع الغيابات حسب الحصة
+    const absencesByClassMap = new Map();
+    absenceRecords.forEach(record => {
+      if (record.status === 'absent') {
+        if (!absencesByClassMap.has(record.className)) {
+          absencesByClassMap.set(record.className, {
+            className: record.className,
+            subject: record.subject,
+            count: 0,
+            records: []
+          });
+        }
+        const classData = absencesByClassMap.get(record.className);
+        classData.count++;
+        classData.records.push({ 
+          date: record.dateFormatted, 
+          teacher: record.teacherName,
+          autoMarked: record.autoMarked
+        });
+      }
+    });
+
+    // ==============================================
+    // الرد النهائي
+    // ==============================================
+    res.json({
+      success: true,
+      student: {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        academicYear: student.academicYear,
+        parentName: student.parentName,
+        parentPhone: student.parentPhone
+      },
+      statistics: {
+        totalClasses: totalClasses,
+        present: totalPresent,
+        absent: totalAbsent,
+        late: totalLate,
+        attendanceRate: attendanceRate,
+        period: {
+          startDate: startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          endDate: endDate || new Date().toISOString().split('T')[0]
+        }
+      },
+      absencesByClass: Array.from(absencesByClassMap.values()),
+      recentAbsences: absenceRecords.slice(0, 20),
+      allAbsences: absenceRecords
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب غيابات الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// نقطة نهاية للحصول على إحصائيات غياب الطالب (ملخص سريع)
+// ==============================================
+app.get('/api/students/:studentId/absences-summary', async (req, res) => {
+  try {
+      const { studentId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(studentId)) {
+          return res.status(400).json({
+              success: false,
+              error: 'معرف الطالب غير صالح'
+          });
+      }
+
+      const student = await Student.findById(studentId).select('name studentId');
+      if (!student) {
+          return res.status(404).json({
+              success: false,
+              error: 'الطالب غير موجود'
+          });
+      }
+
+      // إحصائيات الشهر الحالي
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const monthlyStats = await LiveClass.aggregate([
+          {
+              $match: {
+                  date: { $gte: startOfMonth, $lte: endOfMonth },
+                  'attendance.student': new mongoose.Types.ObjectId(studentId),
+                  status: { $in: ['completed', 'ongoing'] }
+              }
+          },
+          {
+              $unwind: '$attendance'
+          },
+          {
+              $match: {
+                  'attendance.student': new mongoose.Types.ObjectId(studentId)
+              }
+          },
+          {
+              $group: {
+                  _id: '$attendance.status',
+                  count: { $sum: 1 }
+              }
+          }
+      ]);
+
+      // إحصائيات آخر 7 أيام
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const weeklyStats = await LiveClass.aggregate([
+          {
+              $match: {
+                  date: { $gte: weekAgo, $lte: now },
+                  'attendance.student': new mongoose.Types.ObjectId(studentId),
+                  status: { $in: ['completed', 'ongoing'] }
+              }
+          },
+          {
+              $unwind: '$attendance'
+          },
+          {
+              $match: {
+                  'attendance.student': new mongoose.Types.ObjectId(studentId)
+              }
+          },
+          {
+              $group: {
+                  _id: '$attendance.status',
+                  count: { $sum: 1 }
+              }
+          }
+      ]);
+
+      const getCount = (stats, status) => {
+          const found = stats.find(s => s._id === status);
+          return found ? found.count : 0;
+      };
+
+      const monthlyPresent = getCount(monthlyStats, 'present');
+      const monthlyLate = getCount(monthlyStats, 'late');
+      const monthlyAbsent = getCount(monthlyStats, 'absent');
+      const monthlyTotal = monthlyPresent + monthlyLate + monthlyAbsent;
+      const monthlyAttendanceRate = monthlyTotal > 0 
+          ? Math.round(((monthlyPresent + monthlyLate) / monthlyTotal) * 100) 
+          : 100;
+
+      const weeklyPresent = getCount(weeklyStats, 'present');
+      const weeklyLate = getCount(weeklyStats, 'late');
+      const weeklyAbsent = getCount(weeklyStats, 'absent');
+      const weeklyTotal = weeklyPresent + weeklyLate + weeklyAbsent;
+      const weeklyAttendanceRate = weeklyTotal > 0 
+          ? Math.round(((weeklyPresent + weeklyLate) / weeklyTotal) * 100) 
+          : 100;
+
+      res.json({
+          success: true,
+          student: {
+              _id: student._id,
+              name: student.name,
+              studentId: student.studentId
+          },
+          monthly: {
+              present: monthlyPresent,
+              late: monthlyLate,
+              absent: monthlyAbsent,
+              total: monthlyTotal,
+              attendanceRate: monthlyAttendanceRate,
+              monthName: now.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
+          },
+          weekly: {
+              present: weeklyPresent,
+              late: weeklyLate,
+              absent: weeklyAbsent,
+              total: weeklyTotal,
+              attendanceRate: weeklyAttendanceRate,
+              period: `${weekAgo.toLocaleDateString('ar-EG')} - ${now.toLocaleDateString('ar-EG')}`
+          }
+      });
+
+  } catch (err) {
+      console.error('❌ خطأ في جلب ملخص غيابات الطالب:', err);
+      res.status(500).json({
+          success: false,
+          error: err.message
+      });
+  }
+});
+
+// نقطة نهاية لتهيئة سجلات الغياب لجميع طلاب الحصة
+app.post('/api/live-classes/:id/init-attendance', async (req, res) => {
+  try {
+      const liveClassId = req.params.id;
+      
+      const liveClass = await LiveClass.findById(liveClassId);
+      if (!liveClass) {
+          return res.status(404).json({ error: 'الحصة غير موجودة' });
+      }
+      
+      // جلب جميع طلاب الحصة
+      const classObj = await Class.findById(liveClass.class).populate('students');
+      
+      if (!classObj || !classObj.students) {
+          return res.status(404).json({ error: 'لا يوجد طلاب في هذه الحصة' });
+      }
+      
+      // إنشاء مصفوفة جديدة للحضور
+      const attendanceRecords = [];
+      
+      // إضافة سجلات لجميع الطلاب (افتراضياً غائب)
+      for (const student of classObj.students) {
+          // التحقق إذا كان الطالب لديه سجل مسبق
+          const existingRecord = liveClass.attendance.find(
+              att => att.student.toString() === student._id.toString()
+          );
+          
+          if (existingRecord) {
+              // الاحتفاظ بالسجل الموجود
+              attendanceRecords.push(existingRecord);
+          } else {
+              // إضافة سجل جديد كغائب
+              attendanceRecords.push({
+                  student: student._id,
+                  status: 'absent',
+                  joinedAt: null,
+                  leftAt: null
+              });
+          }
+      }
+      
+      // تحديث سجلات الحضور
+      liveClass.attendance = attendanceRecords;
+      await liveClass.save();
+      
+      res.json({
+          success: true,
+          message: `تم تهيئة سجلات الحضور لـ ${attendanceRecords.length} طالب`,
+          studentsCount: attendanceRecords.length
+      });
+      
+  } catch (err) {
+      console.error('Error initializing attendance:', err);
+      res.status(500).json({ error: err.message });
+  }
+});
+
+
+  // في server.js، تحديث نقطة النهاية /api/live-classes/:id/attendance
+  // تحديث نقطة النهاية لتسجيل الغياب وإرسال SMS
+  const axios = require('axios');
+
+// ==============================================
+// نقطة نهاية محسنة لتسجيل الحضور مع حفظ في Attendance Schema
+// ==============================================
+app.post('/api/live-classes/:id/attendance', async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    const { studentId, status, method, sendSMS = true, customMessage } = req.body;
+
+    console.log(`📝 تسجيل حضور/غياب للحصة ${liveClassId} للطالب ${studentId} - الحالة: ${status}`);
+
+    // التحقق من صحة الـ ID
+    if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+      return res.status(400).json({ success: false, error: 'معرف الحصة غير صالح' });
+    }
+
+    // البحث عن الحصة الحية
+    const liveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('teacher', 'name');
+
+    if (!liveClass) {
+      return res.status(404).json({ success: false, error: 'الحصة الحية غير موجودة' });
+    }
+
+    // العثور على الطالب
+    let student;
+    if (method === 'rfid') {
+      const card = await Card.findOne({ uid: studentId }).populate('student');
+      if (!card) {
+        return res.status(404).json({ success: false, error: 'البطاقة غير مسجلة' });
+      }
+      student = card.student;
+    } else {
+      student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ success: false, error: 'الطالب غير موجود' });
+      }
+    }
+
+    // ==============================================
+    // الخطوة 1: تحديث Attendance Schema المنفصل
+    // ==============================================
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // البحث عن سجل حضور موجود لهذا الطالب في هذه الحصة في هذا اليوم
+    let attendanceRecord = await Attendance.findOne({
+      student: student._id,
+      class: liveClass.class._id,
+      date: {
+        $gte: today,
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+      }
+    });
+
+    if (attendanceRecord) {
+      // تحديث السجل الموجود
+      attendanceRecord.status = status || 'present';
+      attendanceRecord.recordedBy = req.user?.id || null;
+      await attendanceRecord.save();
+      console.log(`✅ تم تحديث Attendance Schema: ${attendanceRecord._id}`);
+    } else {
+      // إنشاء سجل جديد
+      attendanceRecord = new Attendance({
+        student: student._id,
+        class: liveClass.class._id,
+        date: new Date(),
+        status: status || 'present',
+        recordedBy: req.user?.id || null
+      });
+      await attendanceRecord.save();
+      console.log(`✅ تم إنشاء سجل جديد في Attendance Schema: ${attendanceRecord._id}`);
+    }
+
+    // ==============================================
+    // الخطوة 2: تحديث LiveClass.attendance (للتكامل مع النظام الحالي)
+    // ==============================================
+    const existingIndex = liveClass.attendance.findIndex((a) =>
+      a.student.toString() === student._id.toString()
+    );
+
+    const attendanceRecordLive = {
+      student: student._id,
+      status: status || 'present',
+      method: method || 'manual',
+      timestamp: new Date(),
+      joinedAt: (status === 'present' || status === 'late') ? new Date() : null,
+      attendanceSchemaId: attendanceRecord._id // ربط بالسجل في Attendance Schema
+    };
+
+    if (existingIndex >= 0) {
+      liveClass.attendance[existingIndex] = attendanceRecordLive;
+    } else {
+      liveClass.attendance.push(attendanceRecordLive);
+    }
+
+    await liveClass.save();
+    console.log(`✅ تم تحديث LiveClass.attendance`);
+
+    // ==============================================
+    // الخطوة 3: إرسال إشعارات SMS (للغائبين)
+    // ==============================================
+    const smsResult = { sent: false, error: null };
+
+    if (sendSMS && status === 'absent' && student.parentPhone) {
+      try {
+        let cleanPhone = student.parentPhone.trim();
+        if (!cleanPhone.startsWith('+')) {
+          if (cleanPhone.startsWith('0')) {
+            cleanPhone = '+213' + cleanPhone.substring(1);
+          } else {
+            cleanPhone = '+213' + cleanPhone;
+          }
+        }
+
+        const smsMessage = customMessage || 
+          `📚 إشعار غياب\n` +
+          `عزيزي ولي أمر الطالب ${student.name}\n` +
+          `يؤسفنا إعلامكم بأن الطالب غائب عن حصة ${liveClass.class?.name || 'المدرسة'}\n` +
+          `📅 التاريخ: ${new Date(liveClass.date).toLocaleDateString('ar-EG')}\n` +
+          `⏰ الوقت: ${liveClass.startTime}\n` +
+          `👨‍🏫 المعلم: ${liveClass.teacher?.name || 'غير محدد'}\n` +
+          `📞 نرجو التواصل مع الإدارة.`;
+
+        const smsResponse = await smsGateway.sendIndividualSMS(cleanPhone, smsMessage);
+        
+        if (smsResponse.success) {
+          smsResult.sent = true;
+          console.log(`✅ تم إرسال رسالة الغياب بنجاح`);
           
           // حفظ سجل الرسالة
-          const message = new Message({
-            sender: null,
-            recipients: [{
-              student: student._id,
-              parentPhone: student.parentPhone
-            }],
-            class: liveClass.class?._id,
-            content: smsContent,
+          const messageRecord = new Message({
+            sender: req.user?.id || null,
+            recipients: [{ student: student._id, parentPhone: cleanPhone }],
+            class: liveClass.class._id,
+            content: smsMessage,
             messageType: 'individual',
             status: 'sent'
           });
-          await message.save({ validateBeforeSave: false });
-        } catch (smsErr) {
-          console.error('فشل إرسال SMS:', smsErr);
+          await messageRecord.save({ validateBeforeSave: false });
+        } else {
+          smsResult.error = smsResponse.error;
+          console.error(`❌ فشل إرسال رسالة الغياب: ${smsResponse.error}`);
         }
+      } catch (smsError) {
+        smsResult.error = smsError.message;
+        console.error(`❌ خطأ في إرسال SMS: ${smsError}`);
       }
+    }
 
-      res.json({
-        success: true,
-        message: `تم تسجيل ${status === 'present' ? 'الحضور' : status === 'absent' ? 'الغياب' : 'التأخير'} بنجاح${smsResult.sent ? ' وإرسال رسالة لأولياء الأمور' : ''}`,
-        attendance: attendanceRecord,
-        sms: smsResult,
+    // ==============================================
+    // الرد على العميل
+    // ==============================================
+    res.json({
+      success: true,
+      message: `تم تسجيل ${status === 'present' ? 'الحضور' : status === 'absent' ? 'الغياب' : 'التأخير'} بنجاح${smsResult.sent ? ' وإرسال رسالة لأولياء الأمور' : ''}`,
+      data: {
         student: {
           _id: student._id,
           name: student.name,
           studentId: student.studentId,
           parentPhone: student.parentPhone
         },
+        class: {
+          _id: liveClass.class._id,
+          name: liveClass.class.name
+        },
+        attendance: {
+          status: status || 'present',
+          recordedAt: new Date(),
+          attendanceSchemaId: attendanceRecord._id
+        },
+        sms: smsResult,
         liveClass: {
           _id: liveClass._id,
           date: liveClass.date,
-          startTime: liveClass.startTime,
-          class: liveClass.class?.name
+          startTime: liveClass.startTime
         }
-      });
+      }
+    });
 
-    } catch (err) {
-      console.error('❌ خطأ في تسجيل الحضور:', err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-      });
-    }
-  });
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الحضور:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
   // نقطة نهاية للحصول على حضور حصة حية محددة
   app.get('/api/live-classes/:id/attendance', async (req, res) => {
     try {
@@ -8663,9 +9208,705 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
         res.status(500).json({ error: err.message });
       }
     });
+// ==============================================
+// نقطة نهاية عامة لتسجيل الحضور عبر البطاقة (بدون مصادقة)
+// ==============================================
+// في server.js - أضف هذا الكود قبل أي middleware للمصادقة
+// ==============================================
+// نقطة نهاية عامة لتسجيل الحضور عبر البطاقة (بدون مصادقة)
+// ==============================================
+// ==============================================
+// نقطة نهاية تسجيل الحضور عبر البطاقة (تعمل بدون مصادقة)
+// ==============================================
+// ==============================================
+// نقطة نهاية لتسجيل غياب الطالب في الحصة الجارية
+// ==============================================
+// ==============================================
+// نقطة نهاية تسجيل حضور الطالب في الحصة الحية
+// ==============================================
+app.post('/api/attendance/card-scan', async (req, res) => {
+  try {
+    const { cardUid, sendSMS = true } = req.body;
+    
+    console.log('🔍 معالجة البطاقة:', cardUid);
+    
+    if (!cardUid) {
+      return res.status(400).json({
+        success: false,
+        error: 'رقم البطاقة مطلوب'
+      });
+    }
 
+    // 1. البحث عن البطاقة والطالب
+    const card = await Card.findOne({ uid: cardUid }).populate('student');
+    
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        error: 'البطاقة غير مسجلة في النظام'
+      });
+    }
+
+    const student = card.student;
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    console.log(`✅ الطالب: ${student.name} (${student.studentId})`);
+
+    // 2. البحث عن حصة حية (LiveClass) جارية الآن
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    console.log(`⏰ الوقت الحالي: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+
+    // البحث عن جميع الحصص الحية التي حالتها "جارية" (ongoing)
+    const ongoingLiveClasses = await LiveClass.find({
+      status: 'ongoing'
+    }).populate({
+      path: 'class',
+      populate: {
+        path: 'students',
+        model: 'Student'
+      }
+    }).populate('teacher', 'name');
+
+    console.log(`📚 عدد الحصص الحية الجارية: ${ongoingLiveClasses.length}`);
+
+    if (ongoingLiveClasses.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'لا توجد حصص حية جارية حالياً',
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId
+        }
+      });
+    }
+
+    // 3. البحث عن حصة حية يشارك فيها الطالب
+    let targetLiveClass = null;
+    
+    for (const liveClass of ongoingLiveClasses) {
+      // التحقق مما إذا كان الطالب مسجلاً في هذه الحصة
+      const classObj = liveClass.class;
+      if (classObj && classObj.students) {
+        const isStudentEnrolled = classObj.students.some(
+          s => s._id.toString() === student._id.toString()
+        );
+        
+        if (isStudentEnrolled) {
+          targetLiveClass = liveClass;
+          console.log(`✅ تم العثور على حصة حية للطالب: ${classObj.name}`);
+          break;
+        }
+      }
+    }
+
+    if (!targetLiveClass) {
+      console.log(`❌ لا توجد حصة حية جارية مسجل فيها الطالب ${student.name}`);
+      return res.status(404).json({
+        success: false,
+        error: 'لا توجد حصة حية جارية مسجل فيها الطالب',
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId
+        },
+        ongoingClassesCount: ongoingLiveClasses.length,
+        ongoingClasses: ongoingLiveClasses.map(lc => ({
+          name: lc.class?.name,
+          startTime: lc.startTime,
+          status: lc.status
+        }))
+      });
+    }
+
+    console.log(`✅ الحصة المستهدفة: ${targetLiveClass.class.name} (${targetLiveClass.startTime})`);
+
+    // 4. تسجيل حضور الطالب
+    const attendanceIndex = targetLiveClass.attendance.findIndex(
+      att => att.student.toString() === student._id.toString()
+    );
+
+    // تحديد حالة الحضور (حاضر أو متأخر)
+    let attendanceStatus = 'present';
+    if (targetLiveClass.startTime) {
+      const [classHour, classMinute] = targetLiveClass.startTime.split(':').map(Number);
+      const classStartMinutes = classHour * 60 + classMinute;
+      
+      // إذا تأخر أكثر من 15 دقيقة عن بداية الحصة
+      if (currentTimeMinutes > classStartMinutes + 15) {
+        attendanceStatus = 'late';
+      }
+    }
+
+    if (attendanceIndex >= 0) {
+      // تحديث السجل الموجود
+      targetLiveClass.attendance[attendanceIndex].status = attendanceStatus;
+      targetLiveClass.attendance[attendanceIndex].joinedAt = now;
+      console.log(`🔄 تحديث سجل الحضور: ${attendanceStatus}`);
+    } else {
+      // إضافة سجل جديد
+      targetLiveClass.attendance.push({
+        student: student._id,
+        status: attendanceStatus,
+        joinedAt: now,
+        leftAt: null
+      });
+      console.log(`➕ إضافة سجل حضور جديد: ${attendanceStatus}`);
+    }
+
+    await targetLiveClass.save();
+    console.log(`✅ تم تسجيل ${attendanceStatus === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name}`);
+
+    // 5. إرسال رسالة SMS لولي الأمر (اختياري)
+    let smsSent = false;
+    let smsError = null;
+
+    if (sendSMS && student.parentPhone) {
+      try {
+        let cleanPhone = student.parentPhone.trim();
+        if (!cleanPhone.startsWith('+')) {
+          if (cleanPhone.startsWith('0')) {
+            cleanPhone = '+213' + cleanPhone.substring(1);
+          } else {
+            cleanPhone = '+213' + cleanPhone;
+          }
+        }
+
+        const smsMessage = 
+          `📚 إشعار حضور\n` +
+          `عزيزي ولي أمر الطالب ${student.name}\n` +
+          `تم تسجيل ${attendanceStatus === 'present' ? 'حضور' : 'تأخير'} الطالب في حصة ${targetLiveClass.class.name}\n` +
+          `📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}\n` +
+          `⏰ وقت التسجيل: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+
+        console.log(`📱 جاري إرسال رسالة إلى: ${cleanPhone}`);
+        
+        // استخدم خدمة SMS الموجودة لديك
+        if (typeof smsGateway !== 'undefined' && smsGateway.sendIndividualSMS) {
+          const result = await smsGateway.sendIndividualSMS(cleanPhone, smsMessage);
+          smsSent = result.success;
+          smsError = result.error;
+          
+          if (smsSent) {
+            console.log(`✅ تم إرسال الرسالة بنجاح`);
+            
+            // حفظ سجل الرسالة
+            try {
+              const messageRecord = new Message({
+                sender: null,
+                recipients: [{
+                  student: student._id,
+                  parentPhone: cleanPhone
+                }],
+                class: targetLiveClass.class._id,
+                content: smsMessage,
+                messageType: 'individual',
+                status: 'sent'
+              });
+              await messageRecord.save({ validateBeforeSave: false });
+            } catch (saveError) {
+              console.error('⚠️ خطأ في حفظ سجل الرسالة:', saveError);
+            }
+          } else {
+            console.error(`❌ فشل إرسال الرسالة: ${smsError}`);
+          }
+        } else {
+          console.log(`⚠️ خدمة SMS غير متاحة`);
+        }
+      } catch (err) {
+        smsError = err.message;
+        console.error('❌ خطأ في إرسال SMS:', err);
+      }
+    }
+
+    // 6. إرجاع النتيجة
+    res.json({
+      success: true,
+      message: `تم تسجيل ${attendanceStatus === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name} في حصة ${targetLiveClass.class.name} بنجاح${smsSent ? ' وتم إرسال إشعار لولي الأمر' : ''}`,
+      data: {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId
+        },
+        class: {
+          _id: targetLiveClass.class._id,
+          name: targetLiveClass.class.name,
+          subject: targetLiveClass.class.subject,
+          teacher: targetLiveClass.teacher?.name
+        },
+        liveClass: {
+          _id: targetLiveClass._id,
+          startTime: targetLiveClass.startTime,
+          endTime: targetLiveClass.endTime,
+          status: targetLiveClass.status
+        },
+        attendance: {
+          status: attendanceStatus,
+          recordedAt: now
+        },
+        sms: {
+          sent: smsSent,
+          error: smsError,
+          phone: student.parentPhone
+        },
+        timestamp: now
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الحضور:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
     // في server.js، أضف هذا الكود مع نقاط النهاية الأخرى
+// ==============================================
+app.post('/api/attendance/quick-register', async (req, res) => {
+  try {
+    const { cardUid } = req.body;
+    
+    console.log(`🔍 بدء التسجيل السريع للغياب للبطاقة: ${cardUid}`);
+    
+    if (!cardUid) {
+      return res.status(400).json({
+        success: false,
+        error: 'رقم البطاقة مطلوب'
+      });
+    }
 
+    // 1. البحث عن البطاقة والطالب المرتبط بها
+    const card = await Card.findOne({ uid: cardUid }).populate('student');
+    
+    if (!card) {
+      console.log('❌ بطاقة غير معروفة:', cardUid);
+      
+      // التحقق مما إذا كانت البطاقة مصرحة ولكن غير مرتبطة بطالب
+      const authorizedCard = await AuthorizedCard.findOne({ 
+        uid: cardUid, 
+        active: true,
+        expirationDate: { $gte: new Date() }
+      });
+      
+      if (authorizedCard) {
+        return res.status(404).json({
+          success: false,
+          error: 'بطاقة مصرحة ولكن غير مرتبطة بطالب',
+          cardType: 'authorized',
+          cardInfo: {
+            uid: authorizedCard.uid,
+            cardName: authorizedCard.cardName,
+            expirationDate: authorizedCard.expirationDate
+          }
+        });
+      }
+      
+      return res.status(404).json({
+        success: false,
+        error: 'البطاقة غير معروفة في النظام',
+        cardUid: cardUid
+      });
+    }
+
+    const student = card.student;
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود أو تم حذفه'
+      });
+    }
+
+    console.log(`✅ تم العثور على الطالب: ${student.name} (${student.studentId})`);
+
+    // 2. التحقق من حالة الطالب
+    if (!student.active || student.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'الطالب غير نشط أو حسابه معلق',
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          status: student.status,
+          active: student.active
+        }
+      });
+    }
+
+    // 3. تحديد الوقت الحالي ويوم الأسبوع
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    const daysMap = {
+      0: 'الأحد',
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت'
+    };
+    const currentDay = daysMap[now.getDay()];
+    
+    console.log(`📅 اليوم: ${currentDay}, الوقت: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+
+    // 4. البحث عن الحصص التي يمكن للطالب تسجيل الغياب فيها
+    //    (الحصص التي هو مسجل فيها والتي وقتها الآن أو على وشك البدء)
+    
+    // الحصول على جميع حصص الطالب
+    const studentClasses = await Class.find({
+      _id: { $in: student.classes || [] },
+      'schedule.day': currentDay
+    }).populate('teacher', 'name phone email');
+    
+    if (studentClasses.length === 0) {
+      console.log('❌ لا توجد حصص للطالب في هذا اليوم');
+      return res.status(404).json({
+        success: false,
+        error: 'لا توجد حصص مجدولة للطالب في هذا اليوم',
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId
+        }
+      });
+    }
+
+    // البحث عن الحصة المناسبة (الحصة التي وقتها الآن)
+    let selectedClass = null;
+    let selectedSchedule = null;
+    const availableClasses = [];
+
+    for (const classObj of studentClasses) {
+      for (const schedule of classObj.schedule || []) {
+        if (schedule.day === currentDay && schedule.time) {
+          const [hour, minute] = schedule.time.split(':').map(Number);
+          const classStartMinutes = hour * 60 + minute;
+          const classEndMinutes = classStartMinutes + 120; // افتراض أن الحصة مدتها ساعتين
+          
+          // التحقق مما إذا كان الوقت الحالي ضمن فترة الحصة (مع هامش 30 دقيقة)
+          const timeDiff = Math.abs(currentTimeMinutes - classStartMinutes);
+          
+          availableClasses.push({
+            class: classObj,
+            schedule: schedule,
+            startTime: schedule.time,
+            startMinutes: classStartMinutes,
+            endMinutes: classEndMinutes,
+            timeDiff: timeDiff,
+            isActive: currentTimeMinutes >= classStartMinutes && currentTimeMinutes <= classEndMinutes,
+            willStartSoon: timeDiff <= 30 && currentTimeMinutes < classStartMinutes // سيبدأ خلال 30 دقيقة
+          });
+        }
+      }
+    }
+
+    // ترتيب حسب الفرق الزمني
+    availableClasses.sort((a, b) => a.timeDiff - b.timeDiff);
+
+    // اختيار الحصة النشطة أولاً، ثم الحصة التي ستبدأ قريباً
+    const activeClass = availableClasses.find(c => c.isActive);
+    const soonClass = availableClasses.find(c => c.willStartSoon);
+    
+    selectedClass = activeClass || soonClass || (availableClasses.length > 0 ? availableClasses[0] : null);
+
+    if (!selectedClass) {
+      console.log('❌ لا توجد حصص مناسبة للطالب في هذا الوقت');
+      return res.status(404).json({
+        success: false,
+        error: 'لا توجد حصص مناسبة للطالب في هذا الوقت',
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId
+        },
+        availableClasses: availableClasses.map(c => ({
+          className: c.class.name,
+          subject: c.class.subject,
+          time: c.startTime,
+          status: c.isActive ? 'نشطة' : (c.willStartSoon ? 'قادمة' : 'غير متاحة')
+        }))
+      });
+    }
+
+    console.log(`✅ تم اختيار الحصة: ${selectedClass.class.name} في ${selectedClass.startTime}`);
+
+    // 5. البحث عن حصة حية (Live Class) لهذه الحصة في هذا اليوم
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    let liveClass = await LiveClass.findOne({
+      class: selectedClass.class._id,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    }).populate('attendance.student');
+
+    // إذا لم توجد حصة حية، قم بإنشائها
+    if (!liveClass) {
+      console.log('📝 إنشاء حصة حية جديدة...');
+      
+      // جلب جميع طلاب الحصة
+      const classWithStudents = await Class.findById(selectedClass.class._id)
+        .populate('students', 'name studentId parentPhone');
+      
+      // إنشاء سجلات الغياب لجميع الطلاب (افتراضي: غائب)
+      const attendance = (classWithStudents.students || []).map(student => ({
+        student: student._id,
+        status: 'absent',
+        joinedAt: null,
+        leftAt: null
+      }));
+
+      liveClass = new LiveClass({
+        class: selectedClass.class._id,
+        date: now,
+        startTime: selectedClass.startTime,
+        endTime: selectedClass.schedule.endTime || `${selectedClass.startTime.split(':')[0]}:00`,
+        teacher: selectedClass.class.teacher?._id,
+        classroom: selectedClass.schedule.classroom,
+        attendance: attendance,
+        status: 'ongoing',
+        createdBy: req.user?.id || null,
+        month: now.toISOString().slice(0, 7)
+      });
+
+      await liveClass.save();
+      console.log(`✅ تم إنشاء حصة حية جديدة: ${liveClass._id}`);
+      
+      // إعادة جلب مع البيانات المترابطة
+      liveClass = await LiveClass.findById(liveClass._id)
+        .populate('attendance.student');
+    }
+
+    // 6. تحديث حالة حضور الطالب
+    const attendanceIndex = liveClass.attendance.findIndex(
+      att => att.student._id.toString() === student._id.toString()
+    );
+
+    // تحديد حالة الحضور (حاضر أو متأخر)
+    let attendanceStatus = 'present';
+    
+    if (selectedClass.startTime) {
+      const [classHour, classMinute] = selectedClass.startTime.split(':').map(Number);
+      const classStartMinutes = classHour * 60 + classMinute;
+      
+      // إذا تأخر أكثر من 15 دقيقة عن بداية الحصة
+      if (currentTimeMinutes > classStartMinutes + 15) {
+        attendanceStatus = 'late';
+      }
+    }
+
+    if (attendanceIndex >= 0) {
+      // تحديث السجل الموجود
+      liveClass.attendance[attendanceIndex].status = attendanceStatus;
+      liveClass.attendance[attendanceIndex].joinedAt = now;
+      console.log(`🔄 تحديث سجل الحضور: ${attendanceStatus}`);
+    } else {
+      // إضافة سجل جديد
+      liveClass.attendance.push({
+        student: student._id,
+        status: attendanceStatus,
+        joinedAt: now,
+        leftAt: null
+      });
+      console.log(`➕ إضافة سجل حضور جديد: ${attendanceStatus}`);
+    }
+
+    await liveClass.save();
+
+    // 7. إرسال إشعار SMS لولي الأمر (اختياري)
+    let smsSent = false;
+    if (student.parentPhone && req.body.sendSMS !== false) {
+      try {
+        const smsMessage = `تم تسجيل ${attendanceStatus === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name} في حصة ${selectedClass.class.name} الساعة ${currentHour}:${currentMinute.toString().padStart(2, '0')}.`;
+        
+        const smsResult = await smsGateway.sendIndividualSMS(student.parentPhone, smsMessage);
+        
+        if (smsResult.success) {
+          smsSent = true;
+          
+          // حفظ سجل الرسالة
+          const message = new Message({
+            sender: req.user?.id || null,
+            recipients: [{
+              student: student._id,
+              parentPhone: student.parentPhone
+            }],
+            class: selectedClass.class._id,
+            content: smsMessage,
+            messageType: 'individual',
+            status: 'sent'
+          });
+          await message.save({ validateBeforeSave: false });
+        }
+      } catch (smsErr) {
+        console.error('❌ فشل إرسال SMS:', smsErr);
+      }
+    }
+
+    // 8. إرجاع الاستجابة
+    res.json({
+      success: true,
+      message: `تم تسجيل ${attendanceStatus === 'present' ? 'الحضور' : 'التأخير'} بنجاح للطالب ${student.name}`,
+      timestamp: now,
+      data: {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          academicYear: student.academicYear
+        },
+        class: {
+          _id: selectedClass.class._id,
+          name: selectedClass.class.name,
+          subject: selectedClass.class.subject,
+          teacher: selectedClass.class.teacher?.name || 'غير محدد'
+        },
+        attendance: {
+          status: attendanceStatus,
+          time: now,
+          scheduledTime: selectedClass.startTime
+        },
+        liveClass: {
+          _id: liveClass._id,
+          date: liveClass.date,
+          startTime: liveClass.startTime
+        },
+        sms: smsSent ? 'تم إرسال إشعار لولي الأمر' : 'لم يتم إرسال إشعار'
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في التسجيل السريع للغياب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// نقطة نهاية للحصول على الحصة المناسبة للطالب
+// ==============================================
+app.get('/api/attendance/available-class/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // تحديد الوقت الحالي ويوم الأسبوع
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    
+    const daysMap = {
+      0: 'الأحد',
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت'
+    };
+    const currentDay = daysMap[now.getDay()];
+
+    // البحث عن الحصص المتاحة
+    const availableClasses = await Class.find({
+      _id: { $in: student.classes || [] },
+      'schedule.day': currentDay
+    }).populate('teacher', 'name');
+
+    const classesWithTimeInfo = [];
+
+    for (const classObj of availableClasses) {
+      for (const schedule of classObj.schedule || []) {
+        if (schedule.day === currentDay && schedule.time) {
+          const [hour, minute] = schedule.time.split(':').map(Number);
+          const classStartMinutes = hour * 60 + minute;
+          const timeDiff = Math.abs(currentTimeMinutes - classStartMinutes);
+          
+          classesWithTimeInfo.push({
+            class: {
+              _id: classObj._id,
+              name: classObj.name,
+              subject: classObj.subject,
+              teacher: classObj.teacher?.name || 'غير محدد'
+            },
+            schedule: {
+              time: schedule.time,
+              classroom: schedule.classroom
+            },
+            timeInfo: {
+              currentTime: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
+              classStartTime: schedule.time,
+              timeDiff: timeDiff,
+              isActive: currentTimeMinutes >= classStartMinutes && currentTimeMinutes <= classStartMinutes + 120,
+              willStartSoon: timeDiff <= 30 && currentTimeMinutes < classStartMinutes,
+              minutesUntilStart: currentTimeMinutes < classStartMinutes ? classStartMinutes - currentTimeMinutes : null,
+              minutesSinceStart: currentTimeMinutes > classStartMinutes ? currentTimeMinutes - classStartMinutes : null
+            }
+          });
+        }
+      }
+    }
+
+    // ترتيب حسب الفرق الزمني
+    classesWithTimeInfo.sort((a, b) => a.timeInfo.timeDiff - b.timeInfo.timeDiff);
+
+    res.json({
+      success: true,
+      student: {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId
+      },
+      currentTime: {
+        day: currentDay,
+        time: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
+        timestamp: now
+      },
+      availableClasses: classesWithTimeInfo,
+      recommendedClass: classesWithTimeInfo.find(c => c.timeInfo.isActive) || 
+                        classesWithTimeInfo.find(c => c.timeInfo.willStartSoon) ||
+                        classesWithTimeInfo[0] || null
+    });
+
+  } catch (err) {
+    console.error('Error getting available classes:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   // 1. نقطة نهاية لمعالجة الغياب بعد الحصة وإرسال رسائل تلقائية
   app.post('/api/live-classes/:id/process-absences',  async (req, res) => {
     try {
@@ -8964,7 +10205,43 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
       });
     }
   });
-
+// DELETE /api/live-classes/:id - حذف حصة حية
+app.delete('/api/live-classes/:id',  async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+    
+    const liveClass = await LiveClass.findById(liveClassId);
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة الحية غير موجودة'
+      });
+    }
+    
+    // حذف الحصة الحية
+    await LiveClass.findByIdAndDelete(liveClassId);
+    
+    res.json({
+      success: true,
+      message: 'تم حذف الحصة الحية بنجاح'
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في حذف الحصة الحية:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   // 3. نقطة نهاية لإرسال تذكير بالدفع للطلاب المتأخرين
   app.post('/api/messages/send-payment-reminders', authenticate(['accountant', 'admin']), async (req, res) => {
     try {
@@ -13485,436 +14762,3 @@ app.get('*', (req, res) => {
 
   // ==============================================
 // نقطة نهاية ذكية لتسجيل الغياب عبر البطاقة
-// ==============================================
-app.post('/api/attendance/quick-register', async (req, res) => {
-  try {
-    const { cardUid } = req.body;
-    
-    console.log(`🔍 بدء التسجيل السريع للغياب للبطاقة: ${cardUid}`);
-    
-    if (!cardUid) {
-      return res.status(400).json({
-        success: false,
-        error: 'رقم البطاقة مطلوب'
-      });
-    }
-
-    // 1. البحث عن البطاقة والطالب المرتبط بها
-    const card = await Card.findOne({ uid: cardUid }).populate('student');
-    
-    if (!card) {
-      console.log('❌ بطاقة غير معروفة:', cardUid);
-      
-      // التحقق مما إذا كانت البطاقة مصرحة ولكن غير مرتبطة بطالب
-      const authorizedCard = await AuthorizedCard.findOne({ 
-        uid: cardUid, 
-        active: true,
-        expirationDate: { $gte: new Date() }
-      });
-      
-      if (authorizedCard) {
-        return res.status(404).json({
-          success: false,
-          error: 'بطاقة مصرحة ولكن غير مرتبطة بطالب',
-          cardType: 'authorized',
-          cardInfo: {
-            uid: authorizedCard.uid,
-            cardName: authorizedCard.cardName,
-            expirationDate: authorizedCard.expirationDate
-          }
-        });
-      }
-      
-      return res.status(404).json({
-        success: false,
-        error: 'البطاقة غير معروفة في النظام',
-        cardUid: cardUid
-      });
-    }
-
-    const student = card.student;
-    
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: 'الطالب غير موجود أو تم حذفه'
-      });
-    }
-
-    console.log(`✅ تم العثور على الطالب: ${student.name} (${student.studentId})`);
-
-    // 2. التحقق من حالة الطالب
-    if (!student.active || student.status !== 'active') {
-      return res.status(403).json({
-        success: false,
-        error: 'الطالب غير نشط أو حسابه معلق',
-        student: {
-          _id: student._id,
-          name: student.name,
-          studentId: student.studentId,
-          status: student.status,
-          active: student.active
-        }
-      });
-    }
-
-    // 3. تحديد الوقت الحالي ويوم الأسبوع
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeMinutes = currentHour * 60 + currentMinute;
-    
-    const daysMap = {
-      0: 'الأحد',
-      1: 'الإثنين',
-      2: 'الثلاثاء',
-      3: 'الأربعاء',
-      4: 'الخميس',
-      5: 'الجمعة',
-      6: 'السبت'
-    };
-    const currentDay = daysMap[now.getDay()];
-    
-    console.log(`📅 اليوم: ${currentDay}, الوقت: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
-
-    // 4. البحث عن الحصص التي يمكن للطالب تسجيل الغياب فيها
-    //    (الحصص التي هو مسجل فيها والتي وقتها الآن أو على وشك البدء)
-    
-    // الحصول على جميع حصص الطالب
-    const studentClasses = await Class.find({
-      _id: { $in: student.classes || [] },
-      'schedule.day': currentDay
-    }).populate('teacher', 'name phone email');
-    
-    if (studentClasses.length === 0) {
-      console.log('❌ لا توجد حصص للطالب في هذا اليوم');
-      return res.status(404).json({
-        success: false,
-        error: 'لا توجد حصص مجدولة للطالب في هذا اليوم',
-        student: {
-          _id: student._id,
-          name: student.name,
-          studentId: student.studentId
-        }
-      });
-    }
-
-    // البحث عن الحصة المناسبة (الحصة التي وقتها الآن)
-    let selectedClass = null;
-    let selectedSchedule = null;
-    const availableClasses = [];
-
-    for (const classObj of studentClasses) {
-      for (const schedule of classObj.schedule || []) {
-        if (schedule.day === currentDay && schedule.time) {
-          const [hour, minute] = schedule.time.split(':').map(Number);
-          const classStartMinutes = hour * 60 + minute;
-          const classEndMinutes = classStartMinutes + 120; // افتراض أن الحصة مدتها ساعتين
-          
-          // التحقق مما إذا كان الوقت الحالي ضمن فترة الحصة (مع هامش 30 دقيقة)
-          const timeDiff = Math.abs(currentTimeMinutes - classStartMinutes);
-          
-          availableClasses.push({
-            class: classObj,
-            schedule: schedule,
-            startTime: schedule.time,
-            startMinutes: classStartMinutes,
-            endMinutes: classEndMinutes,
-            timeDiff: timeDiff,
-            isActive: currentTimeMinutes >= classStartMinutes && currentTimeMinutes <= classEndMinutes,
-            willStartSoon: timeDiff <= 30 && currentTimeMinutes < classStartMinutes // سيبدأ خلال 30 دقيقة
-          });
-        }
-      }
-    }
-
-    // ترتيب حسب الفرق الزمني
-    availableClasses.sort((a, b) => a.timeDiff - b.timeDiff);
-
-    // اختيار الحصة النشطة أولاً، ثم الحصة التي ستبدأ قريباً
-    const activeClass = availableClasses.find(c => c.isActive);
-    const soonClass = availableClasses.find(c => c.willStartSoon);
-    
-    selectedClass = activeClass || soonClass || (availableClasses.length > 0 ? availableClasses[0] : null);
-
-    if (!selectedClass) {
-      console.log('❌ لا توجد حصص مناسبة للطالب في هذا الوقت');
-      return res.status(404).json({
-        success: false,
-        error: 'لا توجد حصص مناسبة للطالب في هذا الوقت',
-        student: {
-          _id: student._id,
-          name: student.name,
-          studentId: student.studentId
-        },
-        availableClasses: availableClasses.map(c => ({
-          className: c.class.name,
-          subject: c.class.subject,
-          time: c.startTime,
-          status: c.isActive ? 'نشطة' : (c.willStartSoon ? 'قادمة' : 'غير متاحة')
-        }))
-      });
-    }
-
-    console.log(`✅ تم اختيار الحصة: ${selectedClass.class.name} في ${selectedClass.startTime}`);
-
-    // 5. البحث عن حصة حية (Live Class) لهذه الحصة في هذا اليوم
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    let liveClass = await LiveClass.findOne({
-      class: selectedClass.class._id,
-      date: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
-    }).populate('attendance.student');
-
-    // إذا لم توجد حصة حية، قم بإنشائها
-    if (!liveClass) {
-      console.log('📝 إنشاء حصة حية جديدة...');
-      
-      // جلب جميع طلاب الحصة
-      const classWithStudents = await Class.findById(selectedClass.class._id)
-        .populate('students', 'name studentId parentPhone');
-      
-      // إنشاء سجلات الغياب لجميع الطلاب (افتراضي: غائب)
-      const attendance = (classWithStudents.students || []).map(student => ({
-        student: student._id,
-        status: 'absent',
-        joinedAt: null,
-        leftAt: null
-      }));
-
-      liveClass = new LiveClass({
-        class: selectedClass.class._id,
-        date: now,
-        startTime: selectedClass.startTime,
-        endTime: selectedClass.schedule.endTime || `${selectedClass.startTime.split(':')[0]}:00`,
-        teacher: selectedClass.class.teacher?._id,
-        classroom: selectedClass.schedule.classroom,
-        attendance: attendance,
-        status: 'ongoing',
-        createdBy: req.user?.id || null,
-        month: now.toISOString().slice(0, 7)
-      });
-
-      await liveClass.save();
-      console.log(`✅ تم إنشاء حصة حية جديدة: ${liveClass._id}`);
-      
-      // إعادة جلب مع البيانات المترابطة
-      liveClass = await LiveClass.findById(liveClass._id)
-        .populate('attendance.student');
-    }
-
-    // 6. تحديث حالة حضور الطالب
-    const attendanceIndex = liveClass.attendance.findIndex(
-      att => att.student._id.toString() === student._id.toString()
-    );
-
-    // تحديد حالة الحضور (حاضر أو متأخر)
-    let attendanceStatus = 'present';
-    
-    if (selectedClass.startTime) {
-      const [classHour, classMinute] = selectedClass.startTime.split(':').map(Number);
-      const classStartMinutes = classHour * 60 + classMinute;
-      
-      // إذا تأخر أكثر من 15 دقيقة عن بداية الحصة
-      if (currentTimeMinutes > classStartMinutes + 15) {
-        attendanceStatus = 'late';
-      }
-    }
-
-    if (attendanceIndex >= 0) {
-      // تحديث السجل الموجود
-      liveClass.attendance[attendanceIndex].status = attendanceStatus;
-      liveClass.attendance[attendanceIndex].joinedAt = now;
-      console.log(`🔄 تحديث سجل الحضور: ${attendanceStatus}`);
-    } else {
-      // إضافة سجل جديد
-      liveClass.attendance.push({
-        student: student._id,
-        status: attendanceStatus,
-        joinedAt: now,
-        leftAt: null
-      });
-      console.log(`➕ إضافة سجل حضور جديد: ${attendanceStatus}`);
-    }
-
-    await liveClass.save();
-
-    // 7. إرسال إشعار SMS لولي الأمر (اختياري)
-    let smsSent = false;
-    if (student.parentPhone && req.body.sendSMS !== false) {
-      try {
-        const smsMessage = `تم تسجيل ${attendanceStatus === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name} في حصة ${selectedClass.class.name} الساعة ${currentHour}:${currentMinute.toString().padStart(2, '0')}.`;
-        
-        const smsResult = await smsGateway.sendIndividualSMS(student.parentPhone, smsMessage);
-        
-        if (smsResult.success) {
-          smsSent = true;
-          
-          // حفظ سجل الرسالة
-          const message = new Message({
-            sender: req.user?.id || null,
-            recipients: [{
-              student: student._id,
-              parentPhone: student.parentPhone
-            }],
-            class: selectedClass.class._id,
-            content: smsMessage,
-            messageType: 'individual',
-            status: 'sent'
-          });
-          await message.save({ validateBeforeSave: false });
-        }
-      } catch (smsErr) {
-        console.error('❌ فشل إرسال SMS:', smsErr);
-      }
-    }
-
-    // 8. إرجاع الاستجابة
-    res.json({
-      success: true,
-      message: `تم تسجيل ${attendanceStatus === 'present' ? 'الحضور' : 'التأخير'} بنجاح للطالب ${student.name}`,
-      timestamp: now,
-      data: {
-        student: {
-          _id: student._id,
-          name: student.name,
-          studentId: student.studentId,
-          academicYear: student.academicYear
-        },
-        class: {
-          _id: selectedClass.class._id,
-          name: selectedClass.class.name,
-          subject: selectedClass.class.subject,
-          teacher: selectedClass.class.teacher?.name || 'غير محدد'
-        },
-        attendance: {
-          status: attendanceStatus,
-          time: now,
-          scheduledTime: selectedClass.startTime
-        },
-        liveClass: {
-          _id: liveClass._id,
-          date: liveClass.date,
-          startTime: liveClass.startTime
-        },
-        sms: smsSent ? 'تم إرسال إشعار لولي الأمر' : 'لم يتم إرسال إشعار'
-      }
-    });
-
-  } catch (err) {
-    console.error('❌ خطأ في التسجيل السريع للغياب:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
-});
-
-// ==============================================
-// نقطة نهاية للحصول على الحصة المناسبة للطالب
-// ==============================================
-app.get('/api/attendance/available-class/:studentId', async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: 'الطالب غير موجود'
-      });
-    }
-
-    // تحديد الوقت الحالي ويوم الأسبوع
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeMinutes = currentHour * 60 + currentMinute;
-    
-    const daysMap = {
-      0: 'الأحد',
-      1: 'الإثنين',
-      2: 'الثلاثاء',
-      3: 'الأربعاء',
-      4: 'الخميس',
-      5: 'الجمعة',
-      6: 'السبت'
-    };
-    const currentDay = daysMap[now.getDay()];
-
-    // البحث عن الحصص المتاحة
-    const availableClasses = await Class.find({
-      _id: { $in: student.classes || [] },
-      'schedule.day': currentDay
-    }).populate('teacher', 'name');
-
-    const classesWithTimeInfo = [];
-
-    for (const classObj of availableClasses) {
-      for (const schedule of classObj.schedule || []) {
-        if (schedule.day === currentDay && schedule.time) {
-          const [hour, minute] = schedule.time.split(':').map(Number);
-          const classStartMinutes = hour * 60 + minute;
-          const timeDiff = Math.abs(currentTimeMinutes - classStartMinutes);
-          
-          classesWithTimeInfo.push({
-            class: {
-              _id: classObj._id,
-              name: classObj.name,
-              subject: classObj.subject,
-              teacher: classObj.teacher?.name || 'غير محدد'
-            },
-            schedule: {
-              time: schedule.time,
-              classroom: schedule.classroom
-            },
-            timeInfo: {
-              currentTime: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
-              classStartTime: schedule.time,
-              timeDiff: timeDiff,
-              isActive: currentTimeMinutes >= classStartMinutes && currentTimeMinutes <= classStartMinutes + 120,
-              willStartSoon: timeDiff <= 30 && currentTimeMinutes < classStartMinutes,
-              minutesUntilStart: currentTimeMinutes < classStartMinutes ? classStartMinutes - currentTimeMinutes : null,
-              minutesSinceStart: currentTimeMinutes > classStartMinutes ? currentTimeMinutes - classStartMinutes : null
-            }
-          });
-        }
-      }
-    }
-
-    // ترتيب حسب الفرق الزمني
-    classesWithTimeInfo.sort((a, b) => a.timeInfo.timeDiff - b.timeInfo.timeDiff);
-
-    res.json({
-      success: true,
-      student: {
-        _id: student._id,
-        name: student.name,
-        studentId: student.studentId
-      },
-      currentTime: {
-        day: currentDay,
-        time: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
-        timestamp: now
-      },
-      availableClasses: classesWithTimeInfo,
-      recommendedClass: classesWithTimeInfo.find(c => c.timeInfo.isActive) || 
-                        classesWithTimeInfo.find(c => c.timeInfo.willStartSoon) ||
-                        classesWithTimeInfo[0] || null
-    });
-
-  } catch (err) {
-    console.error('Error getting available classes:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-});

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تسجيل الطلاب بالبطاقات - أكاديمية الرواد</title>
+    <title>نظام تسجيل الطلاب بالبطاقات الذكية - أكاديمية الرواد</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -43,9 +43,6 @@
             font-family: 'Tajawal', sans-serif;
             background: var(--gradient-primary);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
             position: relative;
             overflow-x: hidden;
@@ -61,6 +58,7 @@
             background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path fill="white" d="M50 0 L100 50 L50 100 L0 50 Z"/></svg>');
             background-size: 50px 50px;
             animation: moveBackground 20s linear infinite;
+            pointer-events: none;
         }
         
         @keyframes moveBackground {
@@ -147,13 +145,6 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
         
-        .school-slogan {
-            font-size: 1rem;
-            opacity: 0.9;
-            margin-bottom: 15px;
-        }
-        
-        /* الوقت والتاريخ */
         .datetime-section {
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
@@ -167,11 +158,6 @@
             font-weight: 800;
             line-height: 1;
             margin-bottom: 5px;
-        }
-        
-        .current-date {
-            font-size: 1.2rem;
-            opacity: 0.9;
         }
         
         /* منطقة المسح */
@@ -206,25 +192,103 @@
             outline: none;
         }
         
-        .scan-input::placeholder {
-            color: #adb5bd;
-            letter-spacing: normal;
+        /* بطاقة الطالب الافتراضية */
+        .virtual-student-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 20px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
         }
         
-        .scan-icon {
+        .virtual-student-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .virtual-student-card::before {
+            content: '';
             position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.5rem;
-            color: var(--primary-color);
-            animation: scan 1.5s infinite;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 15s linear infinite;
         }
         
-        @keyframes scan {
-            0% { opacity: 0.5; transform: translateY(-50%) scale(1); }
-            50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
-            100% { opacity: 0.5; transform: translateY(-50%) scale(1); }
+        .card-chip {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-chip i {
+            font-size: 24px;
+            color: #b8860b;
+        }
+        
+        .student-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid white;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .student-avatar-large i {
+            font-size: 50px;
+            color: white;
+        }
+        
+        .student-name-card {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .student-id-card {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-align: center;
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+        
+        .card-number {
+            font-size: 1.2rem;
+            font-family: monospace;
+            letter-spacing: 3px;
+            margin: 15px 0;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .card-expiry {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            opacity: 0.8;
         }
         
         /* مؤشر الحالة */
@@ -239,11 +303,6 @@
             background: white;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
-        }
-        
-        .status-indicator i {
-            font-size: 1.3rem;
-            margin-left: 10px;
         }
         
         .status-ready {
@@ -290,10 +349,6 @@
             font-size: 1rem;
         }
         
-        .btn-action i {
-            font-size: 1.2rem;
-        }
-        
         .btn-action:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
@@ -312,192 +367,6 @@
         .btn-warning-custom {
             background: var(--gradient-warning);
             color: white;
-        }
-        
-        /* منطقة النتائج */
-        .result-area {
-            padding: 30px;
-            min-height: 300px;
-            background: white;
-        }
-        
-        .result-card {
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            animation: slideIn 0.4s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .result-header {
-            padding: 20px;
-            color: white;
-            text-align: center;
-        }
-        
-        .result-header.success {
-            background: var(--gradient-success);
-        }
-        
-        .result-header.warning {
-            background: var(--gradient-warning);
-        }
-        
-        .result-header.error {
-            background: var(--gradient-danger);
-        }
-        
-        .result-body {
-            padding: 25px;
-            background: white;
-        }
-        
-        /* بطاقة الطالب */
-        .student-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        
-        .student-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid var(--primary-color);
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .student-name {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--dark-color);
-            margin-bottom: 5px;
-        }
-        
-        .student-id {
-            font-size: 1.1rem;
-            color: var(--gray-color);
-            margin-bottom: 15px;
-            padding: 5px 15px;
-            background: var(--light-color);
-            border-radius: 50px;
-            display: inline-block;
-        }
-        
-        .student-info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .info-item {
-            background: var(--light-color);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .info-label {
-            font-size: 0.9rem;
-            color: var(--gray-color);
-            margin-bottom: 5px;
-        }
-        
-        .info-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--dark-color);
-        }
-        
-        /* شريط التقدم */
-        .progress-section {
-            margin: 20px 0;
-        }
-        
-        .progress {
-            height: 10px;
-            border-radius: 5px;
-            background: #e9ecef;
-        }
-        
-        .progress-bar {
-            background: var(--gradient-primary);
-            border-radius: 5px;
-            transition: width 0.3s ease;
-        }
-        
-        /* قائمة الحصص */
-        .classes-list {
-            margin-top: 20px;
-        }
-        
-        .class-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            border-bottom: 1px solid #e9ecef;
-            transition: all 0.3s ease;
-        }
-        
-        .class-item:hover {
-            background: var(--light-color);
-            transform: translateX(-5px);
-        }
-        
-        .class-item:last-child {
-            border-bottom: none;
-        }
-        
-        .class-info {
-            flex: 1;
-        }
-        
-        .class-name {
-            font-weight: 700;
-            color: var(--dark-color);
-            margin-bottom: 3px;
-        }
-        
-        .class-time {
-            font-size: 0.9rem;
-            color: var(--gray-color);
-        }
-        
-        .class-status {
-            padding: 5px 12px;
-            border-radius: 50px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        
-        .status-active {
-            background: rgba(6, 214, 160, 0.1);
-            color: var(--success-color);
-        }
-        
-        .status-soon {
-            background: rgba(255, 183, 3, 0.1);
-            color: var(--warning-color);
-        }
-        
-        .status-late {
-            background: rgba(230, 57, 70, 0.1);
-            color: var(--danger-color);
         }
         
         /* قائمة المسحات الحديثة */
@@ -530,47 +399,6 @@
             padding: 10px;
             border-bottom: 1px solid #dee2e6;
             animation: fadeIn 0.3s ease-out;
-        }
-        
-        .recent-scan-item:last-child {
-            border-bottom: none;
-        }
-        
-        .scan-time {
-            font-size: 0.85rem;
-            color: var(--gray-color);
-        }
-        
-        .scan-badge {
-            padding: 3px 10px;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .badge-success {
-            background: rgba(6, 214, 160, 0.1);
-            color: var(--success-color);
-        }
-        
-        .badge-warning {
-            background: rgba(255, 183, 3, 0.1);
-            color: var(--warning-color);
-        }
-        
-        .badge-danger {
-            background: rgba(230, 57, 70, 0.1);
-            color: var(--danger-color);
-        }
-        
-        /* تذييل الصفحة */
-        .footer {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(5px);
-            padding: 15px;
-            text-align: center;
-            color: white;
-            border-top: 1px solid rgba(255,255,255,0.2);
         }
         
         /* رسائل التنبيه */
@@ -611,10 +439,6 @@
             border-right: 5px solid var(--danger-color);
         }
         
-        .alert-warning {
-            border-right: 5px solid var(--warning-color);
-        }
-        
         /* مؤشر التحميل */
         .loading-spinner {
             display: inline-block;
@@ -640,69 +464,9 @@
                 font-size: 2rem;
             }
             
-            .scan-input {
-                padding: 15px 20px;
-                font-size: 1rem;
+            .student-name-card {
+                font-size: 1.2rem;
             }
-            
-            .student-name {
-                font-size: 1.5rem;
-            }
-            
-            .student-info-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* تأثيرات إضافية */
-        .glow {
-            animation: glow 2s infinite;
-        }
-        
-        @keyframes glow {
-            0% { box-shadow: 0 0 5px rgba(67, 97, 238, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(67, 97, 238, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(67, 97, 238, 0.5); }
-        }
-        
-        .shake {
-            animation: shake 0.5s;
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-        }
-        
-        .bounce {
-            animation: bounce 1s;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-20px); }
-            60% { transform: translateY(-10px); }
-        }
-        
-        /* تخصيص شريط التمرير */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary-color);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--secondary-color);
         }
     </style>
 </head>
@@ -710,25 +474,23 @@
     <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-lg-10">
-                <!-- بطاقة المسح الرئيسية -->
                 <div class="scan-card">
                     <!-- الهيدر -->
                     <div class="scan-header">
                         <div class="d-flex justify-content-center">
-                            <img src="https://ui-avatars.com/api/?name=Redox+Academy&background=4361ee&color=fff&size=100" 
-                                 alt="شعار الأكاديمية" 
-                                 class="school-logo">
+                            <div class="school-logo d-flex align-items-center justify-content-center bg-white">
+                                <i class="bi bi-mortarboard display-4 text-primary"></i>
+                            </div>
                         </div>
                         <h1 class="school-name">أكاديمية الرواد للتعليم والمعارف</h1>
                         <p class="school-slogan">نظام تسجيل الطلاب بالبطاقات الذكية</p>
                         
-                        <!-- الوقت والتاريخ -->
                         <div class="datetime-section">
-                            <div class="current-time" id="currentTime">
+                            <div class="current-time">
                                 <i class="bi bi-clock"></i>
                                 <span id="timeDisplay">--:--:--</span>
                             </div>
-                            <div class="current-date" id="currentDate">
+                            <div class="current-date">
                                 <i class="bi bi-calendar"></i>
                                 <span id="dateDisplay">---</span>
                             </div>
@@ -751,7 +513,7 @@
                                    placeholder="امسح البطاقة أو أدخل الرقم يدوياً"
                                    autocomplete="off"
                                    autofocus>
-                            <i class="bi bi-qr-code-scan scan-icon"></i>
+                            <i class="bi bi-upc-scan scan-icon" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--primary-color);"></i>
                         </div>
                         
                         <div class="action-buttons">
@@ -771,14 +533,7 @@
                     </div>
                     
                     <!-- منطقة النتائج -->
-                    <div class="result-area" id="resultArea">
-                        <div class="text-center text-muted py-5" id="defaultMessage">
-                            <i class="bi bi-credit-card-2-front display-1"></i>
-                            <h4 class="mt-3">بانتظار مسح البطاقة</h4>
-                            <p>سيتم عرض معلومات الطالب هنا بعد مسح البطاقة</p>
-                        </div>
-                        
-                        <!-- هنا يتم عرض نتائج المسح ديناميكياً -->
+                    <div class="result-area p-4" id="resultArea">
                         <div id="scanResult"></div>
                     </div>
                     
@@ -796,7 +551,7 @@
                     </div>
                     
                     <!-- تذييل الصفحة -->
-                    <div class="footer">
+                    <div class="footer p-3 text-center bg-dark text-white">
                         <p class="mb-0">
                             <i class="bi bi-c-circle"></i>
                             2026 Redox Academy - جميع الحقوق محفوظة
@@ -807,1067 +562,487 @@
         </div>
     </div>
     
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Socket.io -->
-    <script src="/socket.io/socket.io.js"></script>
-    <!-- Moment.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ar.js"></script>
     
-    <!-- ملف JavaScript الرئيسي -->
-    <script >
-
-// ==============================================
-// نظام تسجيل الطلاب بالبطاقات
-// الإصدار: 2.0
-// ==============================================
-
-// المتغيرات العامة
-let socket;
-let recentScans = [];
-let isScanning = false;
-let scanBuffer = '';
-let lastKeyTime = Date.now();
-let currentStudent = null;
-let currentLiveClass = null;
-let audioEnabled = true;
-
-// تهيئة التطبيق
-document.addEventListener('DOMContentLoaded', function() {
-    initApp();
-});
-
-// ==============================================
-// دوال التهيئة
-// ==============================================
-
-function initApp() {
-    console.log('🚀 تهيئة نظام تسجيل الطلاب...');
-    
-    // تحديث الوقت والتاريخ
-    updateDateTime();
-    setInterval(updateDateTime, 1000);
-    
-    // الاتصال بالخادم
-    connectToServer();
-    
-    // تهيئة نظام المسح
-    setupScanner();
-    
-    // تحميل المسحات الحديثة
-    loadRecentScans();
-    
-    // التحقق من حالة البطارية
-    checkBatteryStatus();
-    
-    // تشغيل صوت الترحيب
-    playWelcomeSound();
-}
-
-// تحديث الوقت والتاريخ
-function updateDateTime() {
-    const now = new Date();
-    
-    // تنسيق الوقت
-    const timeString = now.toLocaleTimeString('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
-    
-    // تنسيق التاريخ
-    const dateString = now.toLocaleDateString('ar-EG', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    
-    document.getElementById('timeDisplay').textContent = timeString;
-    document.getElementById('dateDisplay').textContent = dateString;
-}
-
-// الاتصال بالخادم
-function connectToServer() {
-    try {
-        socket = io(window.location.origin, {
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            reconnectionAttempts: 5
-        });
+    <script>
+        // ==============================================
+        // نظام تسجيل الطلاب بالبطاقات - الإصدار المحسن
+        // ==============================================
         
-        socket.on('connect', function() {
-            console.log('✅ متصل بالخادم');
-            updateStatus('متصل', 'status-ready', 'bi-wifi');
-            showToast('success', 'تم الاتصال بالخادم بنجاح');
-        });
+        let recentScans = [];
+        let isScanning = false;
+        let audioEnabled = true;
+        let audioContext = null;
         
-        socket.on('disconnect', function() {
-            console.log('❌ غير متصل بالخادم');
-            updateStatus('غير متصل', 'status-error', 'bi-wifi-off');
-            showToast('error', 'انقطع الاتصال بالخادم');
-        });
-        
-        socket.on('student-detected', function(data) {
-            handleStudentDetection(data);
-        });
-        
-        socket.on('unknown-card', function(data) {
-            handleUnknownCard(data);
-        });
-        
-        socket.on('card-error', function(data) {
-            handleCardError(data);
-        });
-        
-        socket.on('attendance-registered', function(data) {
-            handleAttendanceRegistered(data);
-        });
-        
-    } catch (error) {
-        console.error('❌ خطأ في الاتصال:', error);
-        updateStatus('خطأ في الاتصال', 'status-error', 'bi-exclamation-triangle');
-    }
-}
-
-// تهيئة نظام المسح
-function setupScanner() {
-    const cardInput = document.getElementById('cardInput');
-    
-    // معالجة الإدخال المباشر
-    cardInput.addEventListener('input', function(e) {
-        const value = e.target.value.trim();
-        if (value.length >= 6) {
-            processCard(value);
+        // تهيئة الصوت
+        function initAudio() {
+            if (!audioContext && audioEnabled) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {
+                    console.log('⚠️ Web Audio API غير مدعوم');
+                }
+            }
+            return audioContext;
         }
-    });
-    
-    // معالجة ضغط Enter
-    cardInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const value = e.target.value.trim();
-            if (value) {
-                processCard(value);
+        
+        function playBeep(frequency, duration) {
+            if (!audioEnabled) return;
+            
+            try {
+                const ctx = initAudio();
+                if (!ctx || ctx.state === 'closed') return;
+                
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = frequency;
+                gainNode.gain.value = 0.15;
+                
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                oscillator.stop(ctx.currentTime + duration);
+            } catch(e) {
+                console.log('⚠️ خطأ في تشغيل الصوت:', e);
             }
         }
-    });
-    
-    // محاكاة قارئ البطاقات (قراءة سريعة)
-    document.addEventListener('keydown', function(event) {
-        // تجاهل إذا كان المستخدم يكتب في حقل آخر
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-            return;
+        
+        function playScanSound() {
+            playBeep(800, 0.2);
         }
         
-        const currentTime = Date.now();
-        const key = event.key;
-        
-        // إعادة تعيين المخزن المؤقت إذا مر وقت طويل
-        if (currentTime - lastKeyTime > 100) {
-            scanBuffer = '';
+        function playSuccessSound() {
+            playBeep(1046.50, 0.15);
+            setTimeout(() => playBeep(1318.52, 0.15), 150);
+            setTimeout(() => playBeep(1567.98, 0.3), 300);
         }
         
-        lastKeyTime = currentTime;
+        function playErrorSound() {
+            playBeep(440, 0.3);
+            setTimeout(() => playBeep(349.23, 0.3), 300);
+        }
         
-        // إذا كان Enter، معالجة البطاقة
-        if (key === 'Enter' && scanBuffer.length > 0) {
-            event.preventDefault();
-            processCard(scanBuffer);
-            scanBuffer = '';
-            cardInput.value = '';
+        function playWelcomeSound() {
+            if (!audioEnabled) return;
+            
+            const notes = [523.25, 587.33, 659.25, 783.99];
+            notes.forEach((freq, i) => {
+                setTimeout(() => playBeep(freq, 0.2), i * 150);
+            });
         }
-        // إذا كان رقم، إضافته للمخزن المؤقت
-        else if (key >= '0' && key <= '9') {
-            scanBuffer += key;
-            cardInput.value = scanBuffer;
+        
+        // تفعيل الصوت عند أول نقرة
+        document.addEventListener('click', function enableAudio() {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            document.removeEventListener('click', enableAudio);
+        }, { once: true });
+        
+        // تحديث الوقت
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('timeDisplay').textContent = now.toLocaleTimeString('ar-EG');
+            document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ar-EG', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
         }
-    });
-}
-
-// ==============================================
-// دوال معالجة البطاقة
-// ==============================================
-
-async function processCard(cardUid) {
-    if (isScanning) {
-        console.log('⏳ جاري معالجة بطاقة أخرى...');
-        return;
-    }
-    
-    try {
-        isScanning = true;
         
         // تحديث الحالة
-        updateStatus('جاري التعرف على البطاقة...', 'status-scanning', 'bi-arrow-repeat');
-        
-        // تشغيل صوت المسح
-        playScanSound();
-        
-        // إظهار مؤشر التحميل
-        showLoadingState();
-        
-        // تنظيف رقم البطاقة
-        const cleanUid = cardUid.trim();
-        
-        console.log('🔍 معالجة البطاقة:', cleanUid);
-        
-        // إرسال طلب التسجيل السريع
-        const response = await fetch('/api/attendance/quick-register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ cardUid: cleanUid })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'حدث خطأ غير متوقع');
+        function updateStatus(text, statusClass, icon) {
+            const statusElement = document.getElementById('scannerStatus');
+            statusElement.className = `status-indicator ${statusClass}`;
+            statusElement.innerHTML = `<i class="bi ${icon}"></i><span>${text}</span>`;
         }
         
-        if (data.success) {
-            // نجاح تسجيل الحضور
-            handleSuccessfulAttendance(data);
+        // عرض بطاقة الطالب الافتراضية
+        function displayVirtualStudentCard(student, cardUid = null) {
+            const defaultAvatar = `<i class="bi bi-person-circle" style="font-size: 60px;"></i>`;
+            const avatarUrl = student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true&length=2`;
             
-            // إضافة للمسحات الحديثة
-            addToRecentScans({
-                type: 'success',
-                student: data.data.student,
-                class: data.data.class,
-                timestamp: new Date(),
-                status: data.data.attendance.status
-            });
+            const expiryDate = new Date();
+            expiryDate.setFullYear(expiryDate.getFullYear() + 2);
+            const expiryStr = `${expiryDate.getMonth()+1}/${expiryDate.getFullYear().toString().slice(-2)}`;
             
-            // تشغيل صوت النجاح
-            playSuccessSound();
+            const cardNumber = cardUid || student.cardUid || '**** **** **** ' + (student.studentId?.slice(-4) || '0000');
+            const formattedCardNumber = cardNumber.match(/.{1,4}/g)?.join(' ') || cardNumber;
             
-        } else {
-            // فشل في التسجيل
-            handleFailedAttendance(data);
+            return `
+                <div class="virtual-student-card animate__animated animate__fadeInUp">
+                    <div class="card-chip">
+                        <i class="bi bi-wifi"></i>
+                    </div>
+                    <div class="text-center">
+                        <div class="student-avatar-large mx-auto">
+                            <img src="${avatarUrl}" alt="${student.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true'">
+                        </div>
+                        <h3 class="student-name-card mt-3">${student.name}</h3>
+                        <div class="student-id-card">رقم الطالب: ${student.studentId || 'غير محدد'}</div>
+                        <div class="card-number">
+                            <i class="bi bi-credit-card"></i> ${formattedCardNumber}
+                        </div>
+                        <div class="card-expiry">
+                            <span><i class="bi bi-calendar"></i> صالحة حتى: ${expiryStr}</span>
+                            <span><i class="bi bi-shield-check"></i> بطاقة ذكية</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
-    } catch (error) {
-        console.error('❌ خطأ في معالجة البطاقة:', error);
-        
-        // محاولة الطريقة التقليدية
-        await processCardTraditional(cardUid);
-        
-    } finally {
-        isScanning = false;
-        
-        // إعادة تعيين الحالة بعد 3 ثوان
-        setTimeout(() => {
-            updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
-        }, 3000);
-        
-        // تفريغ حقل الإدخال
-        document.getElementById('cardInput').value = '';
-        document.getElementById('cardInput').focus();
-    }
-}
-
-// الطريقة التقليدية (القديمة)
-async function processCardTraditional(cardUid) {
-    try {
-        console.log('🔄 محاولة الطريقة التقليدية...');
-        
-        // البحث عن البطاقة
-        const cardResponse = await fetch(`/api/cards/uid/${cardUid}`);
-        
-        if (!cardResponse.ok) {
-            if (cardResponse.status === 404) {
-                // بطاقة غير معروفة
-                handleUnknownCard({ uid: cardUid });
-                return;
+        // عرض معلومات الطالب
+        function displayStudentInfo(student, classInfo = null, attendance = null) {
+            const resultDiv = document.getElementById('scanResult');
+            const status = attendance?.status || 'present';
+            const statusText = status === 'present' ? '✅ حاضر' : status === 'late' ? '⚠️ متأخر' : '❌ غائب';
+            const statusClass = status === 'present' ? 'success' : status === 'late' ? 'warning' : 'danger';
+            
+            let classHtml = '';
+            if (classInfo) {
+                classHtml = `
+                    <div class="info-item bg-light p-3 rounded mb-2">
+                        <div class="info-label text-muted">الحصة</div>
+                        <div class="info-value fw-bold">${classInfo.name || 'غير محدد'}</div>
+                        <div class="info-label text-muted mt-2">المادة</div>
+                        <div class="info-value">${classInfo.subject || 'غير محدد'}</div>
+                        ${classInfo.teacher ? `<div class="info-label text-muted mt-2">الأستاذ</div><div class="info-value">${classInfo.teacher.name || classInfo.teacher}</div>` : ''}
+                    </div>
+                `;
             }
-            throw new Error('خطأ في استجابة الخادم');
-        }
-        
-        const cardData = await cardResponse.json();
-        
-        if (cardData.student) {
-            // جلب معلومات الطالب
-            const studentResponse = await fetch(`/api/students/${cardData.student._id}`);
             
-            if (studentResponse.ok) {
-                const student = await studentResponse.json();
-                
-                // عرض معلومات الطالب
-                displayStudentInfo(student, cardUid);
-                
-                // إضافة للمسحات الحديثة
-                addToRecentScans({
-                    type: 'info',
-                    student: student,
-                    cardUid: cardUid,
-                    timestamp: new Date()
-                });
-                
-                // البحث عن الحصة المناسبة
-                await findAndRegisterForClass(student._id, cardUid);
-            }
+            resultDiv.innerHTML = `
+                <div class="animate__animated animate__fadeIn">
+                    ${displayVirtualStudentCard(student)}
+                    
+                    <div class="row mt-3 g-3">
+                        <div class="col-md-6">
+                            <div class="bg-${statusClass} bg-opacity-10 p-3 rounded text-center">
+                                <i class="bi ${status === 'present' ? 'bi-check-circle-fill' : status === 'late' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} display-6 text-${statusClass}"></i>
+                                <h5 class="mt-2 text-${statusClass}">${statusText}</h5>
+                                ${attendance?.time ? `<small class="text-muted">${new Date(attendance.time).toLocaleTimeString('ar-EG')}</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            ${classHtml || '<div class="bg-info bg-opacity-10 p-3 rounded text-center"><i class="bi bi-info-circle display-6"></i><h5 class="mt-2">لا توجد حصص حالياً</h5></div>'}
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="bg-light p-3 rounded">
+                                <h6><i class="bi bi-telephone"></i> معلومات الاتصال</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">ولي الأمر</small>
+                                        <div>${student.parentName || 'غير محدد'}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">رقم الهاتف</small>
+                                        <div>${student.parentPhone || 'غير محدد'}</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <small class="text-muted">السنة الدراسية</small>
+                                        <div>${getAcademicYearName(student.academicYear)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
-    } catch (error) {
-        console.error('❌ خطأ في الطريقة التقليدية:', error);
-        showErrorResult(error.message);
-    }
-}
-
-// البحث عن الحصة المناسبة وتسجيل الغياب
-async function findAndRegisterForClass(studentId, cardUid) {
-    try {
-        updateStatus('جاري البحث عن الحصة المناسبة...', 'status-scanning', 'bi-search');
-        
-        // الحصول على الحصص المتاحة للطالب
-        const availableResponse = await fetch(`/api/attendance/available-class/${studentId}`);
-        
-        if (!availableResponse.ok) {
-            throw new Error('فشل في جلب الحصص المتاحة');
-        }
-        
-        const availableData = await availableResponse.json();
-        
-        if (!availableData.recommendedClass) {
-            showNoClassMessage(availableData.availableClasses);
-            return;
-        }
-        
-        const recommendedClass = availableData.recommendedClass;
-        
-        // تحديث الحالة
-        updateStatus('جاري تسجيل الحضور...', 'status-scanning', 'bi-cloud-upload');
-        
-        // تحديد حالة الحضور
-        const attendanceStatus = recommendedClass.timeInfo.isActive ? 
-            (recommendedClass.timeInfo.minutesSinceStart > 15 ? 'late' : 'present') : 
-            'present';
-        
-        // البحث عن حصة حية أو إنشائها
-        const today = new Date().toISOString().split('T')[0];
-        
-        // البحث عن حصة حية
-        let liveClassResponse = await fetch(`/api/live-classes?class=${recommendedClass.class._id}&date=${today}`);
-        let liveClasses = await liveClassResponse.json();
-        
-        let liveClassId;
-        
-        if (liveClasses && liveClasses.length > 0) {
-            liveClassId = liveClasses[0]._id;
-        } else {
-            // إنشاء حصة حية جديدة
-            const createResponse = await fetch('/api/live-classes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    class: recommendedClass.class._id,
-                    date: new Date(),
-                    startTime: recommendedClass.schedule.time,
-                    endTime: `${parseInt(recommendedClass.schedule.time.split(':')[0]) + 2}:00`,
-                    status: 'ongoing',
-                    month: new Date().toISOString().slice(0, 7)
-                })
-            });
+        // معالجة النجاح
+        function handleSuccessfulAttendance(data) {
+            console.log('✅ نجاح تسجيل الحضور:', data);
             
-            if (createResponse.ok) {
-                const newLiveClass = await createResponse.json();
-                liveClassId = newLiveClass._id;
-            } else {
-                throw new Error('فشل في إنشاء الحصة الحية');
-            }
-        }
-        
-        if (liveClassId) {
-            // تسجيل الحضور
-            const attendanceResponse = await fetch(`/api/live-classes/${liveClassId}/attendance`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    studentId: studentId,
-                    status: attendanceStatus,
-                    method: 'rfid',
-                    sendSMS: true
-                })
-            });
+            const student = data.data?.student;
+            const classInfo = data.data?.class;
+            const attendance = data.data?.attendance;
             
-            if (attendanceResponse.ok) {
-                const attendanceData = await attendanceResponse.json();
-                
-                // عرض نجاح التسجيل
-                showAttendanceSuccess(attendanceData, recommendedClass);
-                
-                // إضافة للمسحات الحديثة
+            if (student) {
+                displayStudentInfo(student, classInfo, attendance);
                 addToRecentScans({
                     type: 'success',
-                    student: { name: attendanceData.student?.name },
-                    class: recommendedClass.class.name,
-                    status: attendanceStatus,
+                    student: { name: student.name, studentId: student.studentId },
                     timestamp: new Date()
                 });
-                
-                // تشغيل صوت النجاح
                 playSuccessSound();
+                updateStatus('تم التسجيل بنجاح', 'status-success', 'bi-check-circle');
+                showToast('success', `تم تسجيل ${attendance?.status === 'present' ? 'حضور' : 'تأخير'} الطالب ${student.name}`);
+            } else {
+                showErrorResult('بيانات الطالب غير مكتملة');
             }
         }
         
-    } catch (error) {
-        console.error('❌ خطأ في تسجيل الحضور:', error);
-        showErrorResult('فشل في تسجيل الحضور: ' + error.message);
-    }
-}
-
-// ==============================================
-// دوال معالجة النتائج
-// ==============================================
-
-function handleSuccessfulAttendance(data) {
-    console.log('✅ نجاح تسجيل الحضور:', data);
-    
-    const resultElement = document.getElementById('scanResult');
-    const student = data.data.student;
-    const classInfo = data.data.class;
-    const attendance = data.data.attendance;
-    
-    const statusText = attendance.status === 'present' ? 'حاضر' : 'متأخر';
-    const statusClass = attendance.status === 'present' ? 'success' : 'warning';
-    const statusIcon = attendance.status === 'present' ? 'bi-check-circle' : 'bi-exclamation-triangle';
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__fadeIn">
-            <div class="result-header ${statusClass}">
-                <i class="bi ${statusIcon} display-4"></i>
-                <h4 class="mt-2">تم تسجيل ${statusText} بنجاح</h4>
-            </div>
-            <div class="result-body">
-                <div class="student-card">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=120" 
-                         class="student-avatar" alt="${student.name}">
-                    <h3 class="student-name">${student.name}</h3>
-                    <span class="student-id">${student.studentId || 'رقم غير محدد'}</span>
-                    
-                    <div class="student-info-grid">
-                        <div class="info-item">
-                            <div class="info-label">السنة الدراسية</div>
-                            <div class="info-value">${getAcademicYearName(student.academicYear)}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">الحصة</div>
-                            <div class="info-value">${classInfo.name}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">الوقت المحدد</div>
-                            <div class="info-value">${attendance.scheduledTime || 'غير محدد'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">وقت التسجيل</div>
-                            <div class="info-value">${new Date(attendance.time).toLocaleTimeString('ar-EG')}</div>
-                        </div>
-                    </div>
-                    
-                    ${data.data.sms ? `
-                        <div class="alert alert-success mt-3">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            تم إرسال إشعار SMS لولي الأمر
-                        </div>
-                    ` : ''}
-                    
-                    <button class="btn-action btn-success-custom mt-3" onclick="printReceipt('${data.data.liveClass._id}')">
-                        <i class="bi bi-printer"></i>
-                        طباعة الإيصال
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // تحديث الحالة
-    updateStatus('تم التسجيل بنجاح', 'status-success', 'bi-check-circle');
-}
-
-function handleUnknownCard(data) {
-    console.log('⚠️ بطاقة غير معروفة:', data);
-    
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__shake">
-            <div class="result-header error">
-                <i class="bi bi-exclamation-triangle display-4"></i>
-                <h4 class="mt-2">بطاقة غير معروفة</h4>
-            </div>
-            <div class="result-body text-center">
-                <i class="bi bi-credit-card-2-front display-1 text-muted"></i>
-                <h5 class="mt-3">رقم البطاقة: ${data.uid}</h5>
-                <p class="text-muted">هذه البطاقة غير مسجلة في النظام</p>
-                <div class="action-buttons">
-                    <button class="btn-action btn-primary-custom" onclick="registerNewCard('${data.uid}')">
-                        <i class="bi bi-plus-circle"></i>
-                        تسجيل بطاقة جديدة
-                    </button>
-                    <button class="btn-action btn-warning-custom" onclick="clearScanner()">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        إعادة المحاولة
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // تحديث الحالة
-    updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle');
-    
-    // تشغيل صوت الخطأ
-    playErrorSound();
-}
-
-function handleCardError(data) {
-    console.error('❌ خطأ في البطاقة:', data);
-    
-    showToast('error', 'حدث خطأ أثناء معالجة البطاقة');
-    
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__shake">
-            <div class="result-header error">
-                <i class="bi bi-x-circle display-4"></i>
-                <h4 class="mt-2">خطأ في المعالجة</h4>
-            </div>
-            <div class="result-body text-center">
-                <p class="text-danger">${data.error || 'حدث خطأ غير متوقع'}</p>
-                <button class="btn-action btn-primary-custom" onclick="clearScanner()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    إعادة المحاولة
-                </button>
-            </div>
-        </div>
-    `;
-    
-    updateStatus('خطأ', 'status-error', 'bi-exclamation-triangle');
-}
-
-function handleFailedAttendance(data) {
-    console.log('⚠️ فشل تسجيل الحضور:', data);
-    
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__shake">
-            <div class="result-header warning">
-                <i class="bi bi-info-circle display-4"></i>
-                <h4 class="mt-2">تعذر تسجيل الحضور</h4>
-            </div>
-            <div class="result-body">
-                <p class="text-center">${data.error || 'حدث خطأ أثناء التسجيل'}</p>
-                ${data.data?.student ? `
-                    <div class="student-info-grid">
-                        <div class="info-item">
-                            <div class="info-label">الطالب</div>
-                            <div class="info-value">${data.data.student.name}</div>
-                        </div>
-                    </div>
-                ` : ''}
-                <button class="btn-action btn-primary-custom w-100 mt-3" onclick="clearScanner()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    إعادة المحاولة
-                </button>
-            </div>
-        </div>
-    `;
-    
-    playErrorSound();
-}
-
-function handleAttendanceRegistered(data) {
-    console.log('✅ تم تسجيل الحضور:', data);
-    showToast('success', 'تم تسجيل الحضور بنجاح');
-}
-
-// عرض معلومات الطالب (الطريقة التقليدية)
-function displayStudentInfo(student, cardUid) {
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__fadeIn">
-            <div class="result-header info">
-                <i class="bi bi-person-badge display-4"></i>
-                <h4 class="mt-2">تم التعرف على الطالب</h4>
-            </div>
-            <div class="result-body">
-                <div class="student-card">
-                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=120" 
-                         class="student-avatar" alt="${student.name}">
-                    <h3 class="student-name">${student.name}</h3>
-                    <span class="student-id">${student.studentId || 'رقم غير محدد'}</span>
-                    
-                    <div class="student-info-grid">
-                        <div class="info-item">
-                            <div class="info-label">السنة الدراسية</div>
-                            <div class="info-value">${getAcademicYearName(student.academicYear)}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">ولي الأمر</div>
-                            <div class="info-value">${student.parentName || 'غير محدد'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">رقم البطاقة</div>
-                            <div class="info-value">${cardUid}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center mt-3">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري البحث عن الحصة...</span>
-                        </div>
-                        <p class="mt-2">جاري البحث عن الحصة المناسبة...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// عرض حالة عدم وجود حصص
-function showNoClassMessage(availableClasses) {
-    const resultElement = document.getElementById('scanResult');
-    
-    let classesHtml = '';
-    if (availableClasses && availableClasses.length > 0) {
-        classesHtml = availableClasses.map(c => `
-            <div class="class-item">
-                <div class="class-info">
-                    <div class="class-name">${c.class.name}</div>
-                    <div class="class-time">${c.schedule.time}</div>
-                </div>
-                <span class="class-status ${c.timeInfo.isActive ? 'status-active' : 
-                                           c.timeInfo.willStartSoon ? 'status-soon' : 'status-late'}">
-                    ${c.timeInfo.isActive ? 'نشطة' : 
-                      c.timeInfo.willStartSoon ? 'تبدأ خلال ' + c.timeInfo.minutesUntilStart + ' د' : 
-                      'بدأت منذ ' + c.timeInfo.minutesSinceStart + ' د'}
-                </span>
-            </div>
-        `).join('');
-    }
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__fadeIn">
-            <div class="result-header warning">
-                <i class="bi bi-calendar-x display-4"></i>
-                <h4 class="mt-2">لا توجد حصص نشطة</h4>
-            </div>
-            <div class="result-body">
-                <p class="text-center">لا توجد حصص مناسبة للطالب في هذا الوقت</p>
-                ${classesHtml ? `
-                    <div class="classes-list">
-                        <h6 class="mb-3">الحصص المتاحة اليوم:</h6>
-                        ${classesHtml}
-                    </div>
-                ` : ''}
-                <button class="btn-action btn-primary-custom w-100 mt-3" onclick="clearScanner()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    مسح بطاقة أخرى
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// عرض نجاح تسجيل الحضور
-function showAttendanceSuccess(data, classInfo) {
-    const resultElement = document.getElementById('scanResult');
-    const status = data.attendance?.status || 'present';
-    const statusText = status === 'present' ? 'حاضر' : 'متأخر';
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__bounceIn">
-            <div class="result-header success">
-                <i class="bi bi-check-circle-fill display-4"></i>
-                <h4 class="mt-2">تم تسجيل ${statusText} بنجاح</h4>
-            </div>
-            <div class="result-body">
-                <div class="student-card">
-                    <h5>${data.student?.name || 'الطالب'}</h5>
-                    <p class="text-muted">${classInfo.class.name}</p>
-                    <div class="alert alert-success mt-3">
-                        <i class="bi bi-clock-history"></i>
-                        وقت التسجيل: ${new Date().toLocaleTimeString('ar-EG')}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// عرض حالة التحميل
-function showLoadingState() {
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="text-center py-5">
-            <div class="loading-spinner"></div>
-            <h5 class="mt-3">جاري المعالجة...</h5>
-            <p class="text-muted">يرجى الانتظار</p>
-        </div>
-    `;
-}
-
-// عرض رسالة خطأ
-function showErrorResult(message) {
-    const resultElement = document.getElementById('scanResult');
-    
-    resultElement.innerHTML = `
-        <div class="result-card animate__animated animate__shake">
-            <div class="result-header error">
-                <i class="bi bi-x-circle display-4"></i>
-                <h4 class="mt-2">حدث خطأ</h4>
-            </div>
-            <div class="result-body text-center">
-                <p class="text-danger">${message}</p>
-                <button class="btn-action btn-primary-custom" onclick="clearScanner()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    إعادة المحاولة
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// ==============================================
-// دوال إدارة المسحات الحديثة
-// ==============================================
-
-function addToRecentScans(scan) {
-    // إضافة المسح الجديد
-    recentScans.unshift({
-        ...scan,
-        timestamp: scan.timestamp || new Date()
-    });
-    
-    // الاحتفاظ بآخر 10 مسحات
-    if (recentScans.length > 10) {
-        recentScans.pop();
-    }
-    
-    // حفظ في التخزين المحلي
-    localStorage.setItem('studentCardRecentScans', JSON.stringify(recentScans));
-    
-    // تحديث العرض
-    updateRecentScansList();
-}
-
-function updateRecentScansList() {
-    const listElement = document.getElementById('recentScansList');
-    
-    if (recentScans.length === 0) {
-        listElement.innerHTML = `
-            <div class="recent-scan-item text-muted">
-                <span>لا توجد عمليات مسح حديثة</span>
-            </div>
-        `;
-        return;
-    }
-    
-    listElement.innerHTML = recentScans.map(scan => {
-        const timeString = new Date(scan.timestamp).toLocaleTimeString('ar-EG');
-        const statusClass = scan.type === 'success' ? 'badge-success' : 
-                           scan.type === 'warning' ? 'badge-warning' : 'badge-danger';
-        const statusText = scan.type === 'success' ? 'تم التسجيل' : 
-                          scan.type === 'warning' ? 'تحذير' : 'خطأ';
-        
-        return `
-            <div class="recent-scan-item animate__animated animate__fadeIn">
-                <div>
-                    <strong>${scan.student?.name || 'طالب'}</strong>
-                    ${scan.class ? `<br><small>${scan.class}</small>` : ''}
-                </div>
-                <div class="text-end">
-                    <span class="scan-badge ${statusClass}">${statusText}</span>
-                    <br>
-                    <small class="scan-time">${timeString}</small>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function loadRecentScans() {
-    const saved = localStorage.getItem('studentCardRecentScans');
-    if (saved) {
-        try {
-            recentScans = JSON.parse(saved);
-            updateRecentScansList();
-        } catch (e) {
-            console.error('خطأ في تحميل المسحات الحديثة:', e);
+        // معالجة الخطأ
+        function handleFailedAttendance(data) {
+            console.log('⚠️ فشل تسجيل الحضور:', data);
+            showErrorResult(data.error || 'حدث خطأ أثناء التسجيل');
+            playErrorSound();
+            updateStatus('فشل التسجيل', 'status-error', 'bi-exclamation-triangle');
         }
-    }
-}
-
-// ==============================================
-// دوال الحالة
-// ==============================================
-
-function updateStatus(text, statusClass, icon) {
-    const statusElement = document.getElementById('scannerStatus');
-    statusElement.className = `status-indicator ${statusClass}`;
-    statusElement.innerHTML = `
-        <i class="bi ${icon}"></i>
-        <span>${text}</span>
-    `;
-}
-
-function focusScanner() {
-    document.getElementById('cardInput').focus();
-    showToast('info', 'الماسح الضوئي جاهز');
-}
-
-function clearScanner() {
-    document.getElementById('cardInput').value = '';
-    document.getElementById('defaultMessage').style.display = 'block';
-    document.getElementById('scanResult').innerHTML = '';
-    document.getElementById('cardInput').focus();
-    updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
-}
-
-function manualEntry() {
-    const cardInput = document.getElementById('cardInput');
-    cardInput.value = '';
-    cardInput.focus();
-    showToast('info', 'يمكنك إدخال رقم البطاقة يدوياً');
-}
-
-// ==============================================
-// دوال مساعدة
-// ==============================================
-
-function getAcademicYearName(code) {
-    if (!code || code === 'NS' || code === 'غير محدد') return 'غير محدد';
-    
-    const years = {
-        '1AS': 'الأولى ثانوي',
-        '2AS': 'الثانية ثانوي',
-        '3AS': 'الثالثة ثانوي',
-        '1MS': 'الأولى متوسط',
-        '2MS': 'الثانية متوسط',
-        '3MS': 'الثالثة متوسط',
-        '4MS': 'الرابعة متوسط',
-        '5MS': 'الخامسة متوسط',
-        '1AP': 'الأولى ابتدائي',
-        '2AP': 'الثانية ابتدائي',
-        '3AP': 'الثالثة ابتدائي',
-        '4AP': 'الرابعة ابتدائي',
-        '5AP': 'الخامسة ابتدائي'
-    };
-    
-    return years[code] || code;
-}
-
-function showToast(type, message) {
-    // إنشاء عنصر التنبيه
-    const toast = document.createElement('div');
-    toast.className = `alert-message alert-${type} animate__animated animate__fadeInDown`;
-    toast.innerHTML = `
-        <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 
-                        type === 'error' ? 'bi-x-circle-fill' : 'bi-info-circle-fill'}"></i>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // إزالة بعد 3 ثوان
-    setTimeout(() => {
-        toast.classList.add('animate__fadeOutUp');
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
-}
-
-// ==============================================
-// دوال الأصوات
-// ==============================================
-
-function playScanSound() {
-    if (!audioEnabled) return;
-    
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
         
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        // عرض بطاقة غير معروفة
+        function handleUnknownCard(cardUid) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.innerHTML = `
+                <div class="virtual-student-card animate__animated animate__shake" style="background: linear-gradient(135deg, #e63946, #9d0208);">
+                    <div class="text-center">
+                        <i class="bi bi-exclamation-triangle display-1"></i>
+                        <h3 class="mt-3">بطاقة غير معروفة</h3>
+                        <div class="card-number">${cardUid}</div>
+                        <p class="mt-3">هذه البطاقة غير مسجلة في النظام</p>
+                        <button class="btn btn-light mt-3" onclick="clearScanner()">
+                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle');
+            playErrorSound();
+        }
         
-        oscillator.type = 'sine';
-        oscillator.frequency.value = 800;
-        gainNode.gain.value = 0.1;
-        
-        oscillator.start();
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-        oscillator.stop(audioContext.currentTime + 0.3);
-    } catch (e) {
-        console.log('⚠️ الصوت غير متاح');
-    }
-}
-
-function playSuccessSound() {
-    if (!audioEnabled) return;
-    
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
-        
-        gainNode.gain.value = 0.1;
-        
-        oscillator.start();
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
-        oscillator.stop(audioContext.currentTime + 0.4);
-    } catch (e) {
-        console.log('⚠️ الصوت غير متاح');
-    }
-}
-
-function playErrorSound() {
-    if (!audioEnabled) return;
-    
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.2);
-        
-        gainNode.gain.value = 0.1;
-        
-        oscillator.start();
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
-        oscillator.stop(audioContext.currentTime + 0.4);
-    } catch (e) {
-        console.log('⚠️ الصوت غير متاح');
-    }
-}
-
-function playWelcomeSound() {
-    if (!audioEnabled) return;
-    
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(392, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.15);
-        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.3);
-        
-        gainNode.gain.value = 0.1;
-        
-        oscillator.start();
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.6);
-        oscillator.stop(audioContext.currentTime + 0.6);
-    } catch (e) {
-        console.log('⚠️ الصوت غير متاح');
-    }
-}
-
-// ==============================================
-// دوال إضافية
-// ==============================================
-
-function checkBatteryStatus() {
-    if ('getBattery' in navigator) {
-        navigator.getBattery().then(function(battery) {
-            console.log(`🔋 مستوى البطارية: ${battery.level * 100}%`);
+        // معالجة البطاقة
+        async function processCard(cardUid) {
+            if (isScanning) {
+                console.log('⏳ جاري معالجة بطاقة أخرى...');
+                return;
+            }
             
-            battery.addEventListener('levelchange', function() {
-                console.log(`🔋 تغير مستوى البطارية: ${battery.level * 100}%`);
-                if (battery.level < 0.2) {
-                    showToast('warning', '⚠️ مستوى البطارية منخفض');
+            try {
+                isScanning = true;
+                const cleanUid = cardUid.toString().trim();
+                
+                console.log('🔍 معالجة البطاقة:', cleanUid);
+                
+                if (cleanUid.length < 6) {
+                    throw new Error('رقم البطاقة غير مكتمل');
+                }
+                
+                updateStatus('جاري التعرف على البطاقة...', 'status-scanning', 'bi-arrow-repeat');
+                playScanSound();
+                
+                // عرض حالة التحميل
+                document.getElementById('scanResult').innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="loading-spinner"></div>
+                        <h5 class="mt-3">جاري المعالجة...</h5>
+                        <p class="text-muted">يرجى الانتظار</p>
+                    </div>
+                `;
+                
+                const response = await fetch('/api/attendance/card-scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cardUid: cleanUid, sendSMS: false })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    handleSuccessfulAttendance(data);
+                } else {
+                    handleFailedAttendance(data);
+                }
+                
+            } catch (error) {
+                console.error('❌ خطأ:', error);
+                
+                // محاولة البحث المحلي
+                try {
+                    const localResponse = await fetch(`/api/cards/uid/${cardUid}`);
+                    if (localResponse.ok) {
+                        const cardData = await localResponse.json();
+                        if (cardData.student) {
+                            displayStudentInfo(cardData.student);
+                            addToRecentScans({
+                                type: 'info',
+                                student: { name: cardData.student.name, studentId: cardData.student.studentId },
+                                timestamp: new Date()
+                            });
+                            updateStatus('تم التعرف على الطالب', 'status-success', 'bi-check-circle');
+                            return;
+                        }
+                    }
+                    handleUnknownCard(cardUid);
+                } catch (localError) {
+                    handleUnknownCard(cardUid);
+                }
+            } finally {
+                isScanning = false;
+                setTimeout(() => {
+                    updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
+                }, 2000);
+                
+                document.getElementById('cardInput').value = '';
+                document.getElementById('cardInput').focus();
+            }
+        }
+        
+        // إضافة للمسحات الحديثة
+        function addToRecentScans(scan) {
+            recentScans.unshift({
+                ...scan,
+                timestamp: scan.timestamp || new Date()
+            });
+            
+            if (recentScans.length > 10) recentScans.pop();
+            localStorage.setItem('studentCardRecentScans', JSON.stringify(recentScans));
+            updateRecentScansList();
+        }
+        
+        function updateRecentScansList() {
+            const listElement = document.getElementById('recentScansList');
+            
+            if (recentScans.length === 0) {
+                listElement.innerHTML = '<div class="recent-scan-item text-muted"><span>لا توجد عمليات مسح حديثة</span></div>';
+                return;
+            }
+            
+            listElement.innerHTML = recentScans.map(scan => {
+                const timeString = new Date(scan.timestamp).toLocaleTimeString('ar-EG');
+                const statusClass = scan.type === 'success' ? 'text-success' : scan.type === 'warning' ? 'text-warning' : 'text-danger';
+                const statusIcon = scan.type === 'success' ? 'bi-check-circle-fill' : scan.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill';
+                
+                return `
+                    <div class="recent-scan-item animate__animated animate__fadeIn d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <div>
+                            <i class="bi ${statusIcon} ${statusClass}"></i>
+                            <strong>${scan.student?.name || 'طالب'}</strong>
+                            ${scan.student?.studentId ? `<br><small class="text-muted">${scan.student.studentId}</small>` : ''}
+                        </div>
+                        <div class="text-end">
+                            <small class="scan-time text-muted">${timeString}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function loadRecentScans() {
+            const saved = localStorage.getItem('studentCardRecentScans');
+            if (saved) {
+                try {
+                    recentScans = JSON.parse(saved);
+                    updateRecentScansList();
+                } catch(e) {}
+            }
+        }
+        
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            toast.className = `alert-message alert-${type} animate__animated animate__fadeInDown`;
+            toast.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'}"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('animate__fadeOutUp');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+        
+        function showErrorResult(message) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.innerHTML = `
+                <div class="virtual-student-card animate__animated animate__shake" style="background: linear-gradient(135deg, #e63946, #9d0208);">
+                    <div class="text-center">
+                        <i class="bi bi-x-circle display-1"></i>
+                        <h3 class="mt-3">حدث خطأ</h3>
+                        <p>${message}</p>
+                        <button class="btn btn-light mt-3" onclick="clearScanner()">
+                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getAcademicYearName(code) {
+            const years = {
+                '1AS': 'الأولى ثانوي', '2AS': 'الثانية ثانوي', '3AS': 'الثالثة ثانوي',
+                '1MS': 'الأولى متوسط', '2MS': 'الثانية متوسط', '3MS': 'الثالثة متوسط', '4MS': 'الرابعة متوسط',
+                '1AP': 'الأولى ابتدائي', '2AP': 'الثانية ابتدائي', '3AP': 'الثالثة ابتدائي', '4AP': 'الرابعة ابتدائي', '5AP': 'الخامسة ابتدائي'
+            };
+            return years[code] || code || 'غير محدد';
+        }
+        
+        function focusScanner() {
+            document.getElementById('cardInput').focus();
+            showToast('info', 'الماسح الضوئي جاهز');
+        }
+        
+        function clearScanner() {
+            document.getElementById('cardInput').value = '';
+            document.getElementById('scanResult').innerHTML = '';
+            document.getElementById('cardInput').focus();
+            updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
+        }
+        
+        function manualEntry() {
+            document.getElementById('cardInput').focus();
+            showToast('info', 'أدخل رقم البطاقة ثم اضغط Enter');
+        }
+        
+        // تهيئة الماسح
+        function setupScanner() {
+            const cardInput = document.getElementById('cardInput');
+            let scanBuffer = '';
+            let scanTimeout = null;
+            
+            cardInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = e.target.value.trim();
+                    if (value.length >= 6) {
+                        processCard(value);
+                    }
                 }
             });
-        });
-    }
-}
-
-function registerNewCard(cardUid) {
-    window.location.href = `/cards-auth?uid=${cardUid}`;
-}
-
-function printReceipt(liveClassId) {
-    window.open(`/receipt/live-class/${liveClassId}`, '_blank');
-}
-
-// ==============================================
-// معالجة أحداث Socket.io
-// ==============================================
-
-function handleStudentDetection(data) {
-    console.log('👤 تم اكتشاف طالب:', data);
-    
-    if (data.student) {
-        addToRecentScans({
-            type: 'info',
-            student: data.student,
-            timestamp: new Date()
-        });
-        
-        if (data.currentClass) {
-            showAttendanceSuccess({
-                student: data.student,
-                attendance: { status: 'present' }
-            }, { class: data.currentClass });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                if (e.key >= '0' && e.key <= '9') {
+                    e.preventDefault();
+                    scanBuffer += e.key;
+                    cardInput.value = scanBuffer;
+                    
+                    if (scanTimeout) clearTimeout(scanTimeout);
+                    scanTimeout = setTimeout(() => {
+                        if (scanBuffer.length >= 6) {
+                            processCard(scanBuffer);
+                        }
+                        scanBuffer = '';
+                        cardInput.value = '';
+                        scanTimeout = null;
+                    }, 80);
+                }
+            });
         }
-    }
-}
-
-// ==============================================
-// التهيئة عند تحميل الصفحة
-// ==============================================
-
-// إضافة مستمع لتغيير حالة الاتصال
-window.addEventListener('online', function() {
-    showToast('success', 'تم استعادة الاتصال بالإنترنت');
-    connectToServer();
-});
-
-window.addEventListener('offline', function() {
-    showToast('error', 'انقطع الاتصال بالإنترنت');
-    updateStatus('غير متصل', 'status-error', 'bi-wifi-off');
-});
-
-// تفعيل/تعطيل الأصوات
-document.addEventListener('keydown', function(e) {
-    // Ctrl + S لتفعيل/تعطيل الأصوات
-    if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        audioEnabled = !audioEnabled;
-        showToast('info', `الأصوات ${audioEnabled ? 'مفعّلة' : 'معطّلة'}`);
-    }
-});
+        
+        // تهيئة التطبيق
+        function initApp() {
+            console.log('🚀 تهيئة نظام تسجيل الطلاب...');
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            setupScanner();
+            loadRecentScans();
+            setTimeout(() => playWelcomeSound(), 500);
+        }
+        
+        // بدء التشغيل
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
