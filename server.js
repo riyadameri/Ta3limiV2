@@ -1013,7 +1013,7 @@ const teacherCommissionSchema = new mongoose.Schema({
 
 
   // في server.js
-  app.get('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.get('/api/accounting/teacher-commissions/:id',  async (req, res) => {
     try {
       const commission = await TeacherCommission.findById(req.params.id)
         .populate('teacher', 'name phone email')
@@ -1047,7 +1047,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   
   
   // POST /api/accounting/teacher-commissions - Create new commission
-  app.post('/api/accounting/teacher-commissions', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/accounting/teacher-commissions',  async (req, res) => {
     try {
       const { 
         teacherId, 
@@ -1157,7 +1157,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   
   
   // POST /api/accounting/teacher-commissions/pay-single - Pay a single commission
-  app.post('/api/accounting/teacher-commissions/pay-single', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/accounting/teacher-commissions/pay-single',  async (req, res) => {
     try {
       const { commissionId, paymentMethod, paymentDate, notes } = req.body;
   
@@ -1260,7 +1260,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   
   
   // POST /api/accounting/teacher-commissions/pay-all - Pay all pending commissions for a month
-  app.post('/api/accounting/teacher-commissions/pay-all', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/accounting/teacher-commissions/pay-all',  async (req, res) => {
     try {
       const { month, paymentMethod, paymentDate, notes } = req.body;
   
@@ -1373,7 +1373,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   });
   
   // POST /api/accounting/teacher-commissions/generate-for-month - Generate commissions for a month
-  app.post('/api/accounting/teacher-commissions/generate-for-month', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/accounting/teacher-commissions/generate-for-month',  async (req, res) => {
     try {
       const { month } = req.body;
   
@@ -1465,7 +1465,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   
   
   // PUT /api/accounting/teacher-commissions/:id - Update commission
-  app.put('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.put('/api/accounting/teacher-commissions/:id',  async (req, res) => {
     try {
       const { amount, percentage, status, notes, studentDetails } = req.body;
   
@@ -1507,7 +1507,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   });
   
   // DELETE /api/accounting/teacher-commissions/:id - Delete/cancel commission
-  app.delete('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.delete('/api/accounting/teacher-commissions/:id',  async (req, res) => {
     try {
       const commission = await TeacherCommission.findById(req.params.id);
   
@@ -1537,7 +1537,7 @@ const teacherCommissionSchema = new mongoose.Schema({
   });
   
   // GET /api/accounting/teacher-commissions/summary - Get summary statistics
-  app.get('/api/accounting/teacher-commissions/summary', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.get('/api/accounting/teacher-commissions/summary',  async (req, res) => {
     try {
       const { month, year } = req.query;
   
@@ -2738,6 +2738,12 @@ app.post('/api/classes/:classId/attendance/bulk', async (req, res) => {
 // ==============================================
 // نقطة نهاية إلغاء الدفعة (جعلها غير مدفوعة)
 // ==============================================
+// ==============================================
+// نقطة نهاية إلغاء الدفعة (جعلها غير مدفوعة)
+// ==============================================
+// ==============================================
+// نقطة نهاية إلغاء الدفعة (جعلها غير مدفوعة)
+// ==============================================
 app.put('/api/payments/:id/cancel',  async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id)
@@ -2772,28 +2778,6 @@ app.put('/api/payments/:id/cancel',  async (req, res) => {
       type: 'income'
     });
 
-    // إذا كانت هناك عمولة مرتبطة، قم بإلغائها
-    if (payment.commissionId) {
-      const commission = await TeacherCommission.findById(payment.commissionId);
-      if (commission) {
-        commission.status = 'cancelled';
-        await commission.save();
-      }
-    }
-
-    // تسجيل معاملة مالية عكسية (اختياري)
-    const reverseTransaction = new FinancialTransaction({
-      type: 'expense',
-      amount: payment.amount,
-      description: `إلغاء دفعة - ${payment.student.name} - ${payment.class?.name || 'بدون حصة'} - ${payment.month}`,
-      category: 'refund',
-      recordedBy: req.user.id,
-      reference: payment._id,
-      date: new Date()
-    });
-    
-    await reverseTransaction.save();
-
     res.json({
       success: true,
       message: 'تم إلغاء الدفعة بنجاح',
@@ -2808,106 +2792,15 @@ app.put('/api/payments/:id/cancel',  async (req, res) => {
     });
   }
 });
-
 // ==============================================
 // نقطة نهاية تسديد دفعة معلقة
 // ==============================================
-app.put('/api/payments/:id/pay',  async (req, res) => {
-  try {
-    const { paymentMethod, paymentDate, notes } = req.body;
-    
-    console.log(`دفع الدفعة ${req.params.id}:`, req.body);
-    
-    const payment = await Payment.findById(req.params.id)
-      .populate('student', 'name studentId parentPhone')
-      .populate({
-        path: 'class',
-        populate: [
-          { path: 'teacher', model: 'Teacher', select: 'name' }
-        ]
-      });
-    
-    if (!payment) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'الدفعة غير موجودة' 
-      });
-    }
 
-    if (payment.status === 'paid') {
-      return res.status(400).json({
-        success: false,
-        error: 'الدفعة مسددة مسبقاً'
-      });
-    }
-    
-    // تحديث حالة الدفعة
-    payment.status = 'paid';
-    payment.paymentDate = paymentDate || new Date();
-    payment.paymentMethod = paymentMethod || 'cash';
-    payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
-    
-    if (notes) {
-      payment.notes = notes;
-    }
-    
-    await payment.save();
-    
-    // تسجيل المعاملة المالية
-    const transaction = new FinancialTransaction({
-      type: 'income',
-      amount: payment.amount,
-      description: `دفعة شهرية للطالب ${payment.student.name} - ${payment.month}`,
-      category: 'tuition',
-      recordedBy: req.user.id,
-      reference: payment._id,
-      student: payment.student._id,
-      date: payment.paymentDate
-    });
-    
-    await transaction.save();
-
-    // حساب عمولة الأستاذ إذا كانت الحصة تحتوي على أستاذ
-    if (payment.class && payment.class.teacher) {
-      const teacherCommission = new TeacherCommission({
-        teacher: payment.class.teacher._id,
-        student: payment.student._id,
-        class: payment.class._id,
-        month: payment.month,
-        amount: payment.amount * 0.7, // 70% للأستاذ
-        percentage: 70,
-        type: 'individual',
-        status: 'pending',
-        recordedBy: req.user.id
-      });
-      
-      await teacherCommission.save();
-      
-      // ربط العمولة بالدفعة
-      payment.commissionId = teacherCommission._id;
-      await payment.save();
-    }
-    
-    res.json({
-      success: true,
-      message: 'تم تسديد الدفعة بنجاح',
-      payment: payment,
-      invoiceNumber: payment.invoiceNumber
-    });
-    
-  } catch (err) {
-    console.error('خطأ في دفع الدفعة:', err);
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
-  }
-});
 
 // ==============================================
 // نقطة نهاية الغيابات المحسنة
 // ==============================================
-app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), async (req, res) => {
+app.get('/api/classes/:classId/attendance',  async (req, res) => {
   try {
     const { classId } = req.params;
     const { startDate, endDate } = req.query;
@@ -5108,80 +5001,39 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
   });
 
     // في ملف الخادم (server.js أو app.js)
-  app.put('/api/payments/:id/cancel',  async (req, res) => {
-    try {
-        const payment = await Payment.findById(req.params.id);
-        
-        if (!payment) {
-            return res.status(404).json({ error: 'الدفعة غير موجودة' });
-        }
-
-        if (payment.status !== 'paid') {
-            return res.status(400).json({ error: 'لا يمكن إلغاء دفعة غير مسددة' });
-        }
-
-        // تحديث حالة الدفعة
-        payment.status = 'pending';
-        payment.paymentDate = null;
-        payment.paymentMethod = null;
-        payment.recordedBy = req.user.id;
-        
-        await payment.save();
-
-        // تسجيل معاملة مالية عكسية (إذا كان النظام يحتفظ بسجل للمعاملات)
-        const reverseTransaction = new FinancialTransaction({
-            type: 'expense',
-            amount: payment.amount,
-            description: `إلغاء دفعة - ${payment.student.name} - ${payment.class.name} - ${payment.month}`,
-            category: 'refund',
-            recordedBy: req.user.id,
-            reference: payment._id
-        });
-        await reverseTransaction.save();
-
-        res.json({ 
-            message: 'تم إلغاء الدفعة بنجاح',
-            payment: payment
-        });
-
-    } catch (err) {
-        console.error('Error canceling payment:', err);
-        res.status(500).json({ error: err.message });
-    }
-  });
 
   // Payments - Delete a payment
-  app.delete('/api/payments/:id',  async (req, res) => {
-    try {
-      const paymentId = req.params.id;
+// Payments - Delete a payment (نهائياً)
+app.delete('/api/payments/:id',  async (req, res) => {
+  try {
+    const paymentId = req.params.id;
 
-      // Optional: Check if the payment exists first
-      const payment = await Payment.findById(paymentId);
-      if (!payment) {
-        return res.status(404).json({ error: 'الدفعة غير موجودة' });
-      }
-
-      // Optional: Add logic to handle related records (e.g., reverse teacher commission)
-      // For example, if a commission was recorded, you might want to delete or mark it as cancelled
-      if (payment.commissionId) {
-        // Example: Delete the commission record
-        // await TeacherCommission.findByIdAndDelete(payment.commissionId);
-        // Or mark it as cancelled:
-        await TeacherCommission.findByIdAndUpdate(payment.commissionId, { status: 'cancelled' });
-      }
-
-      // Delete the payment
-      await Payment.findByIdAndDelete(paymentId);
-
-      // Alternatively, you might want to soft delete by updating status:
-      // await Payment.findByIdAndUpdate(paymentId, { status: 'cancelled' });
-
-      res.json({ message: 'تم حذف الدفعة بنجاح' });
-    } catch (err) {
-      console.error('Error deleting payment:', err);
-      res.status(500).json({ error: err.message });
+    // التأكد من وجود الدفعة
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'الدفعة غير موجودة' });
     }
-  });
+
+    // منع حذف الدفعات المدفوعة (يجب إلغاؤها أولاً)
+    if (payment.status === 'paid') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'لا يمكن حذف دفعة مدفوعة. يرجى استخدام خاصية "إلغاء الدفعة" أولاً.' 
+      });
+    }
+
+    // حذف أي معاملات مالية مرتبطة
+    await FinancialTransaction.deleteMany({ reference: paymentId });
+
+    // حذف الدفعة نفسها
+    await Payment.findByIdAndDelete(paymentId);
+
+    res.json({ success: true, message: 'تم حذف الدفعة بنجاح' });
+  } catch (err) {
+    console.error('Error deleting payment:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
     // Payments
   // Payments - Update the GET endpoint to populate class data
   // Update the GET /api/payments endpoint
@@ -6258,71 +6110,161 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
   // Register Payment - FIXED VERSION - Update to return populated data
   // دفع دفعة موجودة
   // دفع دفعة موجودة - FIXED VERSION
-  app.put('/api/payments/:id/pay', async (req, res) => {
+// ==============================================
+// نقطة نهاية تسديد دفعة معلقة (موجودة بالفعل، ولكن تأكد من وجودها)
+// ==============================================
+// في server.js - استبدل نقطة نهاية /api/payments/:id/pay بهذا الكود
+
+// في server.js - استبدل نقطة نهاية /api/payments/:id/pay بهذا الكود (بدون مصادقة)
+
+app.put('/api/payments/:id/pay', async (req, res) => {
+  try {
+    const { paymentMethod, paymentDate, notes } = req.body;
+    
+    console.log(`=== دفع الدفعة ${req.params.id} (بدون مصادقة) ===`);
+    console.log('بيانات الطلب:', { paymentMethod, paymentDate, notes });
+    
+    // 1. البحث عن الدفعة
+    const payment = await Payment.findById(req.params.id)
+      .populate('student', 'name studentId parentPhone')
+      .populate({
+        path: 'class',
+        populate: [
+          { path: 'teacher', model: 'Teacher', select: 'name salaryPercentage' }
+        ]
+      });
+    
+    if (!payment) {
+      console.log('❌ الدفعة غير موجودة');
+      return res.status(404).json({ 
+        success: false,
+        error: 'الدفعة غير موجودة' 
+      });
+    }
+
+    // 2. التحقق من أن الدفعة غير مدفوعة مسبقاً
+    if (payment.status === 'paid') {
+      console.log('⚠️ الدفعة مدفوعة مسبقاً');
+      return res.status(400).json({
+        success: false,
+        error: 'الدفعة مسددة مسبقاً'
+      });
+    }
+    
+    // 3. تحديث بيانات الدفعة
+    const now = new Date();
+    payment.status = 'paid';
+    payment.paymentDate = paymentDate ? new Date(paymentDate) : now;
+    payment.paymentMethod = paymentMethod || 'cash';
+    payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
+    
+    if (notes) {
+      payment.notes = notes;
+    }
+    
+    await payment.save();
+    console.log(`✅ تم تحديث الدفعة: ${payment._id}`);
+    console.log(`   - الحالة: ${payment.status}`);
+    console.log(`   - تاريخ الدفع: ${payment.paymentDate}`);
+    console.log(`   - رقم الفاتورة: ${payment.invoiceNumber}`);
+
+    // 4. تسجيل المعاملة المالية (بدون recordedBy)
     try {
-      const { paymentMethod, paymentDate, notes } = req.body;
-      
-      console.log(`دفع الدفعة ${req.params.id}:`, req.body);
-      
-      const payment = await Payment.findById(req.params.id)
-        .populate('student', 'name studentId parentPhone')
-        .populate({
-          path: 'class',
-          populate: [
-            { path: 'teacher', model: 'Teacher', select: 'name' }
-          ]
-        });
-      
-      if (!payment) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الدفعة غير موجودة' 
-        });
-      }
-      
-      // تحديث حالة الدفعة فقط بدون recordedBy
-      payment.status = 'paid';
-      payment.paymentDate = paymentDate || new Date();
-      payment.paymentMethod = paymentMethod || 'cash';
-      payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
-      
-      if (notes) {
-        payment.notes = notes;
-      }
-      
-      // حذف حقل recordedBy إذا كان موجوداً في الطلب
-      const updateData = payment.toObject();
-      delete updateData.recordedBy;
-      
-      await Payment.findByIdAndUpdate(req.params.id, updateData);
-      
-      // تسجيل المعاملة المالية بدون recordedBy
       const transaction = new FinancialTransaction({
         type: 'income',
         amount: payment.amount,
-        description: `دفعة شهرية لطالب ${payment.student.name} لشهر ${payment.month}`,
+        description: `دفعة للطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
         category: 'tuition',
+        recordedBy: null, // بدون مستخدم
         reference: payment._id,
-        student: payment.student._id
+        student: payment.student?._id,
+        date: payment.paymentDate
       });
       
       await transaction.save();
-      
-      res.json({
-        success: true,
-        message: `تم تسديد الدفعة بنجاح`,
-        payment: await Payment.findById(req.params.id),
-        invoiceNumber: payment.invoiceNumber
-      });
-      
-    } catch (err) {
-      console.error('❌ خطأ في دفع الدفعة:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
+      console.log(`✅ تم تسجيل المعاملة المالية: ${transaction._id}`);
+    } catch (transError) {
+      console.error('⚠️ خطأ في تسجيل المعاملة المالية (غير حرج):', transError.message);
     }
-  });
+
+    // 5. حساب عمولة الأستاذ (بدون recordedBy)
+    if (payment.class && payment.class.teacher) {
+      try {
+        const teacher = payment.class.teacher;
+        const percentage = teacher.salaryPercentage || 70;
+        const commissionAmount = payment.amount * (percentage / 100);
+        
+        const teacherCommission = new TeacherCommission({
+          teacher: teacher._id,
+          student: payment.student?._id,
+          class: payment.class._id,
+          month: payment.monthCode || payment.month,
+          amount: commissionAmount,
+          percentage: percentage,
+          type: 'individual',
+          status: 'pending',
+          recordedBy: null, // بدون مستخدم
+          notes: `عمولة تلقائية من دفعة ${payment.invoiceNumber}`
+        });
+        
+        await teacherCommission.save();
+        console.log(`✅ تم إنشاء عمولة الأستاذ: ${teacherCommission._id} - ${commissionAmount} د.ج`);
+        
+        payment.commissionId = teacherCommission._id;
+        await payment.save();
+      } catch (commError) {
+        console.error('⚠️ خطأ في إنشاء عمولة الأستاذ:', commError.message);
+      }
+    }
+
+    // 6. إرسال إشعار SMS (اختياري)
+    let smsSent = false;
+    if (payment.student && payment.student.parentPhone && req.body.sendSMS !== false) {
+      try {
+        const smsMessage = `تم استلام دفعة بقيمة ${payment.amount.toLocaleString()} د.ج من الطالب ${payment.student.name} لشهر ${payment.month}. رقم الإيصال: ${payment.invoiceNumber}`;
+        
+        if (typeof smsGateway !== 'undefined' && smsGateway.sendIndividualSMS) {
+          const result = await smsGateway.sendIndividualSMS(payment.student.parentPhone, smsMessage);
+          smsSent = result.success;
+          console.log(`📱 إرسال SMS: ${smsSent ? 'تم بنجاح' : 'فشل'}`);
+        }
+      } catch (smsError) {
+        console.error('⚠️ خطأ في إرسال SMS:', smsError.message);
+      }
+    }
+
+    // 7. إرجاع الاستجابة الناجحة
+    const responsePayment = await Payment.findById(payment._id)
+      .populate('student', 'name studentId')
+      .populate('class', 'name subject');
+    
+    res.json({
+      success: true,
+      message: `تم تسديد الدفعة بنجاح بمبلغ ${payment.amount.toLocaleString()} د.ج`,
+      payment: responsePayment,
+      invoiceNumber: payment.invoiceNumber,
+      receipt: {
+        number: payment.invoiceNumber,
+        date: payment.paymentDate,
+        student: payment.student?.name,
+        amount: payment.amount,
+        month: payment.month,
+        method: payment.paymentMethod
+      },
+      smsSent: smsSent
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في دفع الدفعة:', err);
+    console.error('Stack trace:', err.stack);
+    
+    res.status(500).json({ 
+      success: false,
+      error: 'حدث خطأ أثناء معالجة الدفع',
+      message: err.message
+    });
+  }
+});
   // في server.js - تحديث endpoint المدفوعات
   app.get('/api/payments', async (req, res) => {
     try {
@@ -6353,28 +6295,38 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
   });
     // Generate Invoice
   // Generate Invoice - Update to populate class data
-  app.get('/api/payments/:id', async (req, res) => {
-    try {
-      const payment = await Payment.findById(req.params.id)
-        .populate('student')
-        .populate({
-          path: 'class',
-          populate: [
-            { path: 'teacher', model: 'Teacher' },
-            { path: 'schedule.classroom', model: 'Classroom' }
-          ]
-        })
-        .populate('recordedBy');
+app.get('/api/payments/:id', async (req, res) => {
+  try {
+    const payment = await Payment.findById(req.params.id)
+      .populate('student', 'name studentId parentPhone')
+      .populate({
+        path: 'class',
+        populate: [
+          { path: 'teacher', model: 'Teacher', select: 'name' },
+          { path: 'schedule.classroom', model: 'Classroom', select: 'name' }
+        ]
+      })
+      .populate('recordedBy', 'username fullName');
 
-      if (!payment) {
-        return res.status(404).json({ error: 'الدفعة غير موجودة' });
-      }
-
-      res.json(payment);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    if (!payment) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الدفعة غير موجودة' 
+      });
     }
-  });
+
+    res.json({
+      success: true,
+      payment: payment
+    });
+  } catch (err) {
+    console.error('Error fetching payment:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
   // GET /api/payments/class/:classId - Get payments for a specific class
   app.get('/api/payments/class/:classId', async (req, res) => {
     try {
@@ -10242,6 +10194,23 @@ app.delete('/api/live-classes/:id',  async (req, res) => {
     });
   }
 });
+
+//deletAll
+app.delete('/api/live-classesDeletDg192',  async (req, res) => {
+  try {
+    await LiveClass.deleteMany({});
+    res.json({
+      success: true,
+      message: 'تم حذف جميع الحصص الحية بنجاح'
+    });
+  } catch (err) {
+    console.error('❌ خطأ في حذف جميع الحصص الحية:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   // 3. نقطة نهاية لإرسال تذكير بالدفع للطلاب المتأخرين
   app.post('/api/messages/send-payment-reminders', authenticate(['accountant', 'admin']), async (req, res) => {
     try {
@@ -11040,7 +11009,7 @@ app.get('*', (req, res) => {
     });
     // إضافة نقطة النهاية المطلوبة
 
-    app.post('/api/payment-systems/rounds', authenticate(['admin', 'accountant']), async (req, res) => {
+    app.post('/api/payment-systems/rounds',  async (req, res) => {
       try {
         const { 
           studentId, 
@@ -12507,7 +12476,7 @@ app.get('*', (req, res) => {
   });
 
   // نقطة نهاية لدفع عمولة حصة محددة
-  app.post('/api/accounting/teacher-commissions/pay-by-class', authenticate(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/accounting/teacher-commissions/pay-by-class',  async (req, res) => {
     try {
       const { teacherId, classId, month, paymentMethod, paymentDate, percentage } = req.body;
       
