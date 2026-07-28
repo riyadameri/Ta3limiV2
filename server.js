@@ -1,4 +1,4 @@
-  require('dotenv').config();
+    require('dotenv').config();
     const express = require('express');
     const mongoose = require('mongoose');
     const { SerialPort } = require('serialport');
@@ -14,6 +14,7 @@
       const ExcelJS = require('exceljs');
     const app = express();
     const server = require('http').createServer(app);
+const fs = require('fs');
 
   // تحديث إعدادات Socket.IO
   const io = socketio(server, {
@@ -32,22 +33,70 @@
   // Add this BEFORE all other routes and middleware
   // Replace this CORS configuration in your server.js:
   // Use this CORS configuration instead:
-  // Remove duplicate CORS middleware and keep only one
-  const corsOptions = {
-    origin: '*',  // Allow all origins temporarily
+// في server.js - استبدل إعدادات CORS بهذا الكود
+const corsOptions = {
+  origin: '*', // Allow any origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Methods',
+    'X-Requested-With',
+    'Accept-Language',
+    'Content-Language'
+  ],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  credentials: false, // Must be false when using origin: '*'
+  optionsSuccessStatus: 200,
+  preflightContinue: false
+};
+
+
+
+
+
+// تطبيق CORS مع خيارات متقدمة
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
     credentials: true,
     optionsSuccessStatus: 200
-  };
+}));
 
-  app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions));
-  // Handle OPTIONS requests (preflight)
 
-  // إضافة middleware للتصحيح
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
-    next();
-  });
+// ==============================================
+// ✅ معالجة صريحة لطلبات OPTIONS (Preflight)
+// ==============================================
+app.options('*', cors());
+
+
+// تطبيق CORS
+app.use(cors(corsOptions));
+
+// معالجة صريحة لطلبات OPTIONS
+app.options('*', cors(corsOptions));
+app.use((req, res, next) => {
+  // Set CORS headers for all responses
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, X-Requested-With');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).send();
+  }
+  
+  next();
+});
+
+
 
 
 
@@ -67,6 +116,273 @@
       active: { type: Boolean, default: true }
     });
 
+// ==============================================
+// نموذج المدرسة (نسخة مُصححة - بدون تكرار)
+// ==============================================
+
+// ==============================================
+// نموذج المدرسة (School)
+// ==============================================
+// ==============================================
+// نموذج المدرسة (School Schema) - النسخة الكاملة
+// ==============================================
+
+const schoolSchema = new mongoose.Schema({
+  name: { 
+      type: String, 
+      required: true, 
+      unique: true,
+      trim: true 
+  },
+  email: { 
+      type: String, 
+      required: true, 
+      unique: true,
+      lowercase: true,
+      trim: true 
+  },
+  phone: { 
+      type: String, 
+      required: true 
+  },
+  address: {
+      type: String,
+      default: ''
+  },
+  schoolKey: { 
+      type: String, 
+      required: true, 
+      unique: true 
+  },
+  // نظام الاشتراك السنوي
+  subscription: {
+      plan: {
+          type: String,
+          enum: ['basic', 'standard', 'premium', 'enterprise', 'trial'],
+          default: 'trial'
+      },
+      planName: {
+          type: String,
+          enum: ['تجريبي', 'أساسي', 'قياسي', 'مميز', 'مؤسسات'],
+          default: 'تجريبي'
+      },
+      startDate: { type: Date, default: Date.now },
+      endDate: { type: Date },
+      amount: { type: Number, default: 0 },
+      currency: { type: String, default: 'DZD' },
+      status: {
+          type: String,
+          enum: ['active', 'expired', 'pending', 'cancelled', 'trial'],
+          default: 'trial'
+      },
+      paymentMethod: {
+          type: String,
+          enum: ['cash', 'bank_transfer', 'online', 'check', 'free'],
+          default: 'free'
+      },
+      paymentDate: { type: Date },
+      invoiceNumber: { type: String },
+      notes: { type: String, default: '' },
+      features: {
+          maxStudents: { type: Number, default: 10 },
+          maxTeachers: { type: Number, default: 3 },
+          maxClasses: { type: Number, default: 5 },
+          hasRFID: { type: Boolean, default: false },
+          hasSMS: { type: Boolean, default: false },
+          hasReports: { type: Boolean, default: false },
+          hasAPI: { type: Boolean, default: false }
+      },
+      payments: [{
+          amount: Number,
+          date: { type: Date, default: Date.now },
+          method: String,
+          receiptNumber: String,
+          notes: String
+      }]
+  },
+  // المديرون
+  admins: [{
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      username: { type: String, required: true },
+      password: { type: String, required: true },
+      fullName: { type: String, required: true },
+      email: String,
+      phone: String,
+      role: { 
+          type: String, 
+          enum: ['super_admin', 'admin', 'manager', 'accountant'],
+          default: 'admin'
+      },
+      isActive: { type: Boolean, default: true },
+      lastLogin: Date,
+      createdAt: { type: Date, default: Date.now },
+      permissions: {
+          canManageStudents: { type: Boolean, default: true },
+          canManageTeachers: { type: Boolean, default: true },
+          canManageClasses: { type: Boolean, default: true },
+          canManagePayments: { type: Boolean, default: true },
+          canManageUsers: { type: Boolean, default: false },
+          canViewReports: { type: Boolean, default: true },
+          canManageSubscription: { type: Boolean, default: false }
+      }
+  }],
+  settings: {
+      currency: { type: String, default: 'DZD' },
+      language: { type: String, default: 'ar' },
+      timezone: { type: String, default: 'Africa/Algiers' }
+  },
+  stats: {
+      totalStudents: { type: Number, default: 0 },
+      totalTeachers: { type: Number, default: 0 },
+      totalClasses: { type: Number, default: 0 },
+      totalIncome: { type: Number, default: 0 },
+      totalExpenses: { type: Number, default: 0 }
+  },
+  status: { 
+      type: String, 
+      enum: ['active', 'inactive', 'suspended', 'expired'], 
+      default: 'active' 
+  }
+}, { 
+  timestamps: true 
+});
+
+// ==============================================
+// ⚠️ دوال النموذج - تأكد من وجودها هنا ⚠️
+// ==============================================
+
+// 1. توليد مفتاح مدرسة فريد
+schoolSchema.statics.generateSchoolKey = function() {
+  const prefix = 'SCH';
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${timestamp}-${random}`;
+};
+
+// 2. التحقق من صلاحية الاشتراك
+schoolSchema.methods.isSubscriptionActive = function() {
+  if (!this.subscription || !this.subscription.endDate) return false;
+  return this.subscription.status === 'active' && new Date() <= this.subscription.endDate;
+};
+
+// 3. الحصول على الأيام المتبقية في الاشتراك
+schoolSchema.methods.getSubscriptionDaysRemaining = function() {
+  if (!this.subscription || !this.subscription.endDate) return 0;
+  if (this.subscription.status !== 'active') return 0;
+  const now = new Date();
+  const diff = new Date(this.subscription.endDate) - now;
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
+
+// 4. التحقق من انتهاء الاشتراك
+schoolSchema.methods.isSubscriptionExpired = function() {
+  if (!this.subscription || !this.subscription.endDate) return true;
+  return new Date() > this.subscription.endDate || this.subscription.status === 'expired';
+};
+
+// 5. الحصول على ميزات الخطة
+schoolSchema.methods.getPlanLimits = function() {
+  const limits = {
+      trial: { maxStudents: 10, maxTeachers: 3, maxClasses: 5, hasRFID: false, hasSMS: false, hasReports: false, hasAPI: false },
+      basic: { maxStudents: 50, maxTeachers: 10, maxClasses: 20, hasRFID: false, hasSMS: false, hasReports: true, hasAPI: false },
+      standard: { maxStudents: 150, maxTeachers: 25, maxClasses: 50, hasRFID: true, hasSMS: false, hasReports: true, hasAPI: false },
+      premium: { maxStudents: 500, maxTeachers: 50, maxClasses: 100, hasRFID: true, hasSMS: true, hasReports: true, hasAPI: true },
+      enterprise: { maxStudents: 9999, maxTeachers: 999, maxClasses: 999, hasRFID: true, hasSMS: true, hasReports: true, hasAPI: true }
+  };
+  return limits[this.subscription?.plan] || limits.trial;
+};
+
+// 6. تحديث حالة المدرسة بناءً على الاشتراك
+schoolSchema.methods.updateStatusFromSubscription = function() {
+  if (this.isSubscriptionActive()) {
+      this.status = 'active';
+  } else if (this.isSubscriptionExpired()) {
+      this.status = 'expired';
+  }
+  return this;
+};
+
+// 7. تجديد الاشتراك
+schoolSchema.methods.renewSubscription = function(plan, amount, durationMonths = 12) {
+  const now = new Date();
+  const endDate = new Date(now);
+  endDate.setMonth(endDate.getMonth() + durationMonths);
+  
+  const planNames = {
+      trial: 'تجريبي',
+      basic: 'أساسي',
+      standard: 'قياسي',
+      premium: 'مميز',
+      enterprise: 'مؤسسات'
+  };
+  
+  const limits = this.getPlanLimits();
+  
+  this.subscription.plan = plan || this.subscription.plan || 'basic';
+  this.subscription.planName = planNames[this.subscription.plan] || 'أساسي';
+  this.subscription.startDate = now;
+  this.subscription.endDate = endDate;
+  this.subscription.status = 'active';
+  this.subscription.amount = amount || this.subscription.amount || 0;
+  this.subscription.paymentDate = now;
+  this.subscription.invoiceNumber = `SUB-${Date.now().toString().slice(-8)}`;
+  this.subscription.features = {
+      maxStudents: limits.maxStudents,
+      maxTeachers: limits.maxTeachers,
+      maxClasses: limits.maxClasses,
+      hasRFID: limits.hasRFID,
+      hasSMS: limits.hasSMS,
+      hasReports: limits.hasReports,
+      hasAPI: limits.hasAPI
+  };
+  
+  this.status = 'active';
+  return this;
+};
+
+// 8. إضافة دفعة للاشتراك
+schoolSchema.methods.addSubscriptionPayment = function(amount, method, notes = '') {
+  if (!this.subscription.payments) {
+      this.subscription.payments = [];
+  }
+  this.subscription.payments.push({
+      amount: amount,
+      date: new Date(),
+      method: method || 'cash',
+      receiptNumber: `PAY-${Date.now().toString().slice(-8)}`,
+      notes: notes
+  });
+  this.subscription.amount = (this.subscription.amount || 0) + amount;
+  return this;
+};
+
+// 9. الحصول على الميزات النشطة
+schoolSchema.methods.getActiveFeatures = function() {
+  if (!this.subscription || !this.subscription.features) {
+      return {
+          maxStudents: 10,
+          maxTeachers: 3,
+          maxClasses: 5,
+          hasRFID: false,
+          hasSMS: false,
+          hasReports: false,
+          hasAPI: false
+      };
+  }
+  return this.subscription.features;
+};
+
+// 10. Middleware قبل الحفظ
+schoolSchema.pre('save', function(next) {
+  if (this.subscription && this.subscription.endDate) {
+      this.updateStatusFromSubscription();
+  }
+  next();
+});
+
+// إنشاء النموذج - تأكد من وجود هذا السطر
+const School = mongoose.model('School', schoolSchema);
+// إنشاء النموذج (تأكد من عدم وجود تعريف مكرر)
     const StudentsAccountsSchema = new mongoose.Schema({
       username: { type: String, required: true, unique: true },
       password: { type: String, required: true },
@@ -101,6 +417,9 @@
     
     const RoundPayment = mongoose.model('RoundPayment', roundPaymentSchema);
     const studentSchema = new mongoose.Schema({
+      
+        schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+
       name: { type: String, required: true }, 
       studentId: { 
         type: String, 
@@ -145,6 +464,9 @@
     }, { strictPopulate: false });
 
     const teacherSchema = new mongoose.Schema({
+
+          schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+
       name: { type: String, required: true },
       subjects: [{ type: String, enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] }],
       phone: String,
@@ -154,15 +476,65 @@
       salaryPercentage: { type: Number, default: 0.7 }
     });
 
-    const classroomSchema = new mongoose.Schema({
-      name: { type: String, required: true },
-      capacity: Number,
-      location: String
-    });
+// models/Classroom.js - النسخة المحدثة
+// models/Classroom.js - تأكد من وجود حقل status
+// ==============================================
+// نموذج Classroom - النسخة المحدثة مع schoolId
+// ==============================================
+const classroomSchema = new mongoose.Schema({
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true,
+    index: true
+  },
+  name: { type: String, required: true, trim: true },
+  capacity: { type: Number, required: true, min: 1, default: 30 },
+  floor: { type: Number, required: true, min: 0, default: 1 },
+  building: { type: String, required: true, trim: true, default: 'المبنى الرئيسي' },
+  location: { type: String, trim: true, default: '' },
+  color: { type: String, default: '#4361ee', match: [/^#[0-9a-fA-F]{6}$/, 'لون غير صحيح'] },
+  equipment: { type: [String], default: [] },
+  status: { 
+    type: String, 
+    enum: ['available', 'occupied', 'maintenance'],
+    default: 'available'
+  },
+  description: { type: String, trim: true, default: '' },
+  floorArea: { type: Number, min: 0, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+
+// فهارس لتحسين أداء البحث
+classroomSchema.index({ schoolId: 1, building: 1, floor: 1, name: 1 });
+classroomSchema.index({ schoolId: 1, status: 1 });
+classroomSchema.index({ schoolId: 1, location: 1 });
+
+// Middleware لتحديث updatedAt قبل الحفظ
+classroomSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+// دالة مساعدة للحصول على قائمة التجهيزات كـ String
+classroomSchema.methods.getEquipmentList = function() {
+  if (!this.equipment || this.equipment.length === 0) return 'لا توجد تجهيزات';
+  return this.equipment.join('، ');
+};
+
+// دالة مساعدة للتحقق من توفر تجهيز معين
+classroomSchema.methods.hasEquipment = function(item) {
+  if (!this.equipment) return false;
+  return this.equipment.some(eq => eq.toLowerCase().includes(item.toLowerCase()));
+};
+
 
   // في قسم classSchema، أضف الحقل التالي:
   // في قسم classSchema، أضف الحقول التالية:
   const classSchema = new mongoose.Schema({
+      schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+
     name: { type: String, required: true },
     subject: { type: String, enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] },
     description: String,
@@ -200,11 +572,12 @@
       recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
     });
 
-    const cardSchema = new mongoose.Schema({
-      uid: { type: String, required: true, unique: true },
-      student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-      issueDate: { type: Date, default: Date.now }
-    });
+const cardSchema = new mongoose.Schema({
+  uid: { type: String, required: true, unique: true },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true }, // إضافة هذا الحقل
+  issueDate: { type: Date, default: Date.now }
+});
     // Add this schema near your other schemas
     const authorizedCardSchema = new mongoose.Schema({
       uid: { 
@@ -241,8 +614,8 @@
 
     // في paymentSchema، أضف حقل العمولة
     const paymentSchema = new mongoose.Schema({
-      student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-      class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: false },
+    schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+    student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },      class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: false },
       amount: { type: Number, required: true },
       month: { type: String, required: true },
       monthCode: { type: String, required: false },
@@ -271,6 +644,7 @@
     });
 
     const financialTransactionSchema = new mongoose.Schema({
+      schoolId : { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
       type: { type: String, enum: ['income', 'expense'], required: true },
       amount: { type: Number, required: true },
       description: String,
@@ -282,28 +656,158 @@
       date: { type: Date, default: Date.now },
       recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       reference: String,
+
       student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' } // إضافة مرجع للطالب
   });
     // Add this near other schemas
-    const liveClassSchema = new mongoose.Schema({
-      class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
-      date: { type: Date, required: true },
-      month: { type: String, default: new Date().toISOString().slice(0, 7), required: true }, // تنسيق: YYYY-MM
+// ==============================================
+// LIVE CLASS SCHEMA - Updated with schoolId
+// ==============================================
+const liveClassSchema = new mongoose.Schema({
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true,
+    index: true // ✅ Index for faster queries
+  },
+  class: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Class', 
+    required: true 
+  },
+  date: { 
+    type: Date, 
+    required: true 
+  },
+  month: { 
+    type: String, 
+    default: function() {
+      if (this.date) {
+        const d = new Date(this.date);
+        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+      }
+      return new Date().toISOString().slice(0, 7);
+    }, 
+    required: true 
+  },
+  startTime: { 
+    type: String, 
+    required: true 
+  },
+  endTime: { 
+    type: String 
+  },
+  teacher: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Teacher', 
+    required: true 
+  },
+  classroom: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Classroom' 
+  },
+  status: { 
+    type: String, 
+    enum: ['scheduled', 'ongoing', 'completed', 'cancelled'], 
+    default: 'scheduled' 
+  },
+  attendance: [{
+    student: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Student', 
+      required: true 
+    },
+    status: { 
+      type: String, 
+      enum: ['present', 'absent', 'late'], 
+      default: 'present' 
+    },
+    joinedAt: { type: Date },
+    leftAt: { type: Date },
+    timestamp: { type: Date, default: Date.now },
+    method: { 
+      type: String, 
+      enum: ['manual', 'rfid', 'auto', 'bulk'], 
+      default: 'manual' 
+    },
+    attendanceSchemaId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Attendance' 
+    }
+  }],
+  notes: { type: String },
+  createdBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  }
+}, { 
+  timestamps: true 
+});
 
-      startTime: { type: String, required: true },
-      endTime: { type: String },
-      teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
-      classroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Classroom' },
-      status: { type: String, enum: ['scheduled', 'ongoing', 'completed', 'cancelled'], default: 'scheduled' },
-      attendance: [{
-        student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-        status: { type: String, enum: ['present', 'absent', 'late'], default: 'present' },
-        joinedAt: { type: Date },
-        leftAt: { type: Date }
-      }],
-      notes: String,
-      createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
-    }, { timestamps: true });
+// ==============================================
+// ✅ Indexes for better performance
+// ==============================================
+liveClassSchema.index({ schoolId: 1, date: 1, status: 1 });
+liveClassSchema.index({ schoolId: 1, class: 1, month: 1 });
+liveClassSchema.index({ schoolId: 1, teacher: 1, date: 1 });
+liveClassSchema.index({ schoolId: 1, classroom: 1, date: 1 });
+liveClassSchema.index({ schoolId: 1, status: 1, date: -1 });
+
+// ==============================================
+// ✅ Middleware to auto-set month before save
+// ==============================================
+liveClassSchema.pre('save', function(next) {
+  if (this.date) {
+    const date = new Date(this.date);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    this.month = `${year}-${month}`;
+  }
+  next();
+});
+
+// ==============================================
+// ✅ Static methods for filtering by school
+// ==============================================
+liveClassSchema.statics.findBySchool = function(schoolId, options = {}) {
+  const query = { schoolId: schoolId };
+  if (options.status) query.status = options.status;
+  if (options.classId) query.class = options.classId;
+  if (options.date) {
+    const startDate = new Date(options.date);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+    query.date = { $gte: startDate, $lt: endDate };
+  }
+  if (options.month) query.month = options.month;
+  if (options.teacher) query.teacher = options.teacher;
+  
+  return this.find(query)
+    .populate('class', 'name subject price')
+    .populate('teacher', 'name phone email')
+    .populate('classroom', 'name location status')
+    .populate('attendance.student', 'name studentId')
+    .sort(options.sort || { date: -1, startTime: -1 })
+    .limit(options.limit || 100);
+};
+
+// ==============================================
+// ✅ Instance method to check if classroom is available
+// ==============================================
+liveClassSchema.methods.isClassroomAvailable = async function() {
+  if (!this.classroom) return true;
+  
+  const existing = await this.constructor.findOne({
+    schoolId: this.schoolId,
+    classroom: this.classroom,
+    date: this.date,
+    startTime: this.startTime,
+    status: { $in: ['scheduled', 'ongoing'] },
+    _id: { $ne: this._id }
+  });
+  
+  return !existing;
+};
 
   // دالة لتحديث حقل الشهر تلقائياً قبل حفظ LiveClass
   liveClassSchema.pre('save', function(next) {
@@ -321,8 +825,9 @@
 
     // School Fee Schema (one-time registration fee)
     const schoolFeeSchema = new mongoose.Schema({
+        schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-    amount: { type: Number, required: true, default: 60 }, // 60 DZD
+    amount: { type: Number, required: true, default: 600 }, // 60 DZD
     paymentDate: { type: Date, default: null },
     status: { type: String, enum: ['paid', 'pending'], default: 'pending' },
     paymentMethod: { type: String, enum: ['cash', 'bank', 'online'], default: 'cash' },
@@ -378,6 +883,7 @@
 
     // Expense Schema (محدث)
     const expenseSchema = new mongoose.Schema({
+        schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
       description: { type: String, required: true },
       amount: { type: Number, required: true },
       category: { 
@@ -399,6 +905,7 @@
 
 // Teacher Commission Schema
 const teacherCommissionSchema = new mongoose.Schema({
+    schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: false },
   class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
@@ -492,33 +999,1184 @@ const teacherCommissionSchema = new mongoose.Schema({
     // RFID Reader Implementation
 
 
+    //create new scholl
+// ==============================================
+// Routes لإدارة المدارس - Redox Admin
+// ==============================================
 
+// ==============================================
+// Routes لإدارة المدارس - Redox Admin
+// ==============================================
+
+// ==============================================
+// Routes لإدارة المدارس - Redox Admin
+// ==============================================
+
+// 1. إنشاء مدرسة جديدة
+// ==============================================
+// Routes لإدارة المدارس المُحدّثة
+// ==============================================
+
+// 1. إنشاء مدرسة جديدة مع مدير
+// ==============================================
+// 1. إنشاء مدرسة جديدة مع مدير - FIXED ✅
+// ==============================================
+
+app.post('/api/redox-admin/school', async (req, res) => {
+  try {
+    console.log('📝 استلام طلب إنشاء مدرسة:', req.body);
+    
+    const { 
+      name, 
+      email, 
+      phone, 
+      address, 
+      key,
+      adminUsername,
+      adminPassword,
+      adminFullName,
+      adminEmail,
+      adminPhone,
+      plan = 'trial',
+      subscriptionDuration = 1,
+      subscriptionAmount = 0
+    } = req.body;
+    
+    // ✅ التحقق من البيانات المطلوبة
+    if (!name || !email || !phone || !key) {
+      return res.status(400).json({ 
+        error: 'جميع الحقول مطلوبة: name, email, phone, key',
+        status: 'error' 
+      });
+    }
+
+    // ✅ التحقق من وجود المدرسة مسبقاً
+    const existingSchool = await School.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${name}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${email}$`, 'i') } },
+        { schoolKey: key }
+      ]
+    });
+
+    if (existingSchool) {
+      return res.status(400).json({ 
+        error: 'المدرسة موجودة مسبقاً',
+        status: 'error' 
+      });
+    }
+
+    // ✅ تشفير كلمة مرور المدير
+    const hashedPassword = adminPassword ? await bcrypt.hash(adminPassword, 10) : null;
+
+    // ✅ حساب تاريخ انتهاء الاشتراك
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + subscriptionDuration);
+
+    // ✅ تحديد الميزات حسب الخطة
+    const planFeatures = {
+      trial: { maxStudents: 10, maxTeachers: 3, maxClasses: 5, hasRFID: false, hasSMS: false, hasReports: false, hasAPI: false },
+      basic: { maxStudents: 50, maxTeachers: 10, maxClasses: 20, hasRFID: false, hasSMS: false, hasReports: true, hasAPI: false },
+      standard: { maxStudents: 150, maxTeachers: 25, maxClasses: 50, hasRFID: true, hasSMS: false, hasReports: true, hasAPI: false },
+      premium: { maxStudents: 500, maxTeachers: 50, maxClasses: 100, hasRFID: true, hasSMS: true, hasReports: true, hasAPI: true },
+      enterprise: { maxStudents: 9999, maxTeachers: 999, maxClasses: 999, hasRFID: true, hasSMS: true, hasReports: true, hasAPI: true }
+    };
+
+    const planNames = {
+      trial: 'تجريبي',
+      basic: 'أساسي',
+      standard: 'قياسي',
+      premium: 'مميز',
+      enterprise: 'مؤسسات'
+    };
+
+    const features = planFeatures[plan] || planFeatures.trial;
+
+    // ✅ إنشاء المدرسة الجديدة
+    const newSchool = new School({
+      name,
+      email,
+      phone,
+      address: address || '',
+      schoolKey: key,
+      status: 'active',
+      subscription: {
+        plan: plan || 'trial',
+        planName: planNames[plan] || 'تجريبي',
+        startDate: now,
+        endDate: endDate,
+        amount: subscriptionAmount || 0,
+        status: 'active',
+        paymentMethod: 'free',
+        paymentDate: now,
+        invoiceNumber: `SUB-${Date.now().toString().slice(-8)}`,
+        features: features,
+        payments: subscriptionAmount > 0 ? [{
+          amount: subscriptionAmount,
+          date: now,
+          method: 'free',
+          receiptNumber: `PAY-${Date.now().toString().slice(-8)}`,
+          notes: 'دفعة أولية'
+        }] : []
+      },
+      admins: [{
+        username: adminUsername || 'admin',
+        password: hashedPassword || await bcrypt.hash('admin123', 10),
+        fullName: adminFullName || 'مدير المدرسة',
+        email: adminEmail || email,
+        phone: adminPhone || phone,
+        role: 'super_admin',
+        isActive: true,
+        permissions: {
+          canManageStudents: true,
+          canManageTeachers: true,
+          canManageClasses: true,
+          canManagePayments: true,
+          canManageUsers: true,
+          canViewReports: true,
+          canManageSubscription: true
+        }
+      }]
+    });
+
+    // ✅ حفظ المدرسة في قاعدة البيانات
+    await newSchool.save();
+    console.log('✅ تم إنشاء المدرسة:', newSchool.name);
+
+    // ✅ استخراج المدير من المدرسة التي تم إنشاؤها
+    const admin = newSchool.admins[0];
+
+    // ✅ إنشاء التوكن - 🔥 FIXED: استخدام newSchool بدلاً من school
+    const token = jwt.sign(
+      {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
+        schoolId: newSchool._id,        // ✅ تم التصحيح: newSchool._id
+        schoolKey: newSchool.schoolKey, // ✅ تم التصحيح: newSchool.schoolKey
+        permissions: admin.permissions
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '8h' }
+    );
+
+    // ✅ إرجاع الاستجابة الناجحة
+    res.status(201).json({ 
+      message: '✅ تم إنشاء المدرسة بنجاح', 
+      school: {
+        _id: newSchool._id,
+        name: newSchool.name,
+        email: newSchool.email,
+        phone: newSchool.phone,
+        schoolKey: newSchool.schoolKey,
+        subscription: {
+          plan: newSchool.subscription.plan,
+          planName: newSchool.subscription.planName,
+          startDate: newSchool.subscription.startDate,
+          endDate: newSchool.subscription.endDate,
+          daysRemaining: newSchool.getSubscriptionDaysRemaining ? newSchool.getSubscriptionDaysRemaining() : 0,
+          isActive: newSchool.isSubscriptionActive ? newSchool.isSubscriptionActive() : true
+        }
+      },
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        fullName: admin.fullName,
+        role: admin.role
+      },
+      token: token,
+      status: 'success' 
+    });
+
+  } catch (error) {
+    console.error('❌ خطأ في إنشاء المدرسة:', error);
+    res.status(500).json({ 
+      error: 'فشل في إنشاء المدرسة: ' + error.message,
+      status: 'error' 
+    });
+  }
+});
+
+// 2. الحصول على جميع المدارس مع معلومات الاشتراك
+app.get('/api/redox-admin/schools', async (req, res) => {
+  try {
+      console.log('📤 جلب جميع المدارس...');
+      
+      const schools = await School.find()
+          .select('-__v -admins.password')
+          .sort({ createdAt: -1 });
+
+      // إضافة معلومات إضافية لكل مدرسة
+      const enhancedSchools = schools.map(school => {
+          const schoolObj = school.toObject();
+          schoolObj.subscription = {
+              ...schoolObj.subscription,
+              daysRemaining: school.getSubscriptionDaysRemaining(),
+              isActive: school.isSubscriptionActive(),
+              isExpired: school.isSubscriptionExpired(),
+              planLimits: school.getPlanLimits()
+          };
+          schoolObj.adminsCount = school.admins?.length || 0;
+          return schoolObj;
+      });
+
+      console.log(`✅ تم جلب ${enhancedSchools.length} مدرسة`);
+
+      res.json({ 
+          schools: enhancedSchools, 
+          status: 'success',
+          count: enhancedSchools.length 
+      });
+  } catch (error) {
+      console.error('❌ خطأ في جلب المدارس:', error);
+      res.status(500).json({ 
+          error: 'فشل في جلب المدارس: ' + error.message,
+          status: 'error' 
+      });
+  }
+});
+
+// 3. الحصول على مدرسة محددة مع جميع التفاصيل
+app.get('/api/redox-admin/school/:id', async (req, res) => {
+  try {
+      const school = await School.findById(req.params.id)
+          .select('-__v -admins.password');
+      
+      if (!school) {
+          return res.status(404).json({ 
+              error: 'المدرسة غير موجودة',
+              status: 'error' 
+          });
+      }
+
+      const schoolObj = school.toObject();
+      schoolObj.subscription = {
+          ...schoolObj.subscription,
+          daysRemaining: school.getSubscriptionDaysRemaining(),
+          isActive: school.isSubscriptionActive(),
+          isExpired: school.isSubscriptionExpired(),
+          planLimits: school.getPlanLimits()
+      };
+
+      res.json({ 
+          school: schoolObj, 
+          status: 'success' 
+      });
+  } catch (error) {
+      res.status(500).json({ 
+          error: 'فشل في جلب المدرسة: ' + error.message,
+          status: 'error' 
+      });
+  }
+});
+
+// 4. تحديث المدرسة
+app.put('/api/redox-admin/school/:id', async (req, res) => {
+  try {
+      const { name, address, phone, email, status } = req.body;
+      const updateData = { name, address, phone, email, status };
+
+      // منع تحديث الحقول الحساسة
+      delete updateData.schoolKey;
+      delete updateData.admins;
+      delete updateData.subscription;
+
+      const school = await School.findByIdAndUpdate(
+          req.params.id,
+          { $set: updateData },
+          { new: true, runValidators: true }
+      ).select('-__v -admins.password');
+
+      if (!school) {
+          return res.status(404).json({ 
+              error: 'المدرسة غير موجودة',
+              status: 'error' 
+          });
+      }
+
+      res.json({ 
+          message: '✅ تم تحديث المدرسة بنجاح', 
+          school,
+          status: 'success' 
+      });
+  } catch (error) {
+      res.status(500).json({ 
+          error: 'فشل في تحديث المدرسة: ' + error.message,
+          status: 'error' 
+      });
+  }
+});
+
+// 5. إضافة مدير للمدرسة
+app.post('/api/redox-admin/school/:id/admin', async (req, res) => {
+  try {
+      const { username, password, fullName, email, phone, permissions } = req.body;
+
+      if (!username || !password || !fullName) {
+          return res.status(400).json({
+              error: 'البيانات ناقصة: username, password, fullName مطلوبة',
+              status: 'error'
+          });
+      }
+
+      const school = await School.findById(req.params.id);
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      // التحقق من عدم وجود اسم مستخدم مكرر
+      const existingAdmin = school.admins.find(a => a.username === username);
+      if (existingAdmin) {
+          return res.status(400).json({
+              error: 'اسم المستخدم موجود مسبقاً',
+              status: 'error'
+          });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      school.admins.push({
+          username,
+          password: hashedPassword,
+          fullName,
+          email: email || school.email,
+          phone: phone || school.phone,
+          role: 'admin',
+          isActive: true,
+          permissions: permissions || {
+              canManageStudents: true,
+              canManageTeachers: true,
+              canManageClasses: true,
+              canManagePayments: true,
+              canManageUsers: false,
+              canViewReports: true,
+              canManageSubscription: false
+          }
+      });
+
+      await school.save();
+
+      const newAdmin = school.admins[school.admins.length - 1];
+      
+      // إنشاء توكن للمدير الجديد
+// في نقطة /api/auth/login
+const token = jwt.sign(
+    {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
+        schoolId: school._id, // ✅ تم إضافة schoolId هنا
+        schoolKey: school.schoolKey,
+        permissions: admin.permissions
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '8h' }
+);
+
+      res.status(201).json({
+          message: '✅ تم إضافة المدير بنجاح',
+          admin: {
+              _id: newAdmin._id,
+              username: newAdmin.username,
+              fullName: newAdmin.fullName,
+              role: newAdmin.role,
+              email: newAdmin.email,
+              phone: newAdmin.phone
+          },
+          token,
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في إضافة المدير:', error);
+      res.status(500).json({
+          error: 'فشل في إضافة المدير: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 6. الحصول على مدراء المدرسة
+app.get('/api/redox-admin/school/:id/admins', async (req, res) => {
+  try {
+      const school = await School.findById(req.params.id)
+          .select('admins name');
+      
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      const admins = school.admins.map(admin => ({
+          _id: admin._id,
+          username: admin.username,
+          fullName: admin.fullName,
+          email: admin.email,
+          phone: admin.phone,
+          role: admin.role,
+          isActive: admin.isActive,
+          lastLogin: admin.lastLogin,
+          permissions: admin.permissions
+      }));
+
+      res.json({
+          admins,
+          schoolName: school.name,
+          count: admins.length,
+          status: 'success'
+      });
+  } catch (error) {
+      res.status(500).json({
+          error: 'فشل في جلب المدراء: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 7. تحديث مدير
+app.put('/api/redox-admin/school/:schoolId/admin/:adminId', async (req, res) => {
+  try {
+      const { fullName, email, phone, isActive, permissions, password } = req.body;
+
+      const school = await School.findById(req.params.schoolId);
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      const adminIndex = school.admins.findIndex(
+          a => a._id.toString() === req.params.adminId
+      );
+
+      if (adminIndex === -1) {
+          return res.status(404).json({
+              error: 'المدير غير موجود',
+              status: 'error'
+          });
+      }
+
+      // تحديث البيانات
+      if (fullName) school.admins[adminIndex].fullName = fullName;
+      if (email) school.admins[adminIndex].email = email;
+      if (phone) school.admins[adminIndex].phone = phone;
+      if (isActive !== undefined) school.admins[adminIndex].isActive = isActive;
+      if (permissions) school.admins[adminIndex].permissions = permissions;
+      if (password) {
+          school.admins[adminIndex].password = await bcrypt.hash(password, 10);
+      }
+
+      await school.save();
+
+      const updatedAdmin = school.admins[adminIndex];
+      
+      res.json({
+          message: '✅ تم تحديث المدير بنجاح',
+          admin: {
+              _id: updatedAdmin._id,
+              username: updatedAdmin.username,
+              fullName: updatedAdmin.fullName,
+              email: updatedAdmin.email,
+              phone: updatedAdmin.phone,
+              role: updatedAdmin.role,
+              isActive: updatedAdmin.isActive,
+              permissions: updatedAdmin.permissions
+          },
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في تحديث المدير:', error);
+      res.status(500).json({
+          error: 'فشل في تحديث المدير: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 8. حذف مدير (تعطيل)
+app.delete('/api/redox-admin/school/:schoolId/admin/:adminId', async (req, res) => {
+  try {
+      const school = await School.findById(req.params.schoolId);
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      // منع حذف المدير الأساسي (super_admin)
+      const admin = school.admins.id(req.params.adminId);
+      if (!admin) {
+          return res.status(404).json({
+              error: 'المدير غير موجود',
+              status: 'error'
+          });
+      }
+
+      if (admin.role === 'super_admin') {
+          return res.status(400).json({
+              error: 'لا يمكن حذف المدير الأساسي للمدرسة',
+              status: 'error'
+          });
+      }
+
+      admin.isActive = false;
+      await school.save();
+
+      res.json({
+          message: '✅ تم تعطيل المدير بنجاح',
+          status: 'success'
+      });
+  } catch (error) {
+      res.status(500).json({
+          error: 'فشل في حذف المدير: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 9. تجديد اشتراك المدرسة
+app.post('/api/redox-admin/school/:id/renew-subscription', async (req, res) => {
+  try {
+      const { plan, amount, durationMonths = 12, paymentMethod, notes } = req.body;
+
+      const school = await School.findById(req.params.id);
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      // تجديد الاشتراك
+      school.renewSubscription(plan, amount, durationMonths);
+
+      // إضافة دفعة جديدة
+      if (amount > 0) {
+          school.addSubscriptionPayment(amount, paymentMethod || 'cash', notes || 'تجديد اشتراك');
+      }
+
+      await school.save();
+
+      res.json({
+          message: '✅ تم تجديد الاشتراك بنجاح',
+          subscription: {
+              plan: school.subscription.plan,
+              planName: school.subscription.planName,
+              startDate: school.subscription.startDate,
+              endDate: school.subscription.endDate,
+              amount: school.subscription.amount,
+              daysRemaining: school.getSubscriptionDaysRemaining(),
+              isActive: school.isSubscriptionActive(),
+              features: school.getActiveFeatures()
+          },
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في تجديد الاشتراك:', error);
+      res.status(500).json({
+          error: 'فشل في تجديد الاشتراك: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 10. إشعارات انتهاء الاشتراك
+app.get('/api/redox-admin/subscription/expiring-soon', async (req, res) => {
+  try {
+      const { days = 30 } = req.query;
+      const now = new Date();
+      const future = new Date(now);
+      future.setDate(future.getDate() + parseInt(days));
+
+      const schools = await School.find({
+          'subscription.status': 'active',
+          'subscription.endDate': { $gte: now, $lte: future }
+      }).select('name email phone schoolKey subscription');
+
+      const expiringSchools = schools.map(school => ({
+          _id: school._id,
+          name: school.name,
+          email: school.email,
+          phone: school.phone,
+          schoolKey: school.schoolKey,
+          endDate: school.subscription.endDate,
+          daysRemaining: school.getSubscriptionDaysRemaining(),
+          plan: school.subscription.plan,
+          planName: school.subscription.planName
+      }));
+
+      res.json({
+          expiringSchools,
+          count: expiringSchools.length,
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في جلب الاشتراكات المنتهية قريباً:', error);
+      res.status(500).json({
+          error: 'فشل في جلب الاشتراكات: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 11. إحصائيات المدارس مع الاشتراكات
+app.get('/api/redox-admin/schools/stats', async (req, res) => {
+  try {
+      const total = await School.countDocuments();
+      const active = await School.countDocuments({ status: 'active' });
+      const expired = await School.countDocuments({ status: 'expired' });
+      const inactive = await School.countDocuments({ status: 'inactive' });
+
+      // إحصائيات الاشتراكات
+      const subscriptionStats = await School.aggregate([
+          { $group: {
+              _id: '$subscription.plan',
+              count: { $sum: 1 }
+          } }
+      ]);
+
+      // إجمالي الإيرادات من الاشتراكات
+      const revenue = await School.aggregate([
+          { $group: {
+              _id: null,
+              total: { $sum: '$subscription.amount' }
+          } }
+      ]);
+
+      // الاشتراكات المنتهية قريباً (30 يوم)
+      const now = new Date();
+      const future = new Date(now);
+      future.setDate(future.getDate() + 30);
+
+      const expiringSoon = await School.countDocuments({
+          'subscription.status': 'active',
+          'subscription.endDate': { $gte: now, $lte: future }
+      });
+
+      res.json({
+          stats: {
+              total,
+              active,
+              expired,
+              inactive,
+              expiringSoon
+          },
+          subscriptionStats,
+          totalRevenue: revenue[0]?.total || 0,
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في جلب الإحصائيات:', error);
+      res.status(500).json({
+          error: 'فشل في جلب الإحصائيات: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 12. تسجيل دخول المدير
+app.post('/api/redox-admin/school/login', async (req, res) => {
+  try {
+      const { username, password, schoolKey } = req.body;
+
+      if (!username || !password || !schoolKey) {
+          return res.status(400).json({
+              error: 'اسم المستخدم، كلمة المرور، ومفتاح المدرسة مطلوبة',
+              status: 'error'
+          });
+      }
+
+      // البحث عن المدرسة
+      const school = await School.findOne({ schoolKey, status: { $ne: 'inactive' } });
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة أو غير نشطة',
+              status: 'error'
+          });
+      }
+
+      // البحث عن المدير
+      const admin = school.admins.find(
+          a => a.username === username && a.isActive === true
+      );
+
+      if (!admin) {
+          return res.status(401).json({
+              error: 'اسم المستخدم أو كلمة المرور غير صحيحة',
+              status: 'error'
+          });
+      }
+
+      // التحقق من كلمة المرور
+      const isValidPassword = await bcrypt.compare(password, admin.password);
+      if (!isValidPassword) {
+          return res.status(401).json({
+              error: 'اسم المستخدم أو كلمة المرور غير صحيحة',
+              status: 'error'
+          });
+      }
+
+      // تحديث آخر تسجيل دخول
+      admin.lastLogin = new Date();
+      await school.save();
+
+      // التحقق من صلاحية الاشتراك
+      const isSubscriptionActive = school.isSubscriptionActive();
+      const daysRemaining = school.getSubscriptionDaysRemaining();
+
+      // إنشاء توكن
+// في نقطة /api/auth/login
+const token = jwt.sign(
+    {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
+        schoolId: school._id, // ✅ تم إضافة schoolId هنا
+        schoolKey: school.schoolKey,
+        permissions: admin.permissions
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '8h' }
+);
+      res.json({
+          message: '✅ تم تسجيل الدخول بنجاح',
+          token,
+          admin: {
+              _id: admin._id,
+              username: admin.username,
+              fullName: admin.fullName,
+              role: admin.role,
+              email: admin.email,
+              phone: admin.phone,
+              permissions: admin.permissions
+          },
+          school: {
+              _id: school._id,
+              name: school.name,
+              schoolKey: school.schoolKey,
+              subscription: {
+                  plan: school.subscription.plan,
+                  planName: school.subscription.planName,
+                  endDate: school.subscription.endDate,
+                  isActive: isSubscriptionActive,
+                  daysRemaining: daysRemaining,
+                  features: school.getActiveFeatures()
+              }
+          },
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في تسجيل الدخول:', error);
+      res.status(500).json({
+          error: 'فشل في تسجيل الدخول: ' + error.message,
+          status: 'error'
+      });
+  }
+});
+
+// 13. التحقق من صلاحية الاشتراك لمدرسة
+app.get('/api/redox-admin/school/check-subscription/:schoolKey', async (req, res) => {
+  try {
+      const { schoolKey } = req.params;
+
+      const school = await School.findOne({ schoolKey });
+      if (!school) {
+          return res.status(404).json({
+              error: 'المدرسة غير موجودة',
+              status: 'error'
+          });
+      }
+
+      const isActive = school.isSubscriptionActive();
+      const daysRemaining = school.getSubscriptionDaysRemaining();
+      const isExpired = school.isSubscriptionExpired();
+      const features = school.getActiveFeatures();
+
+      res.json({
+          valid: isActive,
+          school: {
+              _id: school._id,
+              name: school.name,
+              schoolKey: school.schoolKey,
+              status: school.status
+          },
+          subscription: {
+              plan: school.subscription.plan,
+              planName: school.subscription.planName,
+              startDate: school.subscription.startDate,
+              endDate: school.subscription.endDate,
+              isActive,
+              isExpired,
+              daysRemaining,
+              features
+          },
+          status: 'success'
+      });
+  } catch (error) {
+      console.error('❌ خطأ في التحقق من الاشتراك:', error);
+      res.status(500).json({
+          error: 'فشل في التحقق من الاشتراك: ' + error.message,
+          status: 'error'
+      });
+  }
+});
   //count students number
-  app.get('/api/count/students', async (req, res) => {
-      try {
-          const count = await Student.countDocuments();
-          res.json({ count, status: 'success' });
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to count students', status: 'error' });
+// ==============================================
+// 📊 إحصائيات المدرسة المحددة فقط
+// ==============================================
+
+// 1. عدد الطلاب في مدرسة محددة
+app.get('/api/count/students', async (req, res) => {
+  try {
+    // جلب schoolId من الـ query أو من التوكن
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    let query = {};
+    if (schoolId) {
+      // إذا كانت المدرسة تستخدم حقل schoolId في نموذج Student
+      query.schoolId = schoolId;
+    }
+
+    const count = await Student.countDocuments(query);
+    res.json({ count, status: 'success' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to count students', status: 'error' });
+  }
+});
+
+// ==============================================
+// 📚 جلب حصص طالب معين (Endpoint مفقود)
+// ==============================================
+app.get('/api/students/:studentId/classes', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+
+    console.log(`📚 جلب حصص الطالب: ${studentId}`);
+    console.log(`🏫 schoolId: ${schoolId}`);
+
+    // 1. التحقق من وجود schoolId
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'schoolId مطلوب',
+      });
+    }
+
+    // 2. التحقق من صحة studentId
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الطالب غير صالح',
+      });
+    }
+
+    // 3. جلب الطالب مع التأكد من أنه ينتمي للمدرسة
+    const student = await Student.findOne({
+      _id: studentId,
+      schoolId: schoolId,
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة',
+      });
+    }
+
+    // 4. جلب الحصص التي تم ربطها بالطالب
+    const classes = await Class.find({
+      _id: { $in: student.classes || [] },
+      schoolId: schoolId, // تصفية حسب المدرسة أيضاً
+    })
+      .populate('teacher', 'name phone email')
+      .populate('schedule.classroom', 'name location')
+      .populate('students', 'name studentId'); // تأكد من وجود هذه العلاقة
+
+    console.log(`✅ تم العثور على ${classes.length} حصة للطالب: ${student.name}`);
+
+    // 5. إعادة البيانات
+    res.json({
+      success: true,
+      data: classes,
+    });
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 2. عدد الأساتذة في مدرسة محددة
+// عدد الأساتذة في مدرسة محددة
+app.get('/api/count/teachers', async (req, res) => {
+  try {
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    let query = {};
+    if (schoolId) {
+      query.schoolId = schoolId;
+    } else {
+      return res.json({ count: 0, status: 'success', message: 'لم يتم تحديد مدرسة' });
+    }
+
+    const count = await Teacher.countDocuments(query);
+    console.log(`📊 عدد الأساتذة في المدرسة ${schoolId}: ${count}`);
+    
+    res.json({ 
+      count, 
+      status: 'success',
+      schoolId: schoolId
+    });
+  } catch (error) {
+    console.error('❌ خطأ في عد الأساتذة:', error);
+    res.status(500).json({ 
+      error: 'Failed to count teachers', 
+      status: 'error' 
+    });
+  }
+});
+
+
+// 3. عدد الحصص في مدرسة محددة
+app.get('/api/count/classes', async (req, res) => {
+  try {
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    let query = {};
+    if (schoolId) {
+      query.schoolId = schoolId;
+    }
+
+    const count = await Class.countDocuments(query);
+    res.json({ count, status: 'success' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to count classes', status: 'error' });
+  }
+});
+
+// 4. نقطة نهاية موحدة للحصول على جميع الإحصائيات لمدرسة محددة
+app.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    // جلب schoolId من الـ query أو من التوكن
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'School ID is required' 
+      });
+    }
+
+    const query = { schoolId: schoolId };
+
+    const [students, teachers, classes] = await Promise.all([
+      Student.countDocuments(query),
+      Teacher.countDocuments(query),
+      Class.countDocuments(query)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        students,
+        teachers,
+        classes,
+        schoolId
       }
     });
-    app.get('/api/count/teachers', async (req, res) => {
-      try {
-          const count = await Teacher.countDocuments();
-          res.json({ count, status: 'success' });
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to count teachers', status: 'error' });
-      }
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
     });
-    //count lessons
-    app.get('/api/count/classes', async (req, res) => {
-      try {
-          const count = await Class.countDocuments();
-          res.json({ count, status: 'success' });
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to count classes', status: 'error' });
-      }
+  }
+});
+app.get('/api/classes', async (req, res) => {
+  try {
+    // Get schoolId from query (priority) or user token
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log('📚 Fetching classes - schoolId:', schoolId);
+    
+    // If no schoolId, return empty array
+    if (!schoolId) {
+      console.warn('⚠️ No schoolId provided, returning empty list');
+      return res.json([]);
+    }
+    
+    // Validate schoolId format
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+    
+    // Check if school exists
+    const school = await School.findById(schoolId);
+    if (!school) {
+      console.warn(`⚠️ School not found: ${schoolId}`);
+      return res.json([]);
+    }
+    
+    // Build query with filters
+    const { academicYear, subject, teacher } = req.query;
+    const query = { schoolId: schoolId };
+    
+    if (academicYear) query.academicYear = academicYear;
+    if (subject) query.subject = subject;
+    if (teacher) query.teacher = teacher;
+    
+    // Fetch classes with population
+    const classes = await Class.find(query)
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId parentPhone')
+      .populate('schedule.classroom', 'name location capacity')
+      .sort({ createdAt: -1 });
+    
+    console.log(`✅ Found ${classes.length} classes for school ${schoolId}`);
+    res.json(classes);
+    
+  } catch (err) {
+    console.error('❌ Error fetching classes:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
     });
+  }
+});
+
+app.get('/api/classes/my-school', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId;
+    
+    if (!schoolId) {
+      return res.status(401).json({
+        success: false,
+        error: 'غير مصرح بالدخول - يرجى تسجيل الدخول'
+      });
+    }
+
+    const classes = await Class.find({ schoolId: schoolId })
+      .populate('teacher')
+      .populate('students')
+      .populate('schedule.classroom')
+      .sort({ createdAt: -1 });
+    
+    console.log(`✅ تم جلب ${classes.length} حصة للمدرسة ${schoolId}`);
+    res.json(classes);
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص المدرسة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+app.post('/api/classes', async (req, res) => {
+  try {
+    // جلب schoolId من التوكن أو من الـ body
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    console.log('📝 إنشاء حصة جديدة - schoolId:', schoolId);
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    // التحقق من وجود المدرسة
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const { name, subject, teacher, academicYear, description, schedule, price, paymentSystem, roundSettings } = req.body;
+    
+    // التحقق من وجود حصة بنفس الاسم في نفس المدرسة
+    const existingClass = await Class.findOne({
+      name: { $regex: new RegExp(`^${name}$`, 'i') },
+      subject: subject,
+      teacher: teacher,
+      academicYear: academicYear,
+      schoolId: schoolId
+    });
+
+    if (existingClass) {
+      return res.status(200).json({
+        success: true,
+        message: "الحصة موجودة مسبقاً في هذه المدرسة",
+        class: existingClass,
+        existed: true
+      });
+    }
+
+    // التحقق من وجود الأستاذ
+    if (teacher) {
+      const teacherExists = await Teacher.findOne({ _id: teacher, schoolId: schoolId });
+      if (!teacherExists) {
+        return res.status(400).json({
+          success: false,
+          error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة'
+        });
+      }
+    }
+
+    const classObj = new Class({
+      schoolId: schoolId,
+      name: name,
+      subject: subject,
+      teacher: teacher,
+      academicYear: academicYear,
+      description: description || '',
+      schedule: schedule || [],
+      price: price || 0,
+      paymentSystem: paymentSystem || 'monthly',
+      roundSettings: roundSettings || { sessionCount: 8, sessionDuration: 2, breakBetweenSessions: 0 }
+    });
+
+    await classObj.save();
+    
+    console.log(`✅ تم إنشاء الحصة: ${classObj.name} للمدرسة: ${schoolId}`);
+    
+    // جلب البيانات المحدثة
+    const populatedClass = await Class.findById(classObj._id)
+      .populate('teacher')
+      .populate('students')
+      .populate('schedule.classroom');
+    
+    res.status(201).json({
+      success: true,
+      message: "تم إنشاء الحصة بنجاح",
+      class: populatedClass,
+      existed: false
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء الحصة:', err);
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 
     // Authorized Cards Management
@@ -844,28 +2502,33 @@ const teacherCommissionSchema = new mongoose.Schema({
     // };
 
 
-    const authenticate = (roles = []) => {
-      return (req, res, next) => {
-        try {
-          const token = req.headers.authorization?.split(' ')[1];
-          
-          if (!token) {
-            return res.status(401).json({ error: 'غير مصرح بالدخول' });
-          }
-          
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          req.user = decoded;
-          
-          if (roles.length && !roles.includes(decoded.role)) {
-            return res.status(403).json({ error: 'غير مصرح بالوصول لهذه الصلاحية' });
-          }
-          
-          next();
-        } catch (err) {
-          res.status(401).json({ error: 'رمز الدخول غير صالح' });
-        }
-      };
-    };
+const authenticate = (roles = []) => {
+  return (req, res, next) => {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      
+      if (!token) {
+        return res.status(401).json({ error: 'غير مصرح بالدخول' });
+      }
+      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      
+      // ✅ إضافة schoolId إلى req.user إذا كان موجوداً في التوكن
+      if (decoded.schoolId) {
+        req.user.schoolId = decoded.schoolId;
+      }
+      
+      if (roles.length && !roles.includes(decoded.role)) {
+        return res.status(403).json({ error: 'غير مصرح بالوصول لهذه الصلاحية' });
+      }
+      
+      next();
+    } catch (err) {
+      res.status(401).json({ error: 'رمز الدخول غير صالح' });
+    }
+  };
+};
   const optionalAuth = (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
@@ -891,26 +2554,108 @@ const teacherCommissionSchema = new mongoose.Schema({
     // API Routes
 
     // Auth Routes
-    app.post('/api/auth/login', async (req, res) => {
-      try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
+// Auth Routes
+// ==============================================
+// نقطة نهاية تسجيل الدخول المحسنة - تدعم كلا النظامين
+// ==============================================
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password, schoolKey } = req.body;
+    
+    console.log('📤 محاولة تسجيل دخول:', username);
+    console.log('🔑 مفتاح المدرسة:', schoolKey);
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-          return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    // 1. البحث عن المدرسة باستخدام المفتاح
+    const school = await School.findOne({ schoolKey });
+    
+    if (!school) {
+      console.log('❌ المدرسة غير موجودة للمفتاح:', schoolKey);
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة أو المفتاح غير صحيح'
+      });
+    }
+
+    // 2. البحث عن المدير في المدرسة
+    const admin = school.admins.find(a => a.username === username);
+    
+    if (!admin) {
+      console.log('❌ المدير غير موجود للمستخدم:', username);
+      return res.status(401).json({
+        success: false,
+        error: 'اسم المستخدم أو كلمة المرور غير صحيحة'
+      });
+    }
+
+    // 3. التحقق من كلمة المرور
+    const isValidPassword = await bcrypt.compare(password, admin.password);
+    
+    if (!isValidPassword) {
+      console.log('❌ كلمة مرور غير صحيحة للمستخدم:', username);
+      return res.status(401).json({
+        success: false,
+        error: 'اسم المستخدم أو كلمة المرور غير صحيحة'
+      });
+    }
+
+    // 4. تحديث آخر تسجيل دخول
+    admin.lastLogin = new Date();
+    await school.save();
+
+    // 5. إنشاء التوكن
+// في نقطة /api/auth/login
+const token = jwt.sign(
+    {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
+        schoolId: school._id, // ✅ تم إضافة schoolId هنا
+        schoolKey: school.schoolKey,
+        permissions: admin.permissions
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '8h' }
+);
+
+
+    console.log('✅ تم تسجيل دخول ناجح للمستخدم:', username);
+
+    // 6. إرجاع البيانات بنفس التنسيق المتوقع من الواجهة الأمامية
+    res.json({
+      success: true,
+      data: {
+        token: token,
+        user: {
+          id: admin._id,
+          username: admin.username,
+          role: admin.role,
+          fullName: admin.fullName,
+          email: admin.email,
+          phone: admin.phone,
+          permissions: admin.permissions
+        },
+        school: {
+          _id: school._id,
+          name: school.name,
+          schoolKey: school.schoolKey,
+          subscription: {
+            plan: school.subscription?.plan,
+            planName: school.subscription?.planName,
+            isActive: school.isSubscriptionActive ? school.isSubscriptionActive() : true,
+            daysRemaining: school.getSubscriptionDaysRemaining ? school.getSubscriptionDaysRemaining() : 365
+          }
         }
-
-        const token = jwt.sign(
-          { id: user._id, username: user.username, role: user.role },
-          process.env.JWT_SECRET,
-          { expiresIn: '8h' }
-        );
-
-        res.json({ token, user: { username: user.username, role: user.role, fullName: user.fullName } });
-      } catch (err) {
-        res.status(500).json({ error: err.message });
       }
     });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الدخول:', err);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ أثناء تسجيل الدخول: ' + err.message
+    });
+  }
+});
 
     app.post('/api/auth/change-password',  async (req, res) => {
       try {
@@ -973,17 +2718,67 @@ const teacherCommissionSchema = new mongoose.Schema({
     // Students
     // get only active students
   // Replace this problematic code in /api/students endpoint:
-  app.get('/api/students', async (req, res) => {
-    try {
-      const students = await Student.find()
-        .populate('classes')
-        .sort({ name: 1 });
-      
-      res.json(students);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+// ==============================================
+// 📚 جلب طلاب المدرسة المحددة فقط - FIXED ✅
+// ==============================================
+
+// ==============================================
+// 📚 جلب طلاب المدرسة المحددة فقط - FIXED ✅
+// ==============================================
+
+// ==============================================
+// 📚 GET STUDENTS - Filtered by School ID
+// ==============================================
+
+// ==============================================
+// 📚 GET STUDENTS - Filtered by School ID
+// ==============================================
+
+// ==============================================
+// 📚 GET STUDENTS - Filtered by School ID
+// ==============================================
+
+// ==============================================
+// 📚 GET STUDENTS - Filtered by School ID
+// ==============================================
+
+app.get('/api/students', async (req, res) => {
+  try {
+    // Get schoolId from query or user token
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log('📚 Fetching students - schoolId:', schoolId);
+    
+    // ✅ إذا لم يكن هناك schoolId، أرجع قائمة فارغة
+    if (!schoolId) {
+      console.warn('⚠️ No schoolId provided, returning empty list');
+      return res.json([]);
     }
-  });
+    
+    // ✅ تحقق من وجود المدرسة
+    const school = await School.findById(schoolId);
+    if (!school) {
+      console.warn(`⚠️ School not found: ${schoolId}`);
+      return res.json([]);
+    }
+    
+    // ✅ جلب الطلاب الذين ينتمون للمدرسة فقط
+    const students = await Student.find({ schoolId: schoolId })
+      .populate('classes')
+      .sort({ name: 1 });
+    
+    console.log(`✅ Found ${students.length} students for school ${schoolId}`);
+    res.json(students);
+    
+  } catch (err) {
+    console.error('❌ Error fetching students:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
 
   // ObjectId validation middleware
   const validateObjectId = (req, res, next) => {
@@ -1729,62 +3524,109 @@ const teacherCommissionSchema = new mongoose.Schema({
       }
     });
 
-    app.post('/api/students',  async (req, res) => {
-      try {
-        const { name, parentPhone, studentId } = req.body;
-        
-        // التحقق من وجود طالب بنفس الاسم ورقم هاتف ولي الأمر
-        const existingStudent = await Student.findOne({
-          name,
-          parentPhone
-        });
+// ==============================================
+// 📚 CREATE STUDENT - With School ID
+// ==============================================
+
+// ==============================================
+// 📚 CREATE STUDENT - With School ID and Registration Fee
+// ==============================================
+
+app.post('/api/students', async (req, res) => {
+  try {
+    // Get schoolId from token or body
+    const schoolId = req.user?.schoolId || req.body.schoolId;
     
-        // أو التحقق من وجود طالب بنفس المعرف إذا تم تقديمه
-        if (studentId) {
-          const existingById = await Student.findOne({ studentId });
-          if (existingById) {
-            return res.status(200).json({ 
-              message: "تم تحديث المعلومات بنجاح",
-              student: existingById,
-              existed: true
-            });
-          }
-        }
+    console.log('📝 Creating student - schoolId:', schoolId);
     
-        if (existingStudent) {
-          return res.status(200).json({ 
-            message: "تم تحديث المعلومات بنجاح",
-            student: existingStudent,
-            existed: true
-          });
-        }
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    // Check if school exists
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const { name, parentPhone, studentId, academicYear } = req.body;
     
-        const student = new Student(req.body);
-        await student.save();
-        
-        // إنشاء رسوم التسجيل فقط إذا كان الطالب نشطاً
-        if (req.body.active !== false) {
-          const schoolFee = new SchoolFee({
-            student: student._id,
-            amount: req.body.registrationFee || 600,
-            status: 'pending'
-          });
-          await schoolFee.save();
-          
-    
-        }
-        
-        res.status(201).json({
-          message: "تم إنشاء الطالب بنجاح",
-          student,
-          existed: false
-        });
-      } catch (err) {
-        res.status(400).json({ error: err.message });
-      }
+    // Check for existing student
+    const existingStudent = await Student.findOne({
+      schoolId: schoolId,
+      $or: [
+        { name: { $regex: new RegExp(`^${name}$`, 'i') } },
+        { parentPhone: parentPhone },
+        ...(studentId ? [{ studentId: studentId }] : [])
+      ]
     });
 
+    if (existingStudent) {
+      return res.status(200).json({
+        success: true,
+        message: "الطالب موجود مسبقاً",
+        student: existingStudent,
+        existed: true
+      });
+    }
+
+    // Create new student with schoolId
+    const studentData = {
+      ...req.body,
+      schoolId: schoolId, // ✅ Link student to school
+      registrationDate: req.body.registrationDate || new Date(),
+      status: req.body.status || 'pending'
+    };
+
+    const student = new Student(studentData);
+    await student.save();
     
+    // --- MODIFICATION START ---
+    // Always create a registration fee record for the new student
+    // Set default amount to 600 DZD as requested
+    const registrationAmount = 600; // Amount in DZD
+    
+    const schoolFee = new SchoolFee({
+      student: student._id,
+      amount: registrationAmount,
+      status: 'pending', // Default status is pending
+      schoolId: schoolId,
+      // Optionally set a default payment method or invoice number
+      // paymentMethod: 'cash',
+      // invoiceNumber: `REG-${Date.now()}`,
+    });
+    await schoolFee.save();
+    console.log(`✅ Registration fee of ${registrationAmount} DZD created for student: ${student.name}`);
+    // --- MODIFICATION END ---
+
+    console.log(`✅ Student created: ${student.name} in school ${schoolId}`);
+    
+    res.status(201).json({
+      success: true,
+      message: "تم إنشاء الطالب بنجاح",
+      student: student,
+      existed: false,
+      // Optional: return the created fee in the response
+      registrationFee: {
+        amount: registrationAmount,
+        status: 'pending',
+        _id: schoolFee._id
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error creating student:', err);
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+});  
     
     app.get('/api/accounting/budgets',  async (req, res) => {
       try {
@@ -2024,20 +3866,84 @@ const teacherCommissionSchema = new mongoose.Schema({
   // });
 
   // Add this endpoint with the other class endpoints
-  app.get('/api/classes/available', async (req, res) => {
-    try {
-      const classes = await Class.find({})
-        .populate('teacher')
-        .populate('students')
-        .populate('schedule.classroom')
-        .sort({ name: 1 });
-      
-      res.json(classes);
-    } catch (err) {
-      console.error('Error fetching available classes:', err);
-      res.status(500).json({ error: err.message });
+// ==============================================
+// ✅ نقطة نهاية الحصص المتاحة - مع تصفية حسب المدرسة
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية الحصص المتاحة - مع تصفية حسب المدرسة
+// ==============================================
+app.get('/api/classes/available', async (req, res) => {
+  try {
+    // 1. جلب schoolId من الـ query (أولوية) أو من التوكن
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log('📚 جلب الحصص المتاحة - schoolId:', schoolId);
+    
+    // 2. بناء استعلام البحث مع تصفية حسب schoolId
+    let query = {};
+    
+    if (schoolId) {
+      // ✅ تطبيق التصفية حسب المدرسة
+      query.schoolId = schoolId;
+      console.log('🔍 تصفية الحصص حسب schoolId:', schoolId);
+    } else {
+      // ⚠️ إذا لم يكن هناك schoolId، نرجع مصفوفة فارغة مع رسالة تحذير
+      console.warn('⚠️ لا يوجد schoolId، سيتم إرجاع قائمة فارغة');
+      return res.json({
+        success: true,
+        count: 0,
+        classes: [],
+        message: 'لم يتم تحديد المدرسة'
+      });
     }
-  });
+
+    // 3. إضافة معايير تصفية إضافية (اختيارية)
+    const { academicYear, subject, excludeEnrolled = 'true', studentId, limit = 50 } = req.query;
+    
+    if (academicYear) query.academicYear = academicYear;
+    if (subject) query.subject = subject;
+
+    // 4. جلب الحصص من قاعدة البيانات مع التصفية
+    let classes = await Class.find(query)
+      .populate('teacher', 'name subjects phone email')
+      .populate('students', 'name studentId academicYear')
+      .populate('schedule.classroom', 'name capacity location')
+      .limit(parseInt(limit))
+      .sort({ name: 1 });
+
+    console.log(`✅ تم جلب ${classes.length} حصة للمدرسة ${schoolId}`);
+
+    // 5. تصفية الحصص التي الطالب مسجل فيها بالفعل (إذا تم تمرير studentId)
+    if (studentId && excludeEnrolled === 'true') {
+      const student = await Student.findOne({ 
+        _id: studentId,
+        schoolId: schoolId // تأكد أن الطالب ينتمي لنفس المدرسة
+      });
+      
+      if (student && student.classes) {
+        const enrolledClassIds = student.classes.map(c => c.toString());
+        classes = classes.filter(c => !enrolledClassIds.includes(c._id.toString()));
+        console.log(`🔍 بعد استبعاد الحصص المسجل فيها: ${classes.length} حصة متاحة`);
+      }
+    }
+
+    // 6. إرجاع النتائج
+    res.json({
+      success: true,
+      count: classes.length,
+      schoolId: schoolId,
+      classes: classes
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب الحصص المتاحة:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في جلب الحصص المتاحة',
+      message: err.message
+    });
+  }
+});
   // الحصول على الغيابات الشهرية لحصة معينة
   app.get('/api/classes/:classId/monthly-attendance', async (req, res) => {
     try {
@@ -2159,6 +4065,50 @@ const teacherCommissionSchema = new mongoose.Schema({
         });
     }
   });  // نقطة نهاية جديدة للحصول على تفاصيل الأستاذ مع حصصه ومدفوعاته
+app.get('/api/classes/:classId/students', async (req, res) => {
+  try {
+    const classId = req.params.classId;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب طلاب الحصة ${classId} للمدرسة ${schoolId}`);
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'School ID is required'
+      });
+    }
+
+    const classObj = await Class.findOne({
+      _id: classId,
+      schoolId: schoolId
+    }).populate({
+      path: 'students',
+      match: { schoolId: schoolId },
+      select: 'name studentId parentPhone parentEmail academicYear'
+    });
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: classObj.students || []
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب طلاب الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 
 
 
@@ -2544,6 +4494,9 @@ app.get('/api/classes/:classId/attendance', async (req, res) => {
 // ==============================================
 // نقطة نهاية لتسجيل غياب طالب في حصة محددة
 // ==============================================
+
+// ENROLL STUDENT - WITHOUT AUTHENTICATION (for testing)
+
 app.post('/api/classes/:classId/attendance/student/:studentId', async (req, res) => {
   try {
     const { classId, studentId } = req.params;
@@ -2744,54 +4697,7 @@ app.post('/api/classes/:classId/attendance/bulk', async (req, res) => {
 // ==============================================
 // نقطة نهاية إلغاء الدفعة (جعلها غير مدفوعة)
 // ==============================================
-app.put('/api/payments/:id/cancel',  async (req, res) => {
-  try {
-    const payment = await Payment.findById(req.params.id)
-      .populate('student', 'name studentId')
-      .populate('class', 'name');
-    
-    if (!payment) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'الدفعة غير موجودة' 
-      });
-    }
 
-    if (payment.status !== 'paid') {
-      return res.status(400).json({ 
-        success: false,
-        error: 'لا يمكن إلغاء دفعة غير مسددة' 
-      });
-    }
-
-    // تحديث حالة الدفعة
-    payment.status = 'pending';
-    payment.paymentDate = null;
-    payment.paymentMethod = null;
-    payment.invoiceNumber = null;
-    
-    await payment.save();
-
-    // إلغاء المعاملة المالية المرتبطة
-    await FinancialTransaction.deleteMany({ 
-      reference: payment._id,
-      type: 'income'
-    });
-
-    res.json({
-      success: true,
-      message: 'تم إلغاء الدفعة بنجاح',
-      payment: payment
-    });
-
-  } catch (err) {
-    console.error('خطأ في إلغاء الدفعة:', err);
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
-  }
-});
 // ==============================================
 // نقطة نهاية تسديد دفعة معلقة
 // ==============================================
@@ -3225,7 +5131,11 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
     });
     
     
-    
+    // ==============================================
+// ✅ نقطة نهاية جديدة: جلب أساتذة المدرسة فقط
+// ==============================================
+
+
   // endpoint جديد للحصول على مدفوعات الأستاذ
   app.get('/api/teachers/:id/payments',  async (req, res) => {
     try {
@@ -3449,15 +5359,37 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
   });
 
 
-    app.get('/api/students/:id', validateObjectId, async (req, res) => {
-      try {
-        const student = await Student.findById(req.params.id).populate('classes');
-        if (!student) return res.status(404).json({ error: 'الطالب غير موجود' });
-        res.json(student);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
+app.get('/api/students/:id', validateObjectId, async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+      .populate({
+        path: 'classes',
+        populate: [
+          { path: 'teacher', model: 'Teacher' },
+          { path: 'students', model: 'Student' },
+          { path: 'schedule.classroom', model: 'Classroom' }
+        ]
+      });
+      
+    if (!student) return res.status(404).json({ error: 'الطالب غير موجود' });
+    
+    // تأكد من أن الحصص التي يتم إرجاعها تنتمي لنفس المدرسة
+    const schoolId = student.schoolId;
+    const validClasses = student.classes.filter(c => 
+      !schoolId || c.schoolId?.toString() === schoolId?.toString()
+    );
+    
+    // إذا كان هناك تباين، قم بتحديث الطالب
+    if (validClasses.length !== student.classes.length) {
+      student.classes = validClasses.map(c => c._id);
+      await student.save();
+    }
+    
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
     
     app.put('/api/students/:id',  async (req, res) => {
       try {
@@ -3495,129 +5427,1254 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
     });
 
     // Teachers
-    app.get('/api/teachers', async (req, res) => {
-      try {
-        const teachers = await Teacher.find().sort({ name: 1 });
-        res.json(teachers);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
+// ==============================================
+// 📚 جلب أساتذة المدرسة المحددة فقط - FIXED ✅
+// ==============================================
 
-    app.post('/api/teachers', async (req, res) => {
-      try {
-        const { name, phone, email } = req.body;
-        
-        // التحقق من وجود أستاذ بنفس الاسم أو الهاتف أو البريد الإلكتروني
-        const existingTeacher = await Teacher.findOne({
-          $or: [
-            { name },
-            { phone },
-            { email }
-          ]
-        });
+// ==============================================
+// 📚 جلب أساتذة المدرسة المحددة فقط - FIXED ✅
+// ==============================================
+
+app.get('/api/teachers', async (req, res) => {
+  try {
+    // جلب schoolId من الـ query أو من التوكن
+    const schoolId = req.query.schoolId || req.user?.schoolId;
     
-        if (existingTeacher) {
-          return res.status(200).json({ 
-            message: "تم تحديث المعلومات بنجاح",
-            teacher: existingTeacher,
-            existed: true
-          });
-        }
+    console.log('📚 جلب الأساتذة - schoolId:', schoolId);
     
-        const teacher = new Teacher(req.body);
-        await teacher.save();
-        
-        res.status(201).json({
-          message: "تم إنشاء الأستاذ بنجاح",
-          teacher,
-          existed: false
-        });
-      } catch (err) {
-        res.status(400).json({ error: err.message });
-      }
+    let query = {};
+    
+    if (schoolId) {
+      // ✅ تصفية حسب schoolId
+      query.schoolId = schoolId;
+      console.log('🔍 تصفية الأساتذة حسب schoolId:', schoolId);
+    } else {
+      // ⚠️ إذا لم يكن هناك schoolId، نرجع مصفوفة فارغة
+      console.warn('⚠️ لا يوجد schoolId، سيتم إرجاع قائمة فارغة');
+      return res.json([]);
+    }
+
+    const teachers = await Teacher.find(query)
+      .sort({ name: 1 });
+    
+    console.log(`✅ تم جلب ${teachers.length} أستاذ للمدرسة ${schoolId}`);
+    res.json(teachers);
+  } catch (err) {
+    console.error('❌ خطأ في جلب الأساتذة:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
     });
+  }
+});
+
+
+
+app.post('/api/teachers', async (req, res) => {
+  try {
+    // جلب schoolId من التوكن (إذا كان المستخدم مسجل دخول)
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    console.log('📝 إنشاء أستاذ جديد - schoolId:', schoolId);
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    const { name, phone, email, subjects, hireDate, salaryPercentage } = req.body;
+    
+    // التحقق من وجود أستاذ بنفس الاسم أو الهاتف في نفس المدرسة
+    const existingTeacher = await Teacher.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${name}$`, 'i') } },
+        { phone: phone },
+        { email: email }
+      ],
+      schoolId: schoolId // ✅ البحث فقط في نفس المدرسة
+    });
+
+    if (existingTeacher) {
+      return res.status(200).json({ 
+        success: true,
+        message: "الأستاذ موجود مسبقاً في هذه المدرسة",
+        teacher: existingTeacher,
+        existed: true
+      });
+    }
+
+    // إنشاء الأستاذ الجديد مع ربطه بالمدرسة
+    const teacher = new Teacher({
+      schoolId: schoolId, // ✅ ربط الأستاذ بالمدرسة
+      name: name,
+      phone: phone || '',
+      email: email || '',
+      subjects: subjects || [],
+      hireDate: hireDate ? new Date(hireDate) : new Date(),
+      active: true,
+      salaryPercentage: salaryPercentage || 0.7
+    });
+
+    await teacher.save();
+    
+    console.log(`✅ تم إنشاء الأستاذ: ${teacher.name} للمدرسة: ${schoolId}`);
+    
+    res.status(201).json({
+      success: true,
+      message: "تم إنشاء الأستاذ بنجاح",
+      teacher: teacher,
+      existed: false
+    });
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء الأستاذ:', err);
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
     
 
-    app.get('/api/teachers/:id',  async (req, res) => {
-      try {
-        const teacher = await Teacher.findById(req.params.id);
-        if (!teacher) return res.status(404).json({ error: 'الأستاذ غير موجود' });
-        res.json(teacher);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
+app.get('/api/teachers/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة'
+      });
+    }
+
+    const teacher = await Teacher.findOne({
+      _id: req.params.id,
+      schoolId: schoolId // ✅ تأكد من أن الأستاذ ينتمي للمدرسة
+    });
+    
+    if (!teacher) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة' 
+      });
+    }
+    
+    res.json(teacher);
+  } catch (err) {
+    console.error('❌ خطأ في جلب الأستاذ:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
+
+
+app.put('/api/teachers/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة'
+      });
+    }
+
+    // التحقق من أن الأستاذ ينتمي للمدرسة
+    const existingTeacher = await Teacher.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
     });
 
-    app.put('/api/teachers/:id',  async (req, res) => {
-      try {
-        const teacher = await Teacher.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          { new: true }
-        );
-        res.json(teacher);
-      } catch (err) {
-        res.status(400).json({ error: err.message });
-      }
+    if (!existingTeacher) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة' 
+      });
+    }
+
+    // منع تحديث schoolId
+    delete req.body.schoolId;
+
+    const teacher = await Teacher.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    
+    res.json({
+      success: true,
+      message: 'تم تحديث الأستاذ بنجاح',
+      teacher
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الأستاذ:', err);
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
+
+app.delete('/api/teachers/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة'
+      });
+    }
+
+    // التحقق من أن الأستاذ ينتمي للمدرسة
+    const teacher = await Teacher.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
     });
 
-    app.delete('/api/teachers/:id',  async (req, res) => {
-      try {
-        // Remove teacher from classes first
-        await Class.updateMany(
-          { teacher: req.params.id },
-          { $unset: { teacher: "" } }
-        );
+    if (!teacher) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة' 
+      });
+    }
 
-        // Delete the teacher
-        await Teacher.findByIdAndDelete(req.params.id);
+    // إزالة الأستاذ من الحصص أولاً
+    await Class.updateMany(
+      { teacher: req.params.id, schoolId: schoolId },
+      { $unset: { teacher: "" } }
+    );
 
-        res.json({ message: 'تم حذف الأستاذ بنجاح' });
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
+    // حذف الأستاذ
+    await Teacher.findByIdAndDelete(req.params.id);
+
+    res.json({ 
+      success: true,
+      message: 'تم حذف الأستاذ بنجاح' 
     });
+  } catch (err) {
+    console.error('❌ خطأ في حذف الأستاذ:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
 
     // Classrooms
-    app.get('/api/classrooms',  async (req, res) => {
-      try {
-        const classrooms = await Classroom.find().sort({ name: 1 });
-        res.json(classrooms);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
+// ==============================================
+// ROOM (CLASSROOM) MANAGEMENT WITH DELETE
+// ==============================================
+
+// ==============================================
+// ROOM (CLASSROOM) MANAGEMENT WITH COMPLETE FIELDS
+// ==============================================
+
+// Get all classrooms with filtering (محدث)
+
+// ==============================================
+// CLASSROOMS API - مع دعم تعدد المدارس
+// ==============================================
+
+// جلب غرف المدرسة المحددة
+
+
+
+
+
+app.get('/api/classrooms/my-school', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId;
+    
+    if (!schoolId) {
+      return res.status(401).json({
+        success: false,
+        error: 'غير مصرح بالدخول - يرجى تسجيل الدخول'
+      });
+    }
+
+    const classrooms = await Classroom.find({ schoolId: schoolId })
+      .sort({ building: 1, floor: 1, name: 1 });
+    
+    console.log(`✅ تم جلب ${classrooms.length} غرفة للمدرسة ${schoolId}`);
+    res.json(classrooms);
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب غرف المدرسة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// إنشاء غرفة جديدة
+
+
+
+// جلب غرفة محددة
+
+
+// تحديث غرفة
+
+
+
+
+// حذف غرفة
+
+
+
+// Get single classroom (محدث)
+app.get('/api/classrooms/:id', async (req, res) => {
+  try {
+    const classroom = await Classroom.findById(req.params.id);
+    if (!classroom) {
+      return res.status(404).json({ error: 'الغرفة غير موجودة' });
+    }
+    res.json(classroom);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create classroom - مع دعم جميع الحقول (محدث)
+
+// Update classroom - دعم جميع الحقول (محدث)
+
+
+// DELETE classroom - مع التحقق من الاستخدام (محدث)
+app.delete('/api/classrooms/:id', async (req, res) => {
+  try {
+    const classroomId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(classroomId)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'معرف الغرفة غير صالح' 
+      });
+    }
+
+    // التحقق من وجود الغرفة
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الغرفة غير موجودة' 
+      });
+    }
+
+    // التحقق من استخدام الغرفة في جدول الحصص
+    const classesUsingRoom = await Class.find({
+      'schedule.classroom': classroomId
+    }).select('name schedule');
+
+    if (classesUsingRoom.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف الغرفة لأنها مستخدمة في جدول الحصص التالية',
+        classes: classesUsingRoom.map(c => ({
+          id: c._id,
+          name: c.name,
+          schedules: c.schedule.filter(s => 
+            s.classroom && s.classroom.toString() === classroomId
+          ).map(s => ({ day: s.day, time: s.time }))
+        }))
+      });
+    }
+
+    // التحقق من استخدام الغرفة في حصص حية
+    const liveClassesUsingRoom = await LiveClass.find({
+      classroom: classroomId,
+      status: { $in: ['scheduled', 'ongoing'] }
+    }).select('date startTime status');
+
+    if (liveClassesUsingRoom.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف الغرفة لأنها مستخدمة في حصص حية حالية أو مستقبلية',
+        liveClasses: liveClassesUsingRoom.map(lc => ({
+          id: lc._id,
+          date: lc.date,
+          startTime: lc.startTime,
+          status: lc.status
+        }))
+      });
+    }
+
+    // حذف الغرفة
+    await Classroom.findByIdAndDelete(classroomId);
+
+    res.json({
+      success: true,
+      message: 'تم حذف الغرفة بنجاح',
+      deletedRoom: {
+        id: classroom._id,
+        name: classroom.name,
+        building: classroom.building,
+        floor: classroom.floor,
+        location: classroom.location
       }
     });
 
-    app.post('/api/classrooms',  async (req, res) => {
-      try {
-        const classroom = new Classroom(req.body);
-        await classroom.save();
-        res.status(201).json(classroom);
-      } catch (err) {
-        res.status(400).json({ error: err.message });
+  } catch (err) {
+    console.error('Error deleting classroom:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
+
+// الحصول على قائمة التجهيزات المتاحة (نقطة نهاية جديدة)
+app.get('/api/classrooms/equipment-options', async (req, res) => {
+  try {
+    // قائمة التجهيزات الافتراضية (مطابقة لـ equipmentOptions في Angular)
+    const defaultEquipment = [
+      'بروجيكتور', 
+      'سبورة ذكية', 
+      'مكيف هواء', 
+      'أجهزة كمبيوتر', 
+      'نظام صوت', 
+      'طابعة', 
+      'شاشة تفاعلية'
+    ];
+    
+    // جلب التجهيزات الفريدة من قاعدة البيانات
+    const uniqueEquipment = await Classroom.distinct('equipment');
+    
+    // دمج القائمة الافتراضية مع القائمة من قاعدة البيانات
+    const allEquipment = [...new Set([...defaultEquipment, ...uniqueEquipment.flat()])]
+      .filter(item => item && item.trim() !== '')
+      .sort();
+    
+    res.json(allEquipment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// الحصول على إحصائيات الغرف (نقطة نهاية جديدة)
+// ==============================================
+// CLASSROOMS API - مع دعم تعدد المدارس وتقييد الإضافة بالمدرسة
+// ==============================================
+
+// جلب غرف المدرسة المحددة
+// ==============================================
+// 📚 نقاط نهاية إضافية لجلب البيانات حسب المدرسة
+// ==============================================
+
+// 1. جلب حصص مدرسة محددة
+// ==============================================
+// جلب حصص مدرسة محددة (بديل)
+// ==============================================
+app.get('/api/classes/school/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    // التحقق من وجود المدرسة
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const classes = await Class.find({ schoolId })
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId')
+      .populate('schedule.classroom', 'name location')
+      .sort({ createdAt: -1 });
+    
+    console.log(`✅ تم جلب ${classes.length} حصة للمدرسة ${schoolId}`);
+    res.json(classes);
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص المدرسة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// 2. جلب أساتذة مدرسة محددة
+app.get('/api/teachers/school/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    const teachers = await Teacher.find({ schoolId })
+      .sort({ name: 1 });
+    
+    res.json(teachers);
+  } catch (err) {
+    console.error('❌ خطأ في جلب أساتذة المدرسة:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. جلب طلاب مدرسة محددة
+app.get('/api/students/school/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    const students = await Student.find({ schoolId })
+      .populate('classes')
+      .sort({ name: 1 });
+    
+    res.json(students);
+  } catch (err) {
+    console.error('❌ خطأ في جلب طلاب المدرسة:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. جلب غرف مدرسة محددة
+app.get('/api/classrooms/school/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    const classrooms = await Classroom.find({ schoolId })
+      .sort({ building: 1, floor: 1, name: 1 });
+    
+    res.json(classrooms);
+  } catch (err) {
+    console.error('❌ خطأ في جلب غرف المدرسة:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// جلب جميع الغرف (مع فلترة حسب schoolId من التوكن)
+// ==============================================
+// 📚 جلب غرف المدرسة المحددة فقط - FIXED ✅
+// ==============================================
+
+app.get('/api/classrooms', async (req, res) => {
+  try {
+    // جلب schoolId من الـ query أو من التوكن
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log('📚 جلب الغرف - schoolId:', schoolId);
+    
+    let query = {};
+    
+    if (schoolId) {
+      // ✅ تصفية حسب schoolId
+      query.schoolId = schoolId;
+      console.log('🔍 تصفية الغرف حسب schoolId:', schoolId);
+    } else {
+      // ⚠️ إذا لم يكن هناك schoolId، نرجع مصفوفة فارغة
+      console.warn('⚠️ لا يوجد schoolId، سيتم إرجاع قائمة فارغة');
+      return res.json([]);
+    }
+
+    const classrooms = await Classroom.find(query)
+      .sort({ building: 1, floor: 1, name: 1 });
+    
+    console.log(`✅ تم جلب ${classrooms.length} غرفة للمدرسة ${schoolId}`);
+    res.json(classrooms);
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب الغرف:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ إنشاء غرفة جديدة - مع التحديث المطلوب (ربط بالمدرسة)
+// ==============================================
+// ==============================================
+// ✅ إنشاء غرفة جديدة - النسخة المصححة
+// ==============================================
+app.post('/api/classrooms', async (req, res) => {
+  try {
+    console.log('📝 استلام طلب إنشاء غرفة جديدة');
+    console.log('📦 Body:', req.body);
+    console.log('👤 User:', req.user);
+    
+    // 1. جلب schoolId من عدة مصادر (الأولوية للـ body ثم التوكن)
+    const schoolId = req.body.schoolId || req.user?.schoolId;
+    
+    console.log('🏫 schoolId المستخدم:', schoolId);
+    
+    // 2. التحقق من وجود schoolId (إلزامي)
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: '❌ يجب تحديد المدرسة (schoolId) عند إضافة غرفة جديدة',
+        message: 'يرجى اختيار المدرسة أولاً'
+      });
+    }
+
+    // 3. التحقق من صحة schoolId
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: '❌ معرف المدرسة غير صالح',
+        message: 'يرجى اختيار مدرسة صحيحة'
+      });
+    }
+
+    // 4. التحقق من وجود المدرسة في قاعدة البيانات
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: '❌ المدرسة غير موجودة',
+        message: 'المدرسة المحددة غير موجودة في النظام'
+      });
+    }
+
+    // 5. استخراج بيانات الغرفة من الطلب
+    const { 
+      name, 
+      capacity, 
+      floor, 
+      building, 
+      location, 
+      color, 
+      equipment, 
+      status, 
+      description, 
+      floorArea 
+    } = req.body;
+
+    // 6. التحقق من الحقول المطلوبة
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: '❌ اسم الغرفة مطلوب',
+        message: 'يرجى إدخال اسم الغرفة'
+      });
+    }
+
+    if (!capacity || capacity < 1) {
+      return res.status(400).json({
+        success: false,
+        error: '❌ سعة الغرفة غير صالحة',
+        message: 'يرجى إدخال سعة صحيحة (أكبر من 0)'
+      });
+    }
+
+    // 7. التحقق من وجود غرفة بنفس الاسم في نفس المدرسة والمبنى والطابق
+    const existingRoom = await Classroom.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+      building: building || 'المبنى الرئيسي',
+      floor: floor || 1,
+      schoolId: schoolId
+    });
+
+    if (existingRoom) {
+      return res.status(400).json({
+        success: false,
+        error: '❌ توجد غرفة بنفس الاسم في نفس المبنى والطابق',
+        message: `الغرفة "${name}" موجودة مسبقاً في مدرسة ${school.name}`,
+        existingRoom: {
+          _id: existingRoom._id,
+          name: existingRoom.name,
+          building: existingRoom.building,
+          floor: existingRoom.floor
+        }
+      });
+    }
+
+    // 8. تنظيف equipment - إزالة القيم الفارغة
+    const cleanEquipment = Array.isArray(equipment) 
+      ? equipment.filter(item => item && item.trim() !== '')
+      : [];
+
+    // 9. إنشاء الغرفة الجديدة مع ربطها بالمدرسة
+    const classroom = new Classroom({
+      schoolId: schoolId, // 🔗 ربط الغرفة بالمدرسة
+      name: name.trim(),
+      capacity: capacity || 30,
+      floor: floor || 1,
+      building: building || 'المبنى الرئيسي',
+      location: location || '',
+      color: color || '#4361ee',
+      equipment: cleanEquipment,
+      status: status || 'available',
+      description: description || '',
+      floorArea: floorArea || 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // 10. حفظ الغرفة في قاعدة البيانات
+    await classroom.save();
+    
+    console.log(`✅ تم إنشاء الغرفة: ${classroom.name} للمدرسة: ${school.name} (${schoolId})`);
+    
+    // 11. إرجاع الاستجابة الناجحة مع تفاصيل المدرسة
+    res.status(201).json({
+      success: true,
+      message: `✅ تم إنشاء الغرفة "${classroom.name}" بنجاح في مدرسة ${school.name}`,
+      data: {
+        classroom: {
+          _id: classroom._id,
+          name: classroom.name,
+          capacity: classroom.capacity,
+          floor: classroom.floor,
+          building: classroom.building,
+          location: classroom.location,
+          color: classroom.color,
+          equipment: classroom.equipment,
+          status: classroom.status,
+          description: classroom.description,
+          floorArea: classroom.floorArea,
+          createdAt: classroom.createdAt,
+          updatedAt: classroom.updatedAt
+        },
+        school: {
+          _id: school._id,
+          name: school.name,
+          email: school.email,
+          phone: school.phone
+        }
+      },
+      details: {
+        schoolId: schoolId,
+        schoolName: school.name,
+        roomName: classroom.name
       }
     });
+    
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء الغرفة:', err);
+    
+    // معالجة أخطاء التحقق من صحة البيانات
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: '❌ خطأ في صحة البيانات',
+        message: errors.join(', '),
+        details: errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: '❌ فشل في إنشاء الغرفة',
+      message: err.message
+    });
+  }
+});
+
+// ==============================================
+// جلب غرفة محددة (مع معلومات المدرسة)
+// ==============================================
+app.get('/api/classrooms/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    const classroom = await Classroom.findOne({
+      _id: req.params.id,
+      ...(schoolId && { schoolId: schoolId })
+    });
+    
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: 'الغرفة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+    
+    // جلب معلومات المدرسة
+    const school = await School.findById(classroom.schoolId).select('name email phone');
+    
+    res.json({
+      success: true,
+      data: {
+        classroom: classroom,
+        school: school
+      }
+    });
+  } catch (err) {
+    console.error('❌ خطأ في جلب الغرفة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// تحديث غرفة (مع التحقق من المدرسة)
+// ==============================================
+app.put('/api/classrooms/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة'
+      });
+    }
+
+    // التحقق من أن الغرفة تنتمي للمدرسة
+    const existingRoom = await Classroom.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
+    });
+
+    if (!existingRoom) {
+      return res.status(404).json({
+        success: false,
+        error: 'الغرفة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // منع تحديث schoolId
+    delete req.body.schoolId;
+
+    const classroom = await Classroom.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+    
+    res.json({
+      success: true,
+      message: 'تم تحديث الغرفة بنجاح',
+      data: classroom
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الغرفة:', err);
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// حذف غرفة (مع التحقق من المدرسة)
+// ==============================================
+app.delete('/api/classrooms/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة'
+      });
+    }
+
+    // التحقق من أن الغرفة تنتمي للمدرسة
+    const classroom = await Classroom.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
+    });
+
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: 'الغرفة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // التحقق من استخدام الغرفة في جدول الحصص
+    const classesUsingRoom = await Class.find({
+      'schedule.classroom': req.params.id
+    });
+
+    if (classesUsingRoom.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف الغرفة لأنها مستخدمة في جدول الحصص',
+        classes: classesUsingRoom.map(c => c.name)
+      });
+    }
+
+    await Classroom.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'تم حذف الغرفة بنجاح'
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في حذف الغرفة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// الحصول على إحصائيات الغرف للمدرسة المحددة
+// ==============================================
+app.get('/api/classrooms/statistics', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'schoolId مطلوب'
+      });
+    }
+
+    const totalRooms = await Classroom.countDocuments({ schoolId: schoolId });
+    const availableRooms = await Classroom.countDocuments({ schoolId: schoolId, status: 'available' });
+    const occupiedRooms = await Classroom.countDocuments({ schoolId: schoolId, status: 'occupied' });
+    const maintenanceRooms = await Classroom.countDocuments({ schoolId: schoolId, status: 'maintenance' });
+    
+    // إحصائيات حسب المبنى
+    const byBuilding = await Classroom.aggregate([
+      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
+      { $group: { _id: '$building', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    // إحصائيات حسب الطابق
+    const byFloor = await Classroom.aggregate([
+      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
+      { $group: { _id: '$floor', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+    
+    // أكثر التجهيزات شيوعاً
+    const equipmentStats = await Classroom.aggregate([
+      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
+      { $unwind: '$equipment' },
+      { $group: { _id: '$equipment', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // معلومات المدرسة
+    const school = await School.findById(schoolId).select('name');
+    
+    res.json({
+      success: true,
+      school: school?.name || 'غير محدد',
+      totalRooms,
+      availableRooms,
+      occupiedRooms,
+      maintenanceRooms,
+      byBuilding,
+      byFloor,
+      equipmentStats
+    });
+  } catch (err) {
+    console.error('❌ خطأ في إحصائيات الغرف:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Check classroom availability
+app.get('/api/classrooms/:id/availability', async (req, res) => {
+  try {
+    const classroomId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(classroomId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الغرفة غير صالح'
+      });
+    }
+    
+    const classroom = await Classroom.findById(classroomId)
+      .select('name status location capacity equipment');
+    
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: 'الغرفة غير موجودة'
+      });
+    }
+    
+    // جلب الحصص الحالية في الغرفة
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const currentLiveClass = await LiveClass.findOne({
+      classroom: classroomId,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      status: 'ongoing'
+    }).populate('class', 'name subject')
+      .populate('teacher', 'name');
+    
+    const upcomingClasses = await LiveClass.find({
+      classroom: classroomId,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      status: 'scheduled'
+    }).populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .sort({ startTime: 1 });
+    
+    res.json({
+      success: true,
+      classroom: {
+        _id: classroom._id,
+        name: classroom.name,
+        status: classroom.status,
+        location: classroom.location,
+        capacity: classroom.capacity,
+        equipment: classroom.equipment
+      },
+      currentStatus: classroom.status === 'available' ? 'متاحة' : 
+                     classroom.status === 'occupied' ? 'مشغولة' : 'قيد الصيانة',
+      currentLiveClass: currentLiveClass ? {
+        id: currentLiveClass._id,
+        className: currentLiveClass.class?.name,
+        subject: currentLiveClass.class?.subject,
+        teacher: currentLiveClass.teacher?.name,
+        startTime: currentLiveClass.startTime,
+        endTime: currentLiveClass.endTime
+      } : null,
+      upcomingClasses: upcomingClasses.map(lc => ({
+        id: lc._id,
+        className: lc.class?.name,
+        subject: lc.class?.subject,
+        teacher: lc.teacher?.name,
+        startTime: lc.startTime
+      }))
+    });
+    
+  } catch (err) {
+    console.error('Error checking classroom availability:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// Get classroom schedule (محدث)
+app.get('/api/classrooms/:id/schedule', async (req, res) => {
+  try {
+    const classroomId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(classroomId)) {
+      return res.status(400).json({ error: 'معرف الغرفة غير صالح' });
+    }
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ error: 'الغرفة غير موجودة' });
+    }
+
+    // جلب جميع الحصص التي تستخدم هذه الغرفة
+    const classes = await Class.find({
+      'schedule.classroom': classroomId
+    })
+      .populate('teacher', 'name')
+      .populate('students', 'name');
+
+    const schedule = [];
+    const dayOrder = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+    classes.forEach(cls => {
+      cls.schedule.forEach(session => {
+        if (session.classroom && session.classroom.toString() === classroomId) {
+          schedule.push({
+            classId: cls._id,
+            className: cls.name,
+            subject: cls.subject,
+            teacher: cls.teacher?.name || 'غير محدد',
+            day: session.day,
+            time: session.time,
+            studentsCount: cls.students?.length || 0
+          });
+        }
+      });
+    });
+
+    // ترتيب حسب اليوم والوقت
+    schedule.sort((a, b) => {
+      const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+      if (dayDiff !== 0) return dayDiff;
+      return a.time.localeCompare(b.time);
+    });
+
+    res.json({
+      classroom: {
+        _id: classroom._id,
+        name: classroom.name,
+        building: classroom.building,
+        floor: classroom.floor,
+        location: classroom.location
+      },
+      schedule
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get classroom statistics (محدث)
+app.get('/api/classrooms/:id/stats', async (req, res) => {
+  try {
+    const classroomId = req.params.id;
+    
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ error: 'الغرفة غير موجودة' });
+    }
+
+    // عدد الحصص التي تستخدم هذه الغرفة
+    const classCount = await Class.countDocuments({
+      'schedule.classroom': classroomId
+    });
+
+    // الحصص القادمة
+    const today = new Date();
+    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const currentDay = dayNames[today.getDay()];
+
+    const upcomingClasses = await Class.find({
+      'schedule.classroom': classroomId,
+      'schedule.day': currentDay
+    })
+      .populate('teacher', 'name')
+      .limit(5);
+
+    // إحصائيات استخدام الغرفة
+    const usageStats = await Class.aggregate([
+      { $unwind: '$schedule' },
+      { $match: { 'schedule.classroom': new mongoose.Types.ObjectId(classroomId) } },
+      { $group: { _id: '$schedule.day', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json({
+      classroom,
+      stats: {
+        totalClasses: classCount,
+        usageByDay: usageStats,
+        upcomingClasses: upcomingClasses.map(c => ({
+          name: c.name,
+          time: c.schedule.find(s => s.classroom?.toString() === classroomId)?.time,
+          teacher: c.teacher?.name
+        }))
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk update classroom status (نقطة نهاية جديدة)
+app.patch('/api/classrooms/bulk-status', async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب توفير مصفوفة من معرفات الغرف وحالة جديدة'
+      });
+    }
+
+    if (!['available', 'occupied', 'maintenance'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'حالة غير صالحة'
+      });
+    }
+
+    const result = await Classroom.updateMany(
+      { _id: { $in: ids } },
+      { status, updatedAt: new Date() }
+    );
+
+    res.json({
+      success: true,
+      message: `تم تحديث حالة ${result.modifiedCount} غرفة بنجاح`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Get classrooms with availability check (نقطة نهاية جديدة)
+app.get('/api/classrooms/available-for-schedule', async (req, res) => {
+  try {
+    const { date, startTime, endTime, day } = req.query;
+    
+    // جلب جميع الغرف المتاحة
+    const availableRooms = await Classroom.find({ 
+      status: { $ne: 'maintenance' } 
+    });
+
+    // إذا تم تحديد وقت، تحقق من الجدولة
+    let scheduledRooms = [];
+    if (day && startTime) {
+      scheduledRooms = await Class.find({
+        'schedule.day': day,
+        'schedule.time': startTime
+      }).distinct('schedule.classroom');
+    }
+
+    const roomsWithAvailability = availableRooms.map(room => {
+      const isScheduled = scheduledRooms.some(
+        id => id.toString() === room._id.toString()
+      );
+      
+      return {
+        ...room.toObject(),
+        isAvailable: !isScheduled && room.status === 'available'
+      };
+    });
+
+    res.json(roomsWithAvailability);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
     // Classes
-    app.get('/api/classes',  async (req, res) => {
-      try {
-        const { academicYear, subject, teacher } = req.query;
-        const query = {};
 
-        if (academicYear) query.academicYear = academicYear;
-        if (subject) query.subject = subject;
-        if (teacher) query.teacher = teacher;
-
-        const classes = await Class.find(query)
-          .populate('teacher')
-          .populate('students')
-          .populate('schedule.classroom');
-        res.json(classes);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
 
   // In your server.js, add logging to the /api/classes POST endpoint:
   // تأكد من أن هذا الكود موجود في نقطة /api/classes POST
@@ -3688,71 +6745,125 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
 
 
   // In your server.js file, change the authenticate middleware for this endpoint:
-  app.get('/api/classes/:id', async (req, res) => {
-    try {
-      console.log('=== REQUEST FOR CLASS DETAILS ===');
-      console.log('Class ID:', req.params.id);
-      console.log('Request URL:', req.url);
-      console.log('Headers:', req.headers);
-      
-      const classId = req.params.id;
-      
-      if (!mongoose.Types.ObjectId.isValid(classId)) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'معرف الحصة غير صالح',
-          id: classId
-        });
-      }
-      
-      const classObj = await Class.findById(classId)
-        .populate('teacher', 'name phone email')
-        .populate('students', 'name studentId parentPhone parentEmail academicYear')
-        .populate('schedule.classroom', 'name location');
-      
-      if (!classObj) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة',
-          id: classId
-        });
-      }
-      
-      console.log('Class found:', classObj.name);
-      
-      res.json({
-        success: true,
-        data: classObj,
-        message: 'تم تحميل تفاصيل الحصة بنجاح'
-      });
-      
-    } catch (err) {
-      console.error('Error fetching class details:', err);
-      res.status(500).json({ 
+// ==============================================
+// 📚 GET CLASS DETAILS - مع تصفية حسب المدرسة
+// ==============================================
+// ==============================================
+// 📚 GET CLASS DETAILS - مع تصفية حسب المدرسة
+// ==============================================
+
+// ==============================================
+// 📚 GET CLASS DETAILS - مع تصفية حسب المدرسة
+// ==============================================
+
+app.get('/api/classes/:id', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب تفاصيل الحصة: ${classId}`);
+    console.log(`🏫 schoolId: ${schoolId}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
         success: false,
-        error: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        error: 'معرف الحصة غير صالح'
       });
     }
-  });
 
+    // ✅ جلب الحصة مع تصفية حسب المدرسة
+    const query = { _id: classId };
+    if (schoolId) {
+      query.schoolId = schoolId;
+    }
 
-    app.put('/api/classes/:id',  async (req, res) => {
-      try {
-        const classObj = await Class.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          { new: true }
-        )
-          .populate('teacher')
-          .populate('students')
-          .populate('schedule.classroom');
+    const classObj = await Class.findOne(query)
+      .populate('teacher', 'name phone email')
+      .populate({
+        path: 'students',
+        match: schoolId ? { schoolId: schoolId } : {}, // ✅ تصفية الطلاب حسب المدرسة
+        populate: {
+          path: 'classes',
+          model: 'Class'
+        }
+      })
+      .populate('schedule.classroom', 'name location capacity');
 
-        res.json(classObj);
-      } catch (err) {
-        res.status(400).json({ error: err.message });
-      }
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // ✅ تأكد من أن students هي مصفوفة
+    if (!classObj.students) {
+      classObj.students = [];
+    }
+
+    console.log(`✅ تم جلب ${classObj.students.length} طالب للحصة`);
+
+    res.json({
+      success: true,
+      data: classObj
     });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب تفاصيل الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+
+app.put('/api/classes/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    // التحقق من أن الحصة تنتمي للمدرسة
+    const existingClass = await Class.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
+    });
+
+    if (!existingClass) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // منع تحديث schoolId
+    delete req.body.schoolId;
+
+    const classObj = await Class.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    )
+      .populate('teacher')
+      .populate('students')
+      .populate('schedule.classroom');
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الحصة بنجاح',
+      data: classObj
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الحصة:', err);
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 
     app.delete('/api/classes/:id',  async (req, res) => {
       try {
@@ -3774,246 +6885,297 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
         res.status(500).json({ error: err.message });
       }
     });
+app.delete('/api/classes/:id', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    // التحقق من أن الحصة تنتمي للمدرسة
+    const classObj = await Class.findOne({
+      _id: req.params.id,
+      schoolId: schoolId
+    });
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // إزالة الحصة من الطلاب
+    await Student.updateMany(
+      { classes: req.params.id },
+      { $pull: { classes: req.params.id } }
+    );
+
+    // حذف المدفوعات المرتبطة
+    await Payment.deleteMany({ class: req.params.id });
+    await Attendance.deleteMany({ class: req.params.id });
+
+    // حذف الحصة
+    await Class.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'تم حذف الحصة بنجاح'
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في حذف الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 
     // دالة مساعدة لإنشاء نظام الدفع الشهري
-    async function createMonthlyPaymentSystem(studentId, classId, price, startDate, recordedById, notes = '') {
-      try {
-        console.log(`[إنشاء شهري] للطالب: ${studentId}, الحصة: ${classId}, السعر: ${price}`);
-        
-        const currentDate = moment(startDate);
-        const months = [];
-        
-        // إنشاء 12 دفعة شهرية (سنة كاملة)
-        for (let i = 0; i < 12; i++) {
-          const monthDate = moment(startDate).add(i, 'months');
-          const monthStr = monthDate.format('YYYY-MM');
-          const monthName = monthDate.locale('ar').format('MMMM YYYY');
-          months.push({ month: monthStr, name: monthName });
-        }
+// ==============================================
+// دالة إنشاء الدفعات الشهرية - مع schoolId
+// ==============================================
+async function createMonthlyPaymentSystem(studentId, classId, price, startDate, recordedById, notes = '') {
+  try {
+    console.log(`[إنشاء شهري] للطالب: ${studentId}, الحصة: ${classId}, السعر: ${price}`);
     
-        const createdPayments = [];
-        for (const month of months) {
-          const paymentExists = await Payment.findOne({
-            student: studentId,
-            class: classId,
-            month: month.month
+    // 🔥 جلب schoolId من الطالب أو الحصة
+    const student = await Student.findById(studentId);
+    const classObj = await Class.findById(classId);
+    
+    // ✅ تحديد schoolId من الطالب أو الحصة
+    let schoolId = student?.schoolId || classObj?.schoolId;
+    
+    if (!schoolId) {
+      console.error('❌ لا يوجد schoolId للطالب أو الحصة');
+      return { success: false, error: 'schoolId غير موجود' };
+    }
+    
+    console.log(`🏫 schoolId المستخدم: ${schoolId}`);
+    
+    const currentDate = moment(startDate);
+    const months = [];
+    
+    // إنشاء 12 دفعة شهرية
+    for (let i = 0; i < 12; i++) {
+      const monthDate = moment(startDate).add(i, 'months');
+      const monthStr = monthDate.format('YYYY-MM');
+      const monthName = monthDate.locale('ar').format('MMMM YYYY');
+      months.push({ month: monthStr, name: monthName });
+    }
+
+    const createdPayments = [];
+    for (const month of months) {
+      const paymentExists = await Payment.findOne({
+        student: studentId,
+        class: classId,
+        month: month.month
+      });
+
+      if (!paymentExists) {
+        const payment = new Payment({
+          student: studentId,
+          class: classId,
+          schoolId: schoolId, // ✅ إضافة schoolId هنا
+          amount: price,
+          month: month.name,
+          monthCode: month.month,
+          status: moment(month.month, 'YYYY-MM').isBefore(moment(), 'month') ? 'late' : 'pending',
+          recordedBy: recordedById,
+          paymentMethod: 'cash',
+          notes: notes || `دفعة شهرية لشهر ${month.name}`
+        });
+
+        await payment.save();
+        createdPayments.push(payment);
+        
+        console.log(`✅ تم إنشاء دفعة شهرية: ${month.name} - ${price} د.ج (schoolId: ${schoolId})`);
+        
+        // تسجيل المعاملة المالية
+        if (recordedById) {
+          const transaction = new FinancialTransaction({
+            type: 'income',
+            amount: price,
+            description: `دفعة متوقعة للطالب في الحصة ${classId} لشهر ${month.name}`,
+            category: 'tuition',
+            recordedBy: recordedById,
+            reference: payment._id,
+            schoolId: schoolId // ✅ إضافة schoolId هنا أيضاً
           });
-    
-          if (!paymentExists) {
-            const payment = new Payment({
-              student: studentId,
-              class: classId,
-              amount: price,
-              month: month.name,
-              monthCode: month.month,
-              status: moment(month.month, 'YYYY-MM').isBefore(moment(), 'month') ? 'late' : 'pending',
-              recordedBy: recordedById,
-              paymentMethod: 'cash',
-              notes: notes || `دفعة شهرية لشهر ${month.name}`
-            });
-    
-            await payment.save();
-            createdPayments.push(payment);
-            
-            console.log(`✅ تم إنشاء دفعة شهرية: ${month.name} - ${price} د.ج`);
-            
-            // تسجيل المعاملة المالية
-            const transaction = new FinancialTransaction({
-              type: 'income',
-              amount: price,
-              description: `دفعة متوقعة للطالب ${studentId} في الحصة ${classId} لشهر ${month.name}`,
-              category: 'tuition',
-              recordedBy: recordedById,
-              reference: payment._id
-            });
-            await transaction.save();
-          }
+          await transaction.save();
         }
-        
-        return {
-          success: true,
-          type: 'monthly',
-          payments: createdPayments,
-          months: months.length,
-          totalAmount: price * months.length,
-          message: `تم إنشاء ${createdPayments.length} دفعة شهرية`
-        };
-      } catch (err) {
-        console.error('❌ خطأ في إنشاء الدفعات الشهرية:', err);
-        return {
-          success: false,
-          error: err.message
-        };
       }
     }
+    
+    return {
+      success: true,
+      type: 'monthly',
+      payments: createdPayments,
+      months: months.length,
+      totalAmount: price * months.length,
+      message: `تم إنشاء ${createdPayments.length} دفعة شهرية`
+    };
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء الدفعات الشهرية:', err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
     
   // دالة مساعدة لإنشاء نظام الجولات
-  async function createRoundPaymentSystem(studentId, classId, price, roundSettings, startDate, recordedById, notes = '') {
-    try {
-      console.log(`[إنشاء جولات] للطالب: ${studentId}, الحصة: ${classId}`);
-      
-      const { sessionCount = 8, sessionDuration = 2, breakBetweenSessions = 0 } = roundSettings;
-      
-      // حساب السعر لكل جلسة
-      const sessionPrice = Math.round(price / sessionCount);
-      const totalAmount = sessionPrice * sessionCount;
-      
-      // حساب تواريخ الجلسات
-      const sessions = [];
-      let currentSessionDate = moment(startDate);
-      
-      for (let i = 1; i <= sessionCount; i++) {
-        sessions.push({
-          sessionNumber: i,
-          date: currentSessionDate.toDate(),
-          price: sessionPrice,
-          status: 'pending',
-          notes: `الجلسة ${i} من ${sessionCount}`
-        });
-        
-        // الانتقال للجلسة التالية
-        currentSessionDate.add(sessionDuration + breakBetweenSessions, 'hours');
-      }
-      
-      const endDate = currentSessionDate.toDate();
-      
-      // إنشاء سجل الجولة
-      const roundPayment = new RoundPayment({
-        student: studentId,
-        class: classId,
-        roundNumber: `RND-${Date.now().toString().slice(-6)}`,
-        sessionCount: sessionCount,
-        sessionPrice: sessionPrice,
-        totalAmount: totalAmount,
-        startDate: startDate,
-        endDate: endDate,
-        sessions: sessions,
-        status: 'pending',
-        recordedBy: recordedById,
-        notes: notes || `نظام جولات: ${sessionCount} جلسة`
-      });
-      
-      await roundPayment.save();
-      
-      // إنشاء دفعة واحدة للجولة
-      const payment = new Payment({
-        student: studentId,
-        class: classId,
-        amount: totalAmount,
-        month: `جولة ${roundPayment.roundNumber}`,
-        monthCode: moment().format('YYYY-MM'),
-        status: 'pending',
-        recordedBy: recordedById,
-        paymentMethod: 'cash',
-        notes: `دفعة جولة ${roundPayment.roundNumber} - ${sessionCount} جلسة`
-      });
-      
-      await payment.save();
-      
-      console.log(`✅ تم إنشاء جولة: ${roundPayment.roundNumber} - ${totalAmount} د.ج`);
-      
-      return {
-        success: true,
-        type: 'rounds',
-        roundId: roundPayment._id,
-        roundNumber: roundPayment.roundNumber,
-        sessionCount: sessionCount,
-        totalAmount: totalAmount,
-        paymentId: payment._id,
-        message: `تم إنشاء جولة ${roundPayment.roundNumber} بـ ${sessionCount} جلسة`
-      };
-    } catch (err) {
-      console.error('❌ خطأ في إنشاء نظام الجولات:', err);
-      return {
-        success: false,
-        error: err.message
-      };
+// ==============================================
+// دالة إنشاء نظام الجولات - مع schoolId
+// ==============================================
+async function createRoundPaymentSystem(studentId, classId, price, roundSettings, startDate, recordedById, notes = '') {
+  try {
+    console.log(`[إنشاء جولات] للطالب: ${studentId}, الحصة: ${classId}`);
+    
+    // 🔥 جلب schoolId من الطالب أو الحصة
+    const student = await Student.findById(studentId);
+    const classObj = await Class.findById(classId);
+    
+    let schoolId = student?.schoolId || classObj?.schoolId;
+    
+    if (!schoolId) {
+      console.error('❌ لا يوجد schoolId للطالب أو الحصة');
+      return { success: false, error: 'schoolId غير موجود' };
     }
+    
+    console.log(`🏫 schoolId المستخدم للجولات: ${schoolId}`);
+    
+    const { sessionCount = 8, sessionDuration = 2, breakBetweenSessions = 0 } = roundSettings;
+    
+    // Calculate price per session
+    const sessionPrice = Math.round(price / sessionCount);
+    const totalAmount = sessionPrice * sessionCount;
+    
+    // Calculate session dates
+    const sessions = [];
+    let currentSessionDate = moment(startDate);
+    
+    for (let i = 1; i <= sessionCount; i++) {
+      sessions.push({
+        sessionNumber: i,
+        date: currentSessionDate.toDate(),
+        price: sessionPrice,
+        status: 'pending',
+        notes: `الجلسة ${i} من ${sessionCount}`
+      });
+      
+      currentSessionDate.add(sessionDuration + breakBetweenSessions, 'hours');
+    }
+    
+    const endDate = currentSessionDate.toDate();
+    
+    // Create round record
+    const roundPayment = new RoundPayment({
+      student: studentId,
+      class: classId,
+      schoolId: schoolId, // ✅ إضافة schoolId
+      roundNumber: `RND-${Date.now().toString().slice(-6)}`,
+      sessionCount: sessionCount,
+      sessionPrice: sessionPrice,
+      totalAmount: totalAmount,
+      startDate: startDate,
+      endDate: endDate,
+      sessions: sessions,
+      status: 'pending',
+      recordedBy: recordedById,
+      notes: notes || `نظام جولات: ${sessionCount} جلسة`
+    });
+    
+    await roundPayment.save();
+    
+    // Create one payment for the round
+    const payment = new Payment({
+      student: studentId,
+      class: classId,
+      schoolId: schoolId, // ✅ إضافة schoolId
+      amount: totalAmount,
+      month: `جولة ${roundPayment.roundNumber}`,
+      monthCode: moment().format('YYYY-MM'),
+      status: 'pending',
+      recordedBy: recordedById,
+      paymentMethod: 'cash',
+      notes: `دفعة جولة ${roundPayment.roundNumber} - ${sessionCount} جلسة`
+    });
+    
+    await payment.save();
+    
+    console.log(`✅ تم إنشاء جولة: ${roundPayment.roundNumber} - ${totalAmount} د.ج (schoolId: ${schoolId})`);
+    
+    return {
+      success: true,
+      type: 'rounds',
+      roundId: roundPayment._id,
+      roundNumber: roundPayment.roundNumber,
+      sessionCount: sessionCount,
+      totalAmount: totalAmount,
+      paymentId: payment._id,
+      message: `تم إنشاء جولة ${roundPayment.roundNumber} بـ ${sessionCount} جلسة`
+    };
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء نظام الجولات:', err);
+    return {
+      success: false,
+      error: err.message
+    };
   }
-
+}
     // Enroll Student in Class
     // Enroll Student in Class
   // في server.js، تحديث نقطة النهاية /api/classes/:classId/enroll/:studentId
   // في نقطة /api/classes/:classId/enroll/:studentId
-  app.post('/api/classes/:classId/enroll/:studentId',  async (req, res) => {
-    try {
-      // 1. Check if class and student exist
-      const classObj = await Class.findById(req.params.classId);
-      const student = await Student.findById(req.params.studentId);
+// TEST ENROLLMENT - Without Authentication (FOR TESTING ONLY)
+app.post('/api/classes/:classId/enroll/test/:studentId', async (req, res) => {
+  try {
+    console.log(`=== TEST ENROLLMENT REQUEST ===`);
+    console.log(`Class ID: ${req.params.classId}`);
+    console.log(`Student ID: ${req.params.studentId}`);
+    
+    const classObj = await Class.findById(req.params.classId);
+    const student = await Student.findById(req.params.studentId);
 
-      if (!classObj || !student) {
-          return res.status(404).json({ error: 'الحصة أو الطالب غير موجود' });
-      }
-
-      // 2. التحقق من تطابق السنة الدراسية
-      const isAcademicYearMatch = (
-          !classObj.academicYear || 
-          classObj.academicYear === 'NS' || 
-          classObj.academicYear === 'غير محدد' ||
-          classObj.academicYear === student.academicYear
-      );
-
-      if (!isAcademicYearMatch) {
-          return res.status(400).json({ 
-              error: `لا يمكن تسجيل الطالب في هذه الحصة بسبب عدم تطابق السنة الدراسية (الحصة: ${classObj.academicYear}, الطالب: ${student.academicYear})`
-          });
-      }
-
-      // 3. التحقق من التسجيل المسبق
-      const isEnrolled = classObj.students.includes(req.params.studentId);
-      if (isEnrolled) {
-        return res.status(400).json({ error: 'الطالب مسجل بالفعل في هذه الحصة' });
-      }
-
-      // 4. تسجيل الطالب في الحصة
-      if (!classObj.students.includes(req.params.studentId)) {
-        classObj.students.push(req.params.studentId);
-        await classObj.save();
-      }
-
-      if (!student.classes.includes(req.params.classId)) {
-        student.classes.push(req.params.classId);
-        await student.save();
-      }
-
-      // 5. إنشاء نظام الدفع تلقائيًا بناءً على نوع النظام
-      const enrollmentDate = new Date();
-      const createdPaymentSystems = [];
-      
-      if (classObj.paymentSystem === 'monthly') {
-        // إنشاء نظام الدفع الشهري
-        const monthlyResult = await createMonthlyPaymentSystem(
-          student._id,
-          classObj._id,
-          classObj.price,
-          enrollmentDate,
-          req.user.id
-        );
-        createdPaymentSystems.push(monthlyResult);
-        
-      } else if (classObj.paymentSystem === 'rounds') {
-        // إنشاء نظام الجولات
-        const roundResult = await createRoundPaymentSystem(
-          student._id,
-          classObj._id,
-          classObj.price,
-          classObj.roundSettings || {},
-          enrollmentDate,
-          req.user.id
-        );
-        createdPaymentSystems.push(roundResult);
-      }
-
-      res.json({
-        message: `تم إضافة الطالب ${student.name} للحصة ${classObj.name} بنجاح`,
-        class: classObj,
-        paymentSystems: createdPaymentSystems
+    if (!classObj || !student) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الحصة أو الطالب غير موجود' 
       });
-    } catch (err) {
-      res.status(400).json({ error: err.message });
     }
-  });
+
+    // Check if already enrolled
+    if (classObj.students.includes(req.params.studentId)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'الطالب مسجل بالفعل' 
+      });
+    }
+
+    // Enroll
+    classObj.students.push(req.params.studentId);
+    await classObj.save();
+
+    if (!student.classes.includes(req.params.classId)) {
+      student.classes.push(req.params.classId);
+      await student.save();
+    }
+
+    const updatedClass = await Class.findById(req.params.classId)
+      .populate('teacher')
+      .populate('students');
+
+    res.json({
+      success: true,
+      message: 'تم إضافة الطالب بنجاح (اختبار)',
+      data: updatedClass
+    });
+
+  } catch (err) {
+    console.error('Test enrollment error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
   async function createAutoPaymentSystem(studentId, classObj, enrollmentDate, recordedById) {
     try {
       console.log(`[نظام تلقائي] إنشاء دفعات للطالب ${studentId} في حصة ${classObj.name}`);
@@ -4093,188 +7255,350 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
         res.status(500).json({ error: err.message });
       }
     });
+app.post('/api/debug/fix-student-classes/:studentId', async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.studentId);
+    if (!student) {
+      return res.status(404).json({ error: 'الطالب غير موجود' });
+    }
+    
+    // جلب جميع الحصص التي تحتوي على هذا الطالب
+    const classesContainingStudent = await Class.find({ 
+      students: student._id 
+    });
+    
+    const classIds = classesContainingStudent.map(c => c._id);
+    
+    // تحديث الطالب بمصفوفة الحصص الصحيحة
+    student.classes = classIds;
+    await student.save();
+    
+    res.json({
+      success: true,
+      message: `تم تحديث الطالب بـ ${classIds.length} حصة`,
+      student: {
+        _id: student._id,
+        name: student.name,
+        classes: student.classes
+      },
+      classes: classesContainingStudent.map(c => ({
+        _id: c._id,
+        name: c.name,
+        studentsCount: c.students.length
+      }))
+    });
+    
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
+// أضف هذا المسار في server.js مع المسارات الأخرى للطلاب
+// ==============================================
+// جلب حصص طالب معين
+// ==============================================
+
+
+// ==============================================
+// جلب تفاصيل حصة معينة (بديل محسن)
+// ==============================================
+app.get('/api/classes/:id/details', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب تفاصيل الحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    const classObj = await Class.findOne({
+      _id: classId,
+      ...(schoolId && { schoolId: schoolId })
+    })
+      .populate('teacher', 'name phone email')
+      .populate({
+        path: 'students',
+        select: 'name studentId parentPhone parentEmail academicYear'
+      })
+      .populate('schedule.classroom', 'name location capacity');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    // جلب إحصائيات المدفوعات للحصة
+    const paymentStats = await Payment.aggregate([
+      { $match: { class: new mongoose.Types.ObjectId(classId) } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    // جلب إحصائيات الحضور (آخر 30 يوم)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const attendanceStats = await Attendance.aggregate([
+      {
+        $match: {
+          class: new mongoose.Types.ObjectId(classId),
+          date: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // تحويل إحصائيات المدفوعات
+    const paymentSummary = {
+      paid: 0,
+      paidAmount: 0,
+      pending: 0,
+      pendingAmount: 0,
+      late: 0,
+      lateAmount: 0
+    };
+
+    paymentStats.forEach(stat => {
+      if (stat._id === 'paid') {
+        paymentSummary.paid = stat.count;
+        paymentSummary.paidAmount = stat.total;
+      } else if (stat._id === 'pending') {
+        paymentSummary.pending = stat.count;
+        paymentSummary.pendingAmount = stat.total;
+      } else if (stat._id === 'late') {
+        paymentSummary.late = stat.count;
+        paymentSummary.lateAmount = stat.total;
+      }
+    });
+
+    // تحويل إحصائيات الحضور
+    const attendanceSummary = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      total: 0
+    };
+
+    attendanceStats.forEach(stat => {
+      if (stat._id === 'present') attendanceSummary.present = stat.count;
+      else if (stat._id === 'absent') attendanceSummary.absent = stat.count;
+      else if (stat._id === 'late') attendanceSummary.late = stat.count;
+    });
+    attendanceSummary.total = attendanceSummary.present + attendanceSummary.absent + attendanceSummary.late;
+
+    // جلب الحصص الحية القادمة لهذه الحصة
+    const upcomingLiveClasses = await LiveClass.find({
+      class: classId,
+      date: { $gte: new Date() },
+      status: { $in: ['scheduled', 'ongoing'] }
+    })
+      .populate('teacher', 'name')
+      .populate('classroom', 'name')
+      .sort({ date: 1, startTime: 1 })
+      .limit(5);
+
+    res.json({
+      success: true,
+      data: {
+        class: classObj,
+        students: classObj.students || [],
+        paymentStats: paymentSummary,
+        attendanceStats: attendanceSummary,
+        upcomingClasses: upcomingLiveClasses,
+        totalStudents: classObj.students?.length || 0,
+        totalIncome: paymentSummary.paidAmount,
+        totalPending: paymentSummary.pendingAmount + paymentSummary.lateAmount
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب تفاصيل الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
     // API للتسجيل الجماعي للطالب في عدة حصص
   // API للتسجيل الجماعي للطالب في عدة حصص
   // التسجيل الجماعي مع إنشاء أنظمة الدفع تلقائياً
-  app.post('/api/students/:studentId/enroll-multiple', async (req, res) => {
-    try {
-      const { classIds, roundSettings } = req.body;
-      const studentId = req.params.studentId;
-      
-      // الحل: استخدام مستخدم افتراضي للاختبار
-      let recordedById;
-      const anyUser = await User.findOne({});
-      if (anyUser) {
-        recordedById = anyUser._id;
-      } else {
-        recordedById = new mongoose.Types.ObjectId();
-      }
+// التسجيل الجماعي مع إنشاء أنظمة الدفع تلقائياً
+// ==============================================
+// ENROLL STUDENT IN MULTIPLE CLASSES - مع إنشاء نظام الدفع
+// ==============================================
 
-      console.log(`=== بدء التسجيل الجماعي ===`);
-      console.log(`الطالب: ${studentId}`);
-      console.log(`الحصص: ${classIds}`);
-      console.log(`المسجل: ${recordedById}`);
-
-      // التحقق من وجود الطالب
-      const student = await Student.findById(studentId);
-      if (!student) {
-        console.log('❌ الطالب غير موجود');
-        return res.status(404).json({ 
-          success: false,
-          error: 'الطالب غير موجود' 
-        });
-      }
-
-      const results = {
-        successful: [],
-        failed: [],
-        paymentSystems: []
-      };
-
-      for (const classId of classIds) {
-        try {
-          console.log(`\n--- معالجة الحصة ${classId} ---`);
-          
-          // الحصول على بيانات الحصة
-          const classObj = await Class.findById(classId)
-            .populate('teacher')
-            .populate('students');
-          
-          if (!classObj) {
-            console.log(`❌ الحصة غير موجودة: ${classId}`);
-            results.failed.push({
-              classId: classId,
-              error: 'الحصة غير موجودة'
-            });
-            continue;
-          }
-
-          console.log(`الحصة: ${classObj.name}, السعر: ${classObj.price}, النظام: ${classObj.paymentSystem}`);
-
-          // التحقق من التسجيل المسبق
-          const isEnrolled = classObj.students.some(s => s._id.toString() === studentId);
-          if (isEnrolled) {
-            console.log(`⚠️ الطالب مسجل مسبقاً`);
-            results.failed.push({
-              classId: classId,
-              className: classObj.name,
-              error: 'الطالب مسجل مسبقاً في هذه الحصة'
-            });
-            continue;
-          }
-
-          // إضافة الطالب للحصة
-          classObj.students.push(studentId);
-          await classObj.save();
-          console.log(`✅ تم إضافة الطالب للحصة`);
-
-          // إضافة الحصة للطالب
-          if (!student.classes.includes(classId)) {
-            student.classes.push(classId);
-          }
-
-          // إنشاء نظام الدفع التلقائي
-          const enrollmentDate = new Date();
-          console.log(`🔄 إنشاء نظام الدفع...`);
-          
-          let paymentResult;
-          
-          if (classObj.paymentSystem === 'rounds' && roundSettings) {
-            // استخدام إعدادات الجولات المخصصة
-            paymentResult = await createRoundPaymentSystem(
-              studentId,
-              classId,
-              classObj.price,
-              roundSettings,
-              enrollmentDate,
-              recordedById,
-              `تسجيل في حصة ${classObj.name}`
-            );
-          } else {
-            // النظام العادي (شهري أو جولات بإعدادات الحصة)
-            paymentResult = await createAutoPaymentSystem(
-              studentId,
-              classObj,
-              enrollmentDate,
-              recordedById
-            );
-          }
-
-          if (paymentResult.success) {
-            results.paymentSystems.push({
-              classId: classId,
-              className: classObj.name,
-              type: paymentResult.type,
-              result: paymentResult
-            });
-            console.log(`✅ تم إنشاء نظام الدفع: ${paymentResult.message}`);
-          } else {
-            console.log(`⚠️ فشل إنشاء نظام الدفع: ${paymentResult.error}`);
-          }
-
-          results.successful.push({
-            classId: classId,
-            className: classObj.name,
-            teacher: classObj.teacher?.name,
-            price: classObj.price,
-            paymentSystem: classObj.paymentSystem,
-            message: 'تم التسجيل وإنشاء نظام الدفع بنجاح',
-            paymentDetails: paymentResult
-          });
-
-        } catch (error) {
-          console.error(`❌ خطأ في معالجة الحصة ${classId}:`, error.message);
-          results.failed.push({
-            classId: classId,
-            error: error.message
-          });
-        }
-      }
-
-      // حفظ التغييرات على الطالب
-      await student.save();
-      console.log(`✅ تم حفظ بيانات الطالب`);
-
-      // استجابة مفصلة
-      const response = {
-        success: true,
-        message: `تم معالجة ${classIds.length} حصة`,
-        student: {
-          id: student._id,
-          name: student.name,
-          studentId: student.studentId
-        },
-        results: results,
-        summary: {
-          total: classIds.length,
-          successful: results.successful.length,
-          failed: results.failed.length,
-          paymentSystemsCreated: results.paymentSystems.length,
-          totalMonthlyPayments: results.paymentSystems
-            .filter(p => p.type === 'monthly')
-            .reduce((sum, p) => sum + (p.result.payments?.length || 0), 0),
-          totalRoundsCreated: results.paymentSystems
-            .filter(p => p.type === 'rounds')
-            .length
-        },
-        timestamp: new Date()
-      };
-
-      console.log(`\n=== النتائج النهائية ===`);
-      console.log(JSON.stringify(response.summary, null, 2));
-
-      res.json(response);
-
-    } catch (err) {
-      console.error('❌ خطأ في التسجيل الجماعي:', err);
-      res.status(500).json({ 
+app.post('/api/students/:studentId/enroll-multiple', async (req, res) => {
+  try {
+    const { classIds, roundSettings } = req.body;
+    const studentId = req.params.studentId;
+    
+    // جلب schoolId من التوكن أو من الطلب
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
         success: false,
-        error: err.message,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        error: 'يجب تحديد المدرسة (schoolId)'
       });
     }
-  });
+    
+    const student = await Student.findOne({ 
+      _id: studentId,
+      schoolId: schoolId 
+    });
+    
+    if (!student) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة' 
+      });
+    }
+    
+    const results = { successful: [], failed: [] };
+    const allPayments = [];
+    
+    for (const classId of classIds) {
+      try {
+        // التحقق من أن الحصة في نفس المدرسة
+        const classObj = await Class.findOne({ 
+          _id: classId,
+          schoolId: schoolId 
+        });
+        
+        if (!classObj) {
+          results.failed.push({ 
+            classId, 
+            error: 'الحصة غير موجودة أو لا تنتمي للمدرسة' 
+          });
+          continue;
+        }
+        
+        // التحقق من عدم التسجيل المسبق
+        if (classObj.students.includes(studentId)) {
+          results.failed.push({ 
+            classId, 
+            error: 'الطالب مسجل مسبقاً في هذه الحصة' 
+          });
+          continue;
+        }
+        
+        // إضافة الطالب للحصة
+        classObj.students.push(studentId);
+        await classObj.save();
+        
+        // إضافة الحصة للطالب
+        if (!student.classes.includes(classId)) {
+          student.classes.push(classId);
+        }
+        
+        // ==============================================
+        // 🔥 إنشاء نظام الدفع تلقائياً
+        // ==============================================
+        let paymentResult = null;
+        const enrollmentDate = new Date();
+        const recordedById = req.user?.id || null;
+        
+        if (classObj.paymentSystem === 'monthly') {
+          // نظام شهري: 12 دفعة
+          paymentResult = await createMonthlyPaymentSystem(
+            studentId,
+            classId,
+            classObj.price || 0,
+            enrollmentDate,
+            recordedById,
+            `تسجيل تلقائي في حصة ${classObj.name}`
+          );
+          console.log(`✅ تم إنشاء نظام دفع شهري للحصة: ${classObj.name}`);
+          
+        } else if (classObj.paymentSystem === 'rounds') {
+          // نظام جولات
+          const settings = classObj.roundSettings || {
+            sessionCount: roundSettings?.sessionCount || 8,
+            sessionDuration: 2,
+            breakBetweenSessions: 0
+          };
+          
+          paymentResult = await createRoundPaymentSystem(
+            studentId,
+            classId,
+            classObj.price || 0,
+            settings,
+            enrollmentDate,
+            recordedById,
+            `تسجيل تلقائي في حصة ${classObj.name}`
+          );
+          console.log(`✅ تم إنشاء نظام جولات للحصة: ${classObj.name}`);
+        }
+        
+        // جمع الدفعات التي تم إنشاؤها
+        if (paymentResult && paymentResult.payments) {
+          allPayments.push(...paymentResult.payments);
+        }
+        
+        results.successful.push({ 
+          classId, 
+          className: classObj.name,
+          paymentSystem: classObj.paymentSystem,
+          paymentsCreated: paymentResult?.payments?.length || 0
+        });
+        
+      } catch (err) {
+        console.error(`❌ خطأ في تسجيل الحصة ${classId}:`, err);
+        results.failed.push({ classId, error: err.message });
+      }
+    }
+    
+    // حفظ تحديثات الطالب
+    await student.save();
+    
+    // جلب الدفعات التي تم إنشاؤها
+    const createdPayments = await Payment.find({
+      student: studentId,
+      class: { $in: classIds }
+    }).populate('class', 'name subject price');
+    
+    res.json({
+      success: true,
+      message: `تم تسجيل الطالب في ${results.successful.length} حصة مع إنشاء نظام الدفع`,
+      results: results,
+      student: {
+        _id: student._id,
+        name: student.name,
+        classes: student.classes
+      },
+      payments: createdPayments,
+      summary: {
+        totalClasses: results.successful.length,
+        totalPayments: createdPayments.length,
+        totalAmount: createdPayments.reduce((sum, p) => sum + p.amount, 0)
+      }
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في التسجيل الجماعي:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
   // الحصول على جميع أنظمة الدفع للطالب
   app.get('/api/students/:studentId/payment-systems',  async (req, res) => {
     try {
@@ -4626,66 +7950,98 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
   });
 
     // Cards
-    app.get('/api/cards',  async (req, res) => {
-      try {
-        const cards = await Card.find().populate('student');
-        res.json(cards);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
+// Cards
+// Cards
+// ==============================================
+// 📚 جلب بطاقات المدرسة المحددة فقط - FIXED ✅
+// ==============================================
+app.get('/api/cards', async (req, res) => {
+  try {
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    if (!schoolId) {
+      return res.json([]);
+    }
+    
+    const cards = await Card.find({ schoolId: schoolId })
+      .populate('student')
+      .sort({ issueDate: -1 });
+    
+    console.log(`✅ تم جلب ${cards.length} بطاقة للمدرسة ${schoolId}`);
+    res.json(cards);
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب البطاقات:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/cards', async (req, res) => {
+  try {
+    const { uid, student } = req.body;
+    
+    // جلب schoolId من التوكن أو من الطلب
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({ 
+        error: 'يجب تحديد المدرسة (schoolId)' 
+      });
+    }
+
+    // First check if card is authorized
+    const authorizedCard = await AuthorizedCard.findOne({ 
+      uid, 
+      active: true,
+      expirationDate: { $gte: new Date() }
+    });
+
+    if (!authorizedCard) {
+      return res.status(400).json({ 
+        error: 'البطاقة غير مصرحة أو منتهية الصلاحية. يرجى استخدام بطاقة مصرحة.' 
+      });
+    }
+
+    // Check if card already assigned to another student
+    const existingCard = await Card.findOne({ uid });
+    if (existingCard) {
+      return res.status(400).json({ error: 'البطاقة مسجلة بالفعل لطالب آخر' });
+    }
+
+    // Check if student exists and belongs to the same school
+    const studentExists = await Student.findOne({ 
+      _id: student,
+      schoolId: schoolId
+    });
+    
+    if (!studentExists) {
+      return res.status(404).json({ error: 'الطالب غير موجود أو لا ينتمي للمدرسة' });
+    }
+
+    const card = new Card({
+      uid,
+      student,
+      schoolId: schoolId, // إضافة schoolId
+      issueDate: new Date()
+    });
+
+    await card.save();
+    
+    // Update authorized card with student assignment info
+    await AuthorizedCard.findByIdAndUpdate(authorizedCard._id, {
+      $set: { 
+        assignedTo: student,
+        assignedAt: new Date(),
+        schoolId: schoolId
       }
     });
 
-    app.post('/api/cards',  async (req, res) => {
-      try {
-        const { uid, student } = req.body;
-
-        // First check if card is authorized
-        const authorizedCard = await AuthorizedCard.findOne({ 
-          uid, 
-          active: true,
-          expirationDate: { $gte: new Date() }
-        });
-
-        if (!authorizedCard) {
-          return res.status(400).json({ 
-            error: 'البطاقة غير مصرحة أو منتهية الصلاحية. يرجى استخدام بطاقة مصرحة.' 
-          });
-        }
-
-        // Check if card already assigned to another student
-        const existingCard = await Card.findOne({ uid });
-        if (existingCard) {
-          return res.status(400).json({ error: 'البطاقة مسجلة بالفعل لطالب آخر' });
-        }
-
-        // Check if student exists
-        const studentExists = await Student.findById(student);
-        if (!studentExists) {
-          return res.status(404).json({ error: 'الطالب غير موجود' });
-        }
-
-        const card = new Card({
-          uid,
-          student,
-          issueDate: new Date()
-        });
-
-        await card.save();
-        
-        // Update authorized card with student assignment info
-        await AuthorizedCard.findByIdAndUpdate(authorizedCard._id, {
-          $set: { 
-            assignedTo: student,
-            assignedAt: new Date()
-          }
-        });
-
-        res.status(201).json(card);
-      } catch (err) {
-        console.error('Error creating card:', err);
-        res.status(400).json({ error: err.message });
-      }
-    });
+    res.status(201).json(card);
+  } catch (err) {
+    console.error('Error creating card:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
 
     app.delete('/api/cards/:id',  async (req, res) => {
       try {
@@ -4722,7 +8078,149 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
       }
     });
 
+// ==============================================
+// 📊 معاملات حقوق التسجيل ومدفوعات الحصص لليوم
+// ==============================================
+app.get('/api/accounting/daily-registration-and-payments', async (req, res) => {
+  try {
+    // الحصول على schoolId من التوكن أو من الاستعلام
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
 
+    // بداية ونهاية اليوم
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    console.log(`📊 جلب معاملات اليوم للمدرسة: ${schoolId}`);
+
+    // 1. جلب رسوم التسجيل لليوم
+    const registrationFees = await SchoolFee.find({
+      schoolId: schoolId,
+      paymentDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    })
+    .populate('student', 'name studentId')
+    .populate('recordedBy', 'username fullName')
+    .sort({ paymentDate: -1 });
+
+    // 2. جلب مدفوعات الحصص لليوم
+    const classPayments = await Payment.find({
+      schoolId: schoolId,
+      paymentDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'paid'
+    })
+    .populate('student', 'name studentId')
+    .populate('class', 'name subject price')
+    .populate('recordedBy', 'username fullName')
+    .sort({ paymentDate: -1 });
+
+    // 3. جلب معاملات مالية أخرى لليوم (اختياري)
+    const otherTransactions = await FinancialTransaction.find({
+      schoolId: schoolId,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      type: 'income'
+    })
+    .populate('recordedBy', 'username fullName')
+    .populate('student', 'name studentId')
+    .sort({ date: -1 });
+
+    // حساب الإجماليات
+    const registrationTotal = registrationFees.reduce((sum, f) => sum + f.amount, 0);
+    const paymentsTotal = classPayments.reduce((sum, p) => sum + p.amount, 0);
+    const otherTotal = otherTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const grandTotal = registrationTotal + paymentsTotal + otherTotal;
+
+    // تنسيق النتيجة
+    const result = {
+      success: true,
+      date: {
+        start: startOfDay,
+        end: endOfDay,
+        formatted: new Date().toLocaleDateString('ar-EG', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      },
+      registrationFees: {
+        total: registrationTotal,
+        count: registrationFees.length,
+        items: registrationFees.map(f => ({
+          id: f._id,
+          student: f.student?.name || 'غير معروف',
+          studentId: f.student?.studentId || 'غير معروف',
+          amount: f.amount,
+          paymentDate: f.paymentDate,
+          status: f.status,
+          method: f.paymentMethod,
+          invoiceNumber: f.invoiceNumber,
+          recordedBy: f.recordedBy?.fullName || 'غير معروف'
+        }))
+      },
+      classPayments: {
+        total: paymentsTotal,
+        count: classPayments.length,
+        items: classPayments.map(p => ({
+          id: p._id,
+          student: p.student?.name || 'غير معروف',
+          studentId: p.student?.studentId || 'غير معروف',
+          class: p.class?.name || 'غير معروف',
+          subject: p.class?.subject || 'غير معروف',
+          amount: p.amount,
+          month: p.month,
+          paymentDate: p.paymentDate,
+          status: p.status,
+          method: p.paymentMethod,
+          invoiceNumber: p.invoiceNumber,
+          recordedBy: p.recordedBy?.fullName || 'غير معروف'
+        }))
+      },
+      otherIncome: {
+        total: otherTotal,
+        count: otherTransactions.length,
+        items: otherTransactions.map(t => ({
+          id: t._id,
+          description: t.description,
+          amount: t.amount,
+          category: t.category,
+          date: t.date,
+          recordedBy: t.recordedBy?.fullName || 'غير معروف'
+        }))
+      },
+      grandTotal: {
+        amount: grandTotal,
+        totalTransactions: registrationFees.length + classPayments.length + otherTransactions.length
+      }
+    };
+
+    res.json(result);
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب معاملات اليوم:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   // Payment Systems Routes
   app.get('/api/payment-systems/monthly/student/:studentId', async (req, res) => {
     try {
@@ -5004,36 +8502,7 @@ app.get('/api/classes/:classId/attendance',  async (req, res) => {
 
   // Payments - Delete a payment
 // Payments - Delete a payment (نهائياً)
-app.delete('/api/payments/:id',  async (req, res) => {
-  try {
-    const paymentId = req.params.id;
 
-    // التأكد من وجود الدفعة
-    const payment = await Payment.findById(paymentId);
-    if (!payment) {
-      return res.status(404).json({ success: false, error: 'الدفعة غير موجودة' });
-    }
-
-    // منع حذف الدفعات المدفوعة (يجب إلغاؤها أولاً)
-    if (payment.status === 'paid') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'لا يمكن حذف دفعة مدفوعة. يرجى استخدام خاصية "إلغاء الدفعة" أولاً.' 
-      });
-    }
-
-    // حذف أي معاملات مالية مرتبطة
-    await FinancialTransaction.deleteMany({ reference: paymentId });
-
-    // حذف الدفعة نفسها
-    await Payment.findByIdAndDelete(paymentId);
-
-    res.json({ success: true, message: 'تم حذف الدفعة بنجاح' });
-  } catch (err) {
-    console.error('Error deleting payment:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
     // Payments
   // Payments - Update the GET endpoint to populate class data
   // Update the GET /api/payments endpoint
@@ -5054,82 +8523,104 @@ app.delete('/api/payments/:id',  async (req, res) => {
   // Get multiple payments by IDs (for printing multiple receipts)
   // Get multiple payments by IDs (for printing multiple receipts)
   // إنشاء دفعة جديدة للطالب
-  app.post('/api/payments',  async (req, res) => {
-    try {
-      const { student, class: classId, amount, month, paymentMethod, notes } = req.body;
-      
-      console.log('إنشاء دفعة جديدة:', req.body);
-      
-      // التحقق من البيانات المطلوبة
-      if (!student || !amount || !month) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'البيانات ناقصة: يجب إدخال الطالب والمبلغ والشهر' 
-        });
-      }
-      
-      // التحقق من وجود الطالب
-      const studentData = await Student.findById(student);
-      if (!studentData) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الطالب غير موجود' 
-        });
-      }
-      
-      // إنشاء رقم فاتورة
-      const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
-      
-      // إنشاء الدفعة
-      const payment = new Payment({
-        student: student,
-        class: classId || null,
-        amount: amount,
-        month: month,
-        monthCode: moment().format('YYYY-MM'),
-        status: 'pending',
-        paymentMethod: paymentMethod || 'cash',
-        invoiceNumber: invoiceNumber,
-        recordedBy: req.user.id,
-        notes: notes || ''
-      });
-      
-      await payment.save();
-      
-      // تسجيل المعاملة المالية
-      const transaction = new FinancialTransaction({
-        type: 'income',
-        amount: amount,
-        description: notes || `دفعة جديدة للطالب ${studentData.name} لشهر ${month}`,
-        category: 'tuition',
-        recordedBy: req.user.id,
-        reference: payment._id,
-        student: student
-      });
-      
-      await transaction.save();
-      
-      // الحصول على الدفعة مع البيانات المترابطة
-      const populatedPayment = await Payment.findById(payment._id)
-        .populate('student', 'name studentId')
-        .populate('class', 'name subject')
-        .populate('recordedBy', 'username fullName');
-      
-      res.status(201).json({
-        success: true,
-        message: 'تم إنشاء الدفعة بنجاح',
-        payment: populatedPayment,
-        invoiceNumber: invoiceNumber
-      });
-      
-    } catch (err) {
-      console.error('❌ خطأ في إنشاء الدفعة:', err);
-      res.status(500).json({ 
+// ==============================================
+// ✅ إنشاء دفعة جديدة - مع schoolId
+// ==============================================
+app.post('/api/payments', async (req, res) => {
+  try {
+    const { student, class: classId, amount, month, paymentMethod, notes } = req.body;
+    
+    console.log('📝 إنشاء دفعة جديدة:', req.body);
+    
+    // التحقق من البيانات المطلوبة
+    if (!student || !amount || !month) {
+      return res.status(400).json({ 
         success: false,
-        error: err.message 
+        error: 'البيانات ناقصة: يجب إدخال الطالب والمبلغ والشهر' 
       });
     }
-  });
+    
+    // التحقق من وجود الطالب
+    const studentData = await Student.findById(student);
+    if (!studentData) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الطالب غير موجود' 
+      });
+    }
+
+    // ✅ الحصول على schoolId من الطالب
+    const schoolId = studentData.schoolId || req.user?.schoolId;
+    
+    console.log(`🏫 schoolId للدفعة: ${schoolId}`);
+    
+    // إنشاء رقم فاتورة
+    const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+    
+    // إنشاء الدفعة مع schoolId
+    const paymentData = {
+        schoolId: schoolId  ,// ✅ تأكد من وجود هذا السطر
+
+      student: student,
+      class: classId || null,
+      amount: amount,
+      month: month,
+      monthCode: moment().format('YYYY-MM'),
+      status: 'pending',
+      paymentMethod: paymentMethod || 'cash',
+      invoiceNumber: invoiceNumber,
+      recordedBy: req.user?.id || null,
+      notes: notes || ''
+    };
+
+    // ✅ إضافة schoolId إذا وجد
+    if (schoolId) {
+      paymentData.schoolId = schoolId;
+    }
+
+    const payment = new Payment(paymentData);
+    await payment.save();
+    
+    // تسجيل المعاملة المالية (متوقعة)
+    const transactionData = {
+      type: 'income',
+      amount: amount,
+      description: notes || `دفعة جديدة للطالب ${studentData.name} لشهر ${month}`,
+      category: 'tuition',
+      recordedBy: req.user?.id || null,
+      reference: payment._id,
+      student: student
+    };
+
+    // ✅ إضافة schoolId إلى المعاملة
+    if (schoolId) {
+      transactionData.schoolId = schoolId;
+    }
+
+    const transaction = new FinancialTransaction(transactionData);
+    await transaction.save();
+    
+    // الحصول على الدفعة مع البيانات المترابطة
+    const populatedPayment = await Payment.findById(payment._id)
+      .populate('student', 'name studentId')
+      .populate('class', 'name subject')
+      .populate('recordedBy', 'username fullName');
+    
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء الدفعة بنجاح',
+      payment: populatedPayment,
+      invoiceNumber: invoiceNumber
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء الدفعة:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+});
   // Add these endpoints near the other dashboard/statistics endpoints in your server.js file
 
   // ==============================================
@@ -5319,43 +8810,50 @@ app.delete('/api/payments/:id',  async (req, res) => {
     }
   });
   // في server.js - عدّل هذه النقطة
-  app.get('/api/live-classes/today', async (req, res) => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+// ==============================================
+// ✅ GET /api/live-classes/today - Get today's live classes
+// ==============================================
+app.get('/api/live-classes/today', async (req, res) => {
+  try {
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
 
-      console.log('Fetching today classes for:', today);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayClasses = await LiveClass.find({
-        date: { $gte: today, $lt: tomorrow }
-      })
+    const liveClasses = await LiveClass.find({
+      schoolId: schoolId,
+      date: { $gte: today, $lt: tomorrow },
+      status: { $in: ['scheduled', 'ongoing'] }
+    })
       .populate('class', 'name subject')
       .populate('teacher', 'name')
       .populate('classroom', 'name')
       .sort({ startTime: 1 });
 
-      const formattedClasses = todayClasses.map(lc => ({
-        _id: lc._id,
-        name: lc.class?.name || 'غير محدد',
-        subject: lc.class?.subject || 'غير محدد',
-        teacher: lc.teacher?.name || 'غير محدد',
-        time: lc.startTime,
-        classroom: lc.classroom?.name || 'غير محدد',
-        isScheduled: lc.status !== 'scheduled',
-        studentsCount: lc.attendance?.length || 0,
-        status: lc.status
-      }));
+    res.json({
+      success: true,
+      data: liveClasses,
+      count: liveClasses.length,
+      date: today.toISOString().split('T')[0]
+    });
 
-      console.log(`Found ${formattedClasses.length} classes today`);
-
-      res.json(formattedClasses);
-    } catch (err) {
-      console.error('Error fetching today classes:', err);
-      res.status(500).json([]);
-    }
-  });
+  } catch (err) {
+    console.error('❌ Error fetching today\'s live classes:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
   // 3. Late Students (Students with pending payments)
   // في server.js - عدّل هذه النقطة
@@ -6117,154 +9615,7 @@ app.delete('/api/payments/:id',  async (req, res) => {
 
 // في server.js - استبدل نقطة نهاية /api/payments/:id/pay بهذا الكود (بدون مصادقة)
 
-app.put('/api/payments/:id/pay', async (req, res) => {
-  try {
-    const { paymentMethod, paymentDate, notes } = req.body;
-    
-    console.log(`=== دفع الدفعة ${req.params.id} (بدون مصادقة) ===`);
-    console.log('بيانات الطلب:', { paymentMethod, paymentDate, notes });
-    
-    // 1. البحث عن الدفعة
-    const payment = await Payment.findById(req.params.id)
-      .populate('student', 'name studentId parentPhone')
-      .populate({
-        path: 'class',
-        populate: [
-          { path: 'teacher', model: 'Teacher', select: 'name salaryPercentage' }
-        ]
-      });
-    
-    if (!payment) {
-      console.log('❌ الدفعة غير موجودة');
-      return res.status(404).json({ 
-        success: false,
-        error: 'الدفعة غير موجودة' 
-      });
-    }
 
-    // 2. التحقق من أن الدفعة غير مدفوعة مسبقاً
-    if (payment.status === 'paid') {
-      console.log('⚠️ الدفعة مدفوعة مسبقاً');
-      return res.status(400).json({
-        success: false,
-        error: 'الدفعة مسددة مسبقاً'
-      });
-    }
-    
-    // 3. تحديث بيانات الدفعة
-    const now = new Date();
-    payment.status = 'paid';
-    payment.paymentDate = paymentDate ? new Date(paymentDate) : now;
-    payment.paymentMethod = paymentMethod || 'cash';
-    payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
-    
-    if (notes) {
-      payment.notes = notes;
-    }
-    
-    await payment.save();
-    console.log(`✅ تم تحديث الدفعة: ${payment._id}`);
-    console.log(`   - الحالة: ${payment.status}`);
-    console.log(`   - تاريخ الدفع: ${payment.paymentDate}`);
-    console.log(`   - رقم الفاتورة: ${payment.invoiceNumber}`);
-
-    // 4. تسجيل المعاملة المالية (بدون recordedBy)
-    try {
-      const transaction = new FinancialTransaction({
-        type: 'income',
-        amount: payment.amount,
-        description: `دفعة للطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
-        category: 'tuition',
-        recordedBy: null, // بدون مستخدم
-        reference: payment._id,
-        student: payment.student?._id,
-        date: payment.paymentDate
-      });
-      
-      await transaction.save();
-      console.log(`✅ تم تسجيل المعاملة المالية: ${transaction._id}`);
-    } catch (transError) {
-      console.error('⚠️ خطأ في تسجيل المعاملة المالية (غير حرج):', transError.message);
-    }
-
-    // 5. حساب عمولة الأستاذ (بدون recordedBy)
-    if (payment.class && payment.class.teacher) {
-      try {
-        const teacher = payment.class.teacher;
-        const percentage = teacher.salaryPercentage || 70;
-        const commissionAmount = payment.amount * (percentage / 100);
-        
-        const teacherCommission = new TeacherCommission({
-          teacher: teacher._id,
-          student: payment.student?._id,
-          class: payment.class._id,
-          month: payment.monthCode || payment.month,
-          amount: commissionAmount,
-          percentage: percentage,
-          type: 'individual',
-          status: 'pending',
-          recordedBy: null, // بدون مستخدم
-          notes: `عمولة تلقائية من دفعة ${payment.invoiceNumber}`
-        });
-        
-        await teacherCommission.save();
-        console.log(`✅ تم إنشاء عمولة الأستاذ: ${teacherCommission._id} - ${commissionAmount} د.ج`);
-        
-        payment.commissionId = teacherCommission._id;
-        await payment.save();
-      } catch (commError) {
-        console.error('⚠️ خطأ في إنشاء عمولة الأستاذ:', commError.message);
-      }
-    }
-
-    // 6. إرسال إشعار SMS (اختياري)
-    let smsSent = false;
-    if (payment.student && payment.student.parentPhone && req.body.sendSMS !== false) {
-      try {
-        const smsMessage = `تم استلام دفعة بقيمة ${payment.amount.toLocaleString()} د.ج من الطالب ${payment.student.name} لشهر ${payment.month}. رقم الإيصال: ${payment.invoiceNumber}`;
-        
-        if (typeof smsGateway !== 'undefined' && smsGateway.sendIndividualSMS) {
-          const result = await smsGateway.sendIndividualSMS(payment.student.parentPhone, smsMessage);
-          smsSent = result.success;
-          console.log(`📱 إرسال SMS: ${smsSent ? 'تم بنجاح' : 'فشل'}`);
-        }
-      } catch (smsError) {
-        console.error('⚠️ خطأ في إرسال SMS:', smsError.message);
-      }
-    }
-
-    // 7. إرجاع الاستجابة الناجحة
-    const responsePayment = await Payment.findById(payment._id)
-      .populate('student', 'name studentId')
-      .populate('class', 'name subject');
-    
-    res.json({
-      success: true,
-      message: `تم تسديد الدفعة بنجاح بمبلغ ${payment.amount.toLocaleString()} د.ج`,
-      payment: responsePayment,
-      invoiceNumber: payment.invoiceNumber,
-      receipt: {
-        number: payment.invoiceNumber,
-        date: payment.paymentDate,
-        student: payment.student?.name,
-        amount: payment.amount,
-        month: payment.month,
-        method: payment.paymentMethod
-      },
-      smsSent: smsSent
-    });
-    
-  } catch (err) {
-    console.error('❌ خطأ في دفع الدفعة:', err);
-    console.error('Stack trace:', err.stack);
-    
-    res.status(500).json({ 
-      success: false,
-      error: 'حدث خطأ أثناء معالجة الدفع',
-      message: err.message
-    });
-  }
-});
   // في server.js - تحديث endpoint المدفوعات
   app.get('/api/payments', async (req, res) => {
     try {
@@ -6328,37 +9679,7 @@ app.get('/api/payments/:id', async (req, res) => {
   }
 });
   // GET /api/payments/class/:classId - Get payments for a specific class
-  app.get('/api/payments/class/:classId', async (req, res) => {
-    try {
-      const { classId } = req.params;
-      const { status, month } = req.query;
-      
-      const query = { class: classId };
-      
-      if (status) query.status = status;
-      if (month) query.month = month;
-      
-      const payments = await Payment.find(query)
-        .populate('student', 'name studentId parentPhone')
-        .populate('class', 'name subject price')
-        .populate('recordedBy', 'username fullName')
-        .sort({ month: -1, createdAt: -1 });
-      
-      res.json({
-        success: true,
-        payments: payments,
-        count: payments.length,
-        totalAmount: payments.reduce((sum, p) => sum + p.amount, 0)
-      });
-      
-    } catch (err) {
-      console.error('Error fetching class payments:', err);
-      res.status(500).json({
-        success: false,
-        error: err.message
-      });
-    }
-  });
+
   app.patch('/api/payments/:id/amount', async (req, res) => {
     try {
       const { amount } = req.body;
@@ -6399,75 +9720,1637 @@ app.get('/api/payments/:id', async (req, res) => {
       });
     }
   });
-  app.put('/api/payments/:id' , async (req, res) => {
-    try {
-      console.log(`=== UPDATE PAYMENT REQUEST ===`);
-      console.log('Payment ID:', req.params.id);
-      console.log('Update data:', req.body);
-      
-      const paymentId = req.params.id;
-      const updateData = { ...req.body };
-      
-      // Remove fields that shouldn't be updated directly
-      delete updateData._id;
-      delete updateData.createdAt;
-      delete updateData.updatedAt;
-      
-      // Find and update the payment
-      const updatedPayment = await Payment.findByIdAndUpdate(
-        paymentId,
-        updateData,
-        { 
-          new: true, // Return the updated document
-          runValidators: true // Run mongoose validators
-        }
-      )
-      .populate('student', 'name studentId')
-      .populate('class', 'name subject')
-      .populate('recordedBy', 'username fullName');
-      
-      if (!updatedPayment) {
-        return res.status(404).json({
-          success: false,
-          error: 'الدفعة غير موجودة'
-        });
-      }
-      
-      console.log('Payment updated successfully:', updatedPayment._id);
-      
-      // If payment status changed to 'paid', record financial transaction
-      if (req.body.status === 'paid' && updatedPayment.paymentDate) {
-        const transaction = new FinancialTransaction({
-          type: 'income',
-          amount: updatedPayment.amount,
-          description: `دفعة شهرية لطالب ${updatedPayment.student?.name} لشهر ${updatedPayment.month}`,
-          category: 'tuition',
-          recordedBy: req.user?.id,
-          reference: updatedPayment._id,
-          student: updatedPayment.student?._id,
-          date: updatedPayment.paymentDate
-        });
-        
-        await transaction.save();
-        console.log('Financial transaction recorded:', transaction._id);
-      }
-      
-      res.json({
-        success: true,
-        message: 'تم تحديث الدفعة بنجاح',
-        payment: updatedPayment
-      });
-      
-    } catch (err) {
-      console.error('Error updating payment:', err);
-      res.status(500).json({
+
+// ==============================================
+// LESSON DETAILS API - نقاط نهاية مفصلة للحصة
+// ==============================================
+
+// ==============================================
+// 1. جلب تفاصيل الحصة مع جميع البيانات المرتبطة
+// ==============================================
+app.get('/api/classes/:id/details', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب تفاصيل الحصة: ${classId}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
         success: false,
-        error: err.message,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        error: 'معرف الحصة غير صالح'
       });
     }
-  });
 
+    // جلب الحصة مع جميع البيانات المرتبطة
+    const classObj = await Class.findById(classId)
+      .populate('teacher', 'name phone email')
+      .populate({
+        path: 'students',
+        populate: {
+          path: 'classes',
+          model: 'Class'
+        }
+      })
+      .populate('schedule.classroom', 'name location capacity');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // التحقق من أن الحصة تنتمي للمدرسة
+    if (schoolId && classObj.schoolId?.toString() !== schoolId.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'غير مصرح بالوصول لهذه الحصة'
+      });
+    }
+
+    // جلب المدفوعات الخاصة بالحصة
+    const payments = await Payment.find({ class: classId })
+      .populate('student', 'name studentId parentPhone parentEmail academicYear')
+      .populate('recordedBy', 'username fullName')
+      .sort({ createdAt: -1 });
+
+    // جلب إحصائيات المدفوعات
+    const paymentStats = {
+      total: payments.length,
+      totalAmount: payments.reduce((sum, p) => sum + p.amount, 0),
+      paid: payments.filter(p => p.status === 'paid').length,
+      paidAmount: payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+      pending: payments.filter(p => p.status === 'pending' || p.status === 'late').length,
+      pendingAmount: payments.filter(p => p.status === 'pending' || p.status === 'late').reduce((sum, p) => sum + p.amount, 0)
+    };
+
+    // جلب حالة الدفع لكل طالب
+    const studentPaymentStatus = {};
+    classObj.students.forEach(student => {
+      const studentPayments = payments.filter(p => 
+        p.student && p.student._id.toString() === student._id.toString()
+      );
+      
+      // تحديد حالة الدفع (مدفوع بالكامل، جزئي، غير مدفوع)
+      const totalPaid = studentPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+      const totalPending = studentPayments.filter(p => p.status !== 'paid').reduce((sum, p) => sum + p.amount, 0);
+      
+      let status = 'not-paid';
+      if (totalPaid > 0 && totalPending === 0) {
+        status = 'paid';
+      } else if (totalPaid > 0 && totalPending > 0) {
+        status = 'partial';
+      } else if (totalPending > 0) {
+        status = 'pending';
+      }
+      
+      studentPaymentStatus[student._id.toString()] = status;
+    });
+
+    // جلب إحصائيات الغيابات (آخر 30 يوم)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const attendanceStats = await Attendance.aggregate([
+      {
+        $match: {
+          class: new mongoose.Types.ObjectId(classId),
+          date: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const attendanceSummary = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      total: 0
+    };
+
+    attendanceStats.forEach(stat => {
+      if (stat._id === 'present') attendanceSummary.present = stat.count;
+      else if (stat._id === 'absent') attendanceSummary.absent = stat.count;
+      else if (stat._id === 'late') attendanceSummary.late = stat.count;
+    });
+    attendanceSummary.total = attendanceSummary.present + attendanceSummary.absent + attendanceSummary.late;
+
+    res.json({
+      success: true,
+      data: {
+        class: classObj,
+        students: classObj.students || [],
+        payments: payments,
+        studentPaymentStatus: studentPaymentStatus,
+        paymentStats: paymentStats,
+        attendanceSummary: attendanceSummary,
+        statistics: {
+          totalStudents: classObj.students?.length || 0,
+          totalPayments: payments.length,
+          totalPaidAmount: paymentStats.paidAmount,
+          totalPendingAmount: paymentStats.pendingAmount
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب تفاصيل الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 2. جلب مدفوعات الحصة مع تصفية حسب الشهر
+// ==============================================
+app.get('/api/classes/:id/payments', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { month, status, limit = 100 } = req.query;
+    
+    console.log(`📊 جلب مدفوعات الحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // بناء الاستعلام
+    const query = { class: classId };
+    if (status && status !== 'all') query.status = status;
+    if (month && month !== 'all') {
+      query.monthCode = { $regex: `^${month}` };
+    }
+
+    const payments = await Payment.find(query)
+      .populate('student', 'name studentId parentPhone parentEmail academicYear')
+      .populate('recordedBy', 'username fullName')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    // إحصائيات المدفوعات
+    const summary = {
+      total: payments.length,
+      totalAmount: payments.reduce((sum, p) => sum + p.amount, 0),
+      paid: payments.filter(p => p.status === 'paid').length,
+      paidAmount: payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+      pending: payments.filter(p => p.status === 'pending').length,
+      pendingAmount: payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
+      late: payments.filter(p => p.status === 'late').length,
+      lateAmount: payments.filter(p => p.status === 'late').reduce((sum, p) => sum + p.amount, 0)
+    };
+
+    // تجميع المدفوعات حسب الشهر
+    const months = {};
+    payments.forEach(p => {
+      const monthKey = p.monthCode || p.month || 'unknown';
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          month: monthKey,
+          total: 0,
+          paid: 0,
+          pending: 0,
+          count: 0
+        };
+      }
+      months[monthKey].total += p.amount;
+      months[monthKey].count++;
+      if (p.status === 'paid') {
+        months[monthKey].paid += p.amount;
+      } else {
+        months[monthKey].pending += p.amount;
+      }
+    });
+
+    res.json({
+      success: true,
+      payments: payments,
+      summary: summary,
+      monthsSummary: Object.values(months)
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب مدفوعات الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 3. جلب بيانات الغيابات للحصة
+// ==============================================
+app.get('/api/classes/:id/attendance', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { startDate, endDate } = req.query;
+    
+    console.log(`📊 جلب بيانات الغيابات للحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // بناء نطاق التاريخ
+    let dateRange = {};
+    if (startDate && endDate) {
+      dateRange = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    } else {
+      // افتراضي: آخر 30 يوم
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      dateRange = {
+        $gte: start,
+        $lte: end
+      };
+    }
+
+    // جلب الحصة مع الطلاب
+    const classObj = await Class.findById(classId)
+      .populate('students', 'name studentId academicYear')
+      .populate('teacher', 'name');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // جلب جميع الحصص الحية لهذه الحصة في الفترة المحددة
+    const liveClasses = await LiveClass.find({
+      class: classId,
+      date: dateRange,
+      status: { $in: ['completed', 'ongoing'] }
+    })
+      .populate({
+        path: 'attendance.student',
+        select: 'name studentId parentPhone parentEmail academicYear'
+      })
+      .populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .populate('classroom', 'name')
+      .sort({ date: 1, startTime: 1 });
+
+    // تهيئة بيانات الطلاب
+    const studentAttendanceMap = new Map();
+
+    classObj.students.forEach(student => {
+      studentAttendanceMap.set(student._id.toString(), {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          academicYear: student.academicYear
+        },
+        totalClasses: liveClasses.length,
+        present: 0,
+        absent: 0,
+        late: 0,
+        attendanceRate: 0,
+        records: []
+      });
+    });
+
+    // تجميع سجلات الحضور
+    liveClasses.forEach(liveClass => {
+      liveClass.attendance.forEach(record => {
+        const studentId = record.student._id.toString();
+        if (studentAttendanceMap.has(studentId)) {
+          const studentData = studentAttendanceMap.get(studentId);
+          
+          // تحديث الإحصائيات
+          studentData[record.status]++;
+          
+          // إضافة السجل
+          studentData.records.push({
+            liveClassId: liveClass._id,
+            date: liveClass.date,
+            startTime: liveClass.startTime,
+            endTime: liveClass.endTime,
+            status: record.status,
+            teacher: liveClass.teacher?.name,
+            joinedAt: record.joinedAt,
+            leftAt: record.leftAt
+          });
+        }
+      });
+    });
+
+    // حساب نسب الحضور
+    studentAttendanceMap.forEach((data) => {
+      data.attendanceRate = liveClasses.length > 0 
+        ? Math.round((data.present / liveClasses.length) * 100) 
+        : 100;
+    });
+
+    // تحويل الخريطة إلى مصفوفة
+    const studentsAttendance = Array.from(studentAttendanceMap.values());
+
+    // ترتيب الطلاب حسب نسبة الحضور
+    studentsAttendance.sort((a, b) => b.attendanceRate - a.attendanceRate);
+
+    // إحصائيات عامة
+    const statistics = {
+      totalClasses: liveClasses.length,
+      totalStudents: classObj.students.length,
+      totalPresent: studentsAttendance.reduce((sum, s) => sum + s.present, 0),
+      totalAbsent: studentsAttendance.reduce((sum, s) => sum + s.absent, 0),
+      totalLate: studentsAttendance.reduce((sum, s) => sum + s.late, 0),
+      averageAttendance: studentsAttendance.length > 0
+        ? Math.round(studentsAttendance.reduce((sum, s) => sum + s.attendanceRate, 0) / studentsAttendance.length)
+        : 0
+    };
+
+    // تفاصيل الحصص
+    const classesDetails = liveClasses.map(lc => ({
+      _id: lc._id,
+      date: lc.date,
+      startTime: lc.startTime,
+      endTime: lc.endTime,
+      teacher: lc.teacher?.name,
+      status: lc.status,
+      attendanceCount: lc.attendance.length,
+      presentCount: lc.attendance.filter(a => a.status === 'present').length,
+      absentCount: lc.attendance.filter(a => a.status === 'absent').length,
+      lateCount: lc.attendance.filter(a => a.status === 'late').length
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classObj._id,
+          name: classObj.name,
+          subject: classObj.subject,
+          teacher: classObj.teacher?.name
+        },
+        period: {
+          start: dateRange.$gte,
+          end: dateRange.$lte,
+          totalDays: liveClasses.length
+        },
+        statistics: statistics,
+        studentsAttendance: studentsAttendance,
+        classesDetails: classesDetails
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب بيانات الغيابات:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 4. جلب الطلاب المتاحين للتسجيل في الحصة
+// ==============================================
+app.get('/api/classes/:id/available-students', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب الطلاب المتاحين للحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // جلب الحصة مع الطلاب المسجلين
+    const classObj = await Class.findById(classId).populate('students', '_id');
+    
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // معرفات الطلاب المسجلين
+    const enrolledStudentIds = new Set(
+      classObj.students.map(s => s._id.toString())
+    );
+
+    // جلب جميع الطلاب في المدرسة
+    const query = {};
+    if (schoolId) query.schoolId = schoolId;
+    
+    const allStudents = await Student.find(query)
+      .select('name studentId academicYear parentPhone parentEmail status')
+      .sort({ name: 1 });
+
+    // تصفية الطلاب غير المسجلين
+    const availableStudents = allStudents.filter(student => 
+      !enrolledStudentIds.has(student._id.toString()) && 
+      student.status !== 'inactive'
+    );
+
+    res.json({
+      success: true,
+      availableStudents: availableStudents,
+      totalAvailable: availableStudents.length,
+      totalEnrolled: enrolledStudentIds.size
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب الطلاب المتاحين:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 5. تسجيل طالب في الحصة (مع إنشاء نظام الدفع)
+// ==============================================
+// ==============================================
+// 📚 ENROLL STUDENT IN CLASS - مع إنشاء نظام الدفع
+// ==============================================
+
+// ==============================================
+// 📚 ENROLL STUDENT IN CLASS - مع إنشاء نظام الدفع
+// ==============================================
+
+app.post('/api/classes/:classId/enroll/:studentId', async (req, res) => {
+  try {
+    const classId = req.params.classId;
+    const studentId = req.params.studentId;
+    const { paymentSystem, sessionCount, startDate } = req.body;
+    
+    console.log(`📝 تسجيل الطالب ${studentId} في الحصة ${classId}`);
+    
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(classId) || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    // جلب الحصة والطالب
+    const [classObj, student] = await Promise.all([
+      Class.findById(classId),
+      Student.findById(studentId)
+    ]);
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // التحقق من التسجيل المسبق
+    const isAlreadyEnrolled = classObj.students.some(s => s.toString() === studentId);
+    
+    if (isAlreadyEnrolled) {
+      // ✅ إذا كان الطالب مسجلاً، نتحقق من وجود نظام دفع
+      const existingPayments = await Payment.find({
+        student: studentId,
+        class: classId
+      });
+      
+      if (existingPayments.length > 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'الطالب مسجل مسبقاً ونظام الدفع موجود',
+          data: {
+            class: classObj,
+            student: student,
+            payments: existingPayments,
+            alreadyEnrolled: true,
+            hasPaymentSystem: true
+          }
+        });
+      } else {
+        // ✅ الطالب مسجل ولكن لا يوجد نظام دفع → ننشئه
+        console.log(`⚠️ الطالب مسجل ولكن لا يوجد نظام دفع، جاري الإنشاء...`);
+        
+        let paymentResult = null;
+        const recordedById = req.user?.id || null;
+        const enrollmentDate = startDate ? new Date(startDate) : new Date();
+        
+        // تحديد نظام الدفع (من الجسم أو من الحصة)
+        const systemType = paymentSystem || classObj.paymentSystem || 'monthly';
+        
+        if (systemType === 'monthly') {
+          paymentResult = await createMonthlyPaymentSystem(
+            studentId,
+            classId,
+            classObj.price || 0,
+            enrollmentDate,
+            recordedById,
+            `نظام دفع شهري - ${student.name} - ${classObj.name}`
+          );
+          console.log(`✅ تم إنشاء نظام دفع شهري للطالب المسجل مسبقاً`);
+          
+        } else if (systemType === 'rounds') {
+          const roundSettings = classObj.roundSettings || {
+            sessionCount: sessionCount || 8,
+            sessionDuration: 2,
+            breakBetweenSessions: 0
+          };
+          
+          paymentResult = await createRoundPaymentSystem(
+            studentId,
+            classId,
+            classObj.price || 0,
+            roundSettings,
+            enrollmentDate,
+            recordedById,
+            `نظام جولات - ${student.name} - ${classObj.name}`
+          );
+          console.log(`✅ تم إنشاء نظام جولات للطالب المسجل مسبقاً`);
+        }
+        
+        return res.json({
+          success: true,
+          message: 'تم إنشاء نظام الدفع للطالب المسجل',
+          data: {
+            class: classObj,
+            student: student,
+            paymentSystem: paymentResult,
+            alreadyEnrolled: true,
+            hasPaymentSystem: true
+          }
+        });
+      }
+    }
+
+    // ==============================================
+    // 🚀 الحالة: طالب غير مسجل → تسجيل + إنشاء نظام دفع
+    // ==============================================
+    
+    console.log(`📝 تسجيل طالب جديد في الحصة`);
+
+    // 1. تسجيل الطالب في الحصة
+    classObj.students.push(studentId);
+    await classObj.save();
+
+    // 2. إضافة الحصة للطالب
+    if (!student.classes.includes(classId)) {
+      student.classes.push(classId);
+      await student.save();
+    }
+
+    // 3. 🔥 إنشاء نظام الدفع تلقائياً
+    let paymentResult = null;
+    const recordedById = req.user?.id || null;
+    const enrollmentDate = startDate ? new Date(startDate) : new Date();
+    
+    // تحديد نظام الدفع
+    const systemType = paymentSystem || classObj.paymentSystem || 'monthly';
+    
+    if (systemType === 'monthly') {
+      paymentResult = await createMonthlyPaymentSystem(
+        studentId,
+        classId,
+        classObj.price || 0,
+        enrollmentDate,
+        recordedById,
+        `نظام دفع شهري - ${student.name} - ${classObj.name}`
+      );
+      console.log(`✅ تم إنشاء نظام دفع شهري للطالب الجديد`);
+      
+    } else if (systemType === 'rounds') {
+      const roundSettings = classObj.roundSettings || {
+        sessionCount: sessionCount || 8,
+        sessionDuration: 2,
+        breakBetweenSessions: 0
+      };
+      
+      paymentResult = await createRoundPaymentSystem(
+        studentId,
+        classId,
+        classObj.price || 0,
+        roundSettings,
+        enrollmentDate,
+        recordedById,
+        `نظام جولات - ${student.name} - ${classObj.name}`
+      );
+      console.log(`✅ تم إنشاء نظام جولات للطالب الجديد`);
+    }
+
+    // 4. جلب البيانات المحدثة
+    const updatedClass = await Class.findById(classId)
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId parentPhone parentEmail academicYear');
+
+    // 5. جلب الدفعات التي تم إنشاؤها
+    const createdPayments = await Payment.find({
+      student: studentId,
+      class: classId
+    }).populate('student', 'name studentId');
+
+    res.status(201).json({
+      success: true,
+      message: `تم تسجيل الطالب ${student.name} في الحصة ${classObj.name} بنجاح مع نظام الدفع`,
+      data: {
+        class: updatedClass,
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          academicYear: student.academicYear
+        },
+        paymentSystem: {
+          type: systemType,
+          details: paymentResult,
+          payments: createdPayments
+        },
+        enrollment: {
+          date: enrollmentDate,
+          classPrice: classObj.price,
+          totalPayments: createdPayments.length,
+          totalAmount: createdPayments.reduce((sum, p) => sum + p.amount, 0)
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// 📚 GET PAYMENTS FOR CLASS - مع تصفية حسب المدرسة
+// ==============================================
+
+app.get('/api/payments/class/:classId', async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { status, month } = req.query;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📊 جلب مدفوعات الحصة: ${classId}`);
+    console.log(`🏫 schoolId: ${schoolId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // ✅ بناء الاستعلام مع تصفية حسب المدرسة
+    const query = { class: classId };
+    if (schoolId) {
+      query.schoolId = schoolId;
+    }
+    if (status) query.status = status;
+    if (month) query.monthCode = month;
+    
+    const payments = await Payment.find(query)
+      .populate('student', 'name studentId parentPhone')
+      .populate('class', 'name subject price')
+      .populate('recordedBy', 'username fullName')
+      .sort({ month: -1, createdAt: -1 });
+    
+    res.json({
+      success: true,
+      payments: payments || [],
+      count: payments.length,
+      totalAmount: payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب مدفوعات الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// 6. إزالة طالب من الحصة
+// ==============================================
+app.delete('/api/classes/:classId/unenroll/:studentId', async (req, res) => {
+  try {
+    const classId = req.params.classId;
+    const studentId = req.params.studentId;
+    
+    console.log(`🗑️ إزالة الطالب ${studentId} من الحصة ${classId}`);
+    
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(classId) || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    // جلب الحصة
+    const classObj = await Class.findById(classId);
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // التحقق من وجود الطالب في الحصة
+    if (!classObj.students.some(s => s.toString() === studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'الطالب غير مسجل في هذه الحصة'
+      });
+    }
+
+    // إزالة الطالب من الحصة
+    classObj.students = classObj.students.filter(s => s.toString() !== studentId);
+    await classObj.save();
+
+    // إزالة الحصة من الطالب
+    await Student.findByIdAndUpdate(studentId, {
+      $pull: { classes: classId }
+    });
+
+    // حذف المدفوعات المعلقة للطالب في هذه الحصة
+    await Payment.deleteMany({
+      student: studentId,
+      class: classId,
+      status: { $in: ['pending', 'late'] }
+    });
+
+    res.json({
+      success: true,
+      message: 'تم إزالة الطالب من الحصة بنجاح'
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إزالة الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 7. تسجيل دفعة جديدة للحصة
+// ==============================================
+app.post('/api/classes/:id/payments', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { studentId, amount, month, paymentMethod, notes } = req.body;
+    
+    console.log(`💰 تسجيل دفعة جديدة للحصة ${classId}`);
+    
+    // التحقق من البيانات المطلوبة
+    if (!studentId || !amount || !month) {
+      return res.status(400).json({
+        success: false,
+        error: 'البيانات ناقصة: studentId, amount, month مطلوبة'
+      });
+    }
+
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(classId) || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    // التحقق من وجود الحصة
+    const classObj = await Class.findById(classId);
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // التحقق من وجود الطالب
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // التحقق من أن الطالب مسجل في الحصة
+    if (!classObj.students.some(s => s.toString() === studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'الطالب غير مسجل في هذه الحصة'
+      });
+    }
+
+    // إنشاء رقم فاتورة
+    const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+
+    // إنشاء الدفعة
+    const payment = new Payment({
+      student: studentId,
+      class: classId,
+      amount: amount,
+      month: month,
+      monthCode: month,
+      status: 'paid',
+      paymentMethod: paymentMethod || 'cash',
+      paymentDate: new Date(),
+      invoiceNumber: invoiceNumber,
+      recordedBy: req.user?.id || null,
+      notes: notes || ''
+    });
+
+    await payment.save();
+
+    // تسجيل المعاملة المالية
+    const transaction = new FinancialTransaction({
+      type: 'income',
+      amount: amount,
+      description: `دفعة للطالب ${student.name} في حصة ${classObj.name} لشهر ${month}`,
+      category: 'tuition',
+      recordedBy: req.user?.id || null,
+      reference: payment._id,
+      student: studentId,
+      date: new Date()
+    });
+
+    await transaction.save();
+
+    // جلب الدفعة مع البيانات المترابطة
+    const populatedPayment = await Payment.findById(payment._id)
+      .populate('student', 'name studentId')
+      .populate('recordedBy', 'username fullName');
+
+    res.status(201).json({
+      success: true,
+      message: 'تم تسجيل الدفعة بنجاح',
+      payment: populatedPayment,
+      invoiceNumber: invoiceNumber
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 8. تحديث دفعة
+// ==============================================
+app.put('/api/payments/:id', async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    const { amount, paymentMethod, status, notes } = req.body;
+    
+    console.log(`✏️ تحديث الدفعة: ${paymentId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الدفعة غير صالح'
+      });
+    }
+
+    // جلب الدفعة
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'الدفعة غير موجودة'
+      });
+    }
+
+    // تحديث البيانات
+    if (amount) payment.amount = amount;
+    if (paymentMethod) payment.paymentMethod = paymentMethod;
+    if (status) payment.status = status;
+    if (notes !== undefined) payment.notes = notes;
+    
+    // إذا تم تغيير الحالة إلى مدفوع، تحديث تاريخ الدفع
+    if (status === 'paid' && payment.status !== 'paid') {
+      payment.paymentDate = new Date();
+    }
+
+    await payment.save();
+
+    // جلب الدفعة المحدثة
+    const updatedPayment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId')
+      .populate('recordedBy', 'username fullName');
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الدفعة بنجاح',
+      payment: updatedPayment
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 9. تسديد دفعة (تغيير الحالة إلى مدفوع)
+// ==============================================
+// ==============================================
+// 9. تسديد دفعة (تغيير الحالة إلى مدفوع) - مع schoolId
+// ==============================================
+app.put('/api/payments/:id/pay', async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    const { paymentMethod, paymentDate, notes } = req.body;
+    
+    console.log(`✅ تسديد الدفعة: ${paymentId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الدفعة غير صالح'
+      });
+    }
+
+    // جلب الدفعة مع بيانات الطالب والحصة
+    const payment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId schoolId')
+      .populate('class', 'name subject');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'الدفعة غير موجودة'
+      });
+    }
+
+    if (payment.status === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'الدفعة مسددة مسبقاً'
+      });
+    }
+
+    // ✅ الحصول على schoolId من الدفعة أو من الطالب أو من التوكن
+    let schoolId = payment.schoolId;
+    
+    if (!schoolId && payment.student) {
+      schoolId = payment.student.schoolId;
+    }
+    
+    if (!schoolId) {
+      schoolId = req.user?.schoolId;
+    }
+
+    console.log(`🏫 schoolId المستخدم للدفعة ${paymentId}: ${schoolId}`);
+
+    // تحديث حالة الدفعة
+    payment.status = 'paid';
+    payment.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
+    payment.paymentMethod = paymentMethod || payment.paymentMethod || 'cash';
+    payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
+    if (notes) payment.notes = notes;
+
+    await payment.save();
+
+    // ✅ تسجيل المعاملة المالية مع schoolId
+    const transactionData = {
+      type: 'income',
+      amount: payment.amount,
+      description: `دفعة للطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
+      category: 'tuition',
+      recordedBy: req.user?.id || null,
+      reference: payment._id,
+      student: payment.student?._id,
+      date: payment.paymentDate
+    };
+
+    // ✅ إضافة schoolId إذا وجد
+    if (schoolId) {
+      transactionData.schoolId = schoolId;
+    }
+
+    const transaction = new FinancialTransaction(transactionData);
+    await transaction.save();
+
+    // جلب الدفعة المحدثة
+    const updatedPayment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId')
+      .populate('recordedBy', 'username fullName');
+
+    res.json({
+      success: true,
+      message: 'تم تسديد الدفعة بنجاح',
+      payment: updatedPayment,
+      invoiceNumber: payment.invoiceNumber,
+      transactionId: transaction._id
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسديد الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 10. إلغاء دفعة (جعلها معلقة)
+// ==============================================
+app.put('/api/payments/:id/cancel', async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    const { reason } = req.body;
+    
+    console.log(`↩️ إلغاء الدفعة: ${paymentId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الدفعة غير صالح'
+      });
+    }
+
+    // جلب الدفعة
+    const payment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'الدفعة غير موجودة'
+      });
+    }
+
+    if (payment.status !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن إلغاء دفعة غير مدفوعة'
+      });
+    }
+
+    // تحديث حالة الدفعة
+    payment.status = 'pending';
+    payment.paymentDate = null;
+    payment.paymentMethod = null;
+    if (reason) payment.notes = `إلغاء الدفعة: ${reason}`;
+
+    await payment.save();
+
+    // حذف المعاملة المالية المرتبطة
+    await FinancialTransaction.deleteMany({
+      reference: payment._id,
+      type: 'income'
+    });
+
+    // جلب الدفعة المحدثة
+    const updatedPayment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId')
+      .populate('recordedBy', 'username fullName');
+
+    res.json({
+      success: true,
+      message: 'تم إلغاء الدفعة بنجاح',
+      payment: updatedPayment
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إلغاء الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 11. حذف دفعة (نهائياً)
+// ==============================================
+app.delete('/api/payments/:id', async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    
+    console.log(`🗑️ حذف الدفعة: ${paymentId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الدفعة غير صالح'
+      });
+    }
+
+    // جلب الدفعة
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'الدفعة غير موجودة'
+      });
+    }
+
+    // منع حذف الدفعات المدفوعة (يجب إلغاؤها أولاً)
+    if (payment.status === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف دفعة مدفوعة. يرجى إلغاؤها أولاً.'
+      });
+    }
+
+    // حذف المعاملة المالية المرتبطة
+    await FinancialTransaction.deleteMany({ reference: paymentId });
+
+    // حذف الدفعة
+    await Payment.findByIdAndDelete(paymentId);
+
+    res.json({
+      success: true,
+      message: 'تم حذف الدفعة بنجاح'
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في حذف الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 12. جلب إحصائيات سريعة للحصة
+// ==============================================
+app.get('/api/classes/:id/stats', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    
+    console.log(`📊 جلب إحصائيات الحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // جلب الحصة
+    const classObj = await Class.findById(classId)
+      .populate('students', 'name studentId')
+      .populate('teacher', 'name');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // عدد الطلاب
+    const totalStudents = classObj.students?.length || 0;
+
+    // المدفوعات
+    const paymentStats = await Payment.aggregate([
+      { $match: { class: new mongoose.Types.ObjectId(classId) } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    // إحصائيات الغيابات (آخر 30 يوم)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const attendanceStats = await Attendance.aggregate([
+      {
+        $match: {
+          class: new mongoose.Types.ObjectId(classId),
+          date: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // تحويل البيانات
+    const paymentSummary = {
+      paid: 0,
+      paidAmount: 0,
+      pending: 0,
+      pendingAmount: 0,
+      late: 0,
+      lateAmount: 0
+    };
+
+    paymentStats.forEach(stat => {
+      if (stat._id === 'paid') {
+        paymentSummary.paid = stat.count;
+        paymentSummary.paidAmount = stat.total;
+      } else if (stat._id === 'pending') {
+        paymentSummary.pending = stat.count;
+        paymentSummary.pendingAmount = stat.total;
+      } else if (stat._id === 'late') {
+        paymentSummary.late = stat.count;
+        paymentSummary.lateAmount = stat.total;
+      }
+    });
+
+    const attendanceSummary = {
+      present: 0,
+      absent: 0,
+      late: 0
+    };
+
+    attendanceStats.forEach(stat => {
+      if (stat._id === 'present') attendanceSummary.present = stat.count;
+      else if (stat._id === 'absent') attendanceSummary.absent = stat.count;
+      else if (stat._id === 'late') attendanceSummary.late = stat.count;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classObj._id,
+          name: classObj.name,
+          subject: classObj.subject,
+          teacher: classObj.teacher?.name
+        },
+        students: {
+          total: totalStudents,
+          list: classObj.students
+        },
+        payments: paymentSummary,
+        attendance: attendanceSummary,
+        totalIncome: paymentSummary.paidAmount,
+        totalPending: paymentSummary.pendingAmount + paymentSummary.lateAmount
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب إحصائيات الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 13. جلب الحصص حسب المعلم
+// ==============================================
+app.get('/api/teachers/:id/classes', async (req, res) => {
+  try {
+    const teacherId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب حصص المعلم: ${teacherId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(teacherId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المعلم غير صالح'
+      });
+    }
+
+    const query = { teacher: teacherId };
+    if (schoolId) query.schoolId = schoolId;
+
+    const classes = await Class.find(query)
+      .populate('students', 'name studentId')
+      .populate('schedule.classroom', 'name location')
+      .sort({ name: 1 });
+
+    // إضافة إحصائيات لكل حصة
+    const classesWithStats = await Promise.all(classes.map(async (cls) => {
+      const studentCount = cls.students?.length || 0;
+      
+      // جلب إحصائيات المدفوعات
+      const paymentStats = await Payment.aggregate([
+        { $match: { class: cls._id } },
+        {
+          $group: {
+            _id: '$status',
+            total: { $sum: '$amount' }
+          }
+        }
+      ]);
+
+      const totalPaid = paymentStats
+        .filter(s => s._id === 'paid')
+        .reduce((sum, s) => sum + s.total, 0);
+
+      const totalPending = paymentStats
+        .filter(s => s._id !== 'paid')
+        .reduce((sum, s) => sum + s.total, 0);
+
+      return {
+        ...cls.toObject(),
+        studentCount: studentCount,
+        totalPaid: totalPaid,
+        totalPending: totalPending
+      };
+    }));
+
+    res.json({
+      success: true,
+      data: classesWithStats,
+      count: classesWithStats.length
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص المعلم:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    // التحقق من صحة schoolId
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    // التحقق من وجود المدرسة
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    // تعيين بداية ونهاية اليوم
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    console.log(`📊 جلب معاملات اليوم للمدرسة: ${schoolId}`);
+    console.log(`📅 النطاق: ${startOfDay} - ${endOfDay}`);
+
+    // 1. جلب معاملات اليوم من FinancialTransaction
+    const transactions = await FinancialTransaction.find({
+      schoolId: schoolId,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    })
+    .populate('recordedBy', 'username fullName')
+    .populate('student', 'name studentId')
+    .sort({ date: -1 });
+
+    // 2. جلب مدفوعات اليوم
+    const todayPayments = await Payment.find({
+      schoolId: schoolId,
+      paymentDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'paid'
+    })
+    .populate('student', 'name studentId')
+    .populate('class', 'name subject')
+    .populate('recordedBy', 'username fullName')
+    .sort({ paymentDate: -1 });
+
+    // 3. جلب رسوم التسجيل المدفوعة اليوم
+    const todayFees = await SchoolFee.find({
+      schoolId: schoolId,
+      paymentDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'paid'
+    })
+    .populate('student', 'name studentId')
+    .populate('recordedBy', 'username fullName')
+    .sort({ paymentDate: -1 });
+
+    // 4. جلب المصروفات اليوم
+    const todayExpenses = await Expense.find({
+      schoolId: schoolId,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'paid'
+    })
+    .populate('recordedBy', 'username fullName')
+    .sort({ date: -1 });
+
+    // 5. جلب عمولات اليوم
+    const todayCommissions = await TeacherCommission.find({
+      schoolId: schoolId,
+      paymentDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: 'paid'
+    })
+    .populate('teacher', 'name')
+    .populate('student', 'name')
+    .populate('class', 'name')
+    .populate('recordedBy', 'username fullName')
+    .sort({ paymentDate: -1 });
+
+    // حساب الإحصائيات
+    const summary = {
+      totalIncome: 0,
+      totalExpenses: 0,
+      totalTransactions: 0,
+      paymentsCount: todayPayments.length,
+      feesCount: todayFees.length,
+      expensesCount: todayExpenses.length,
+      commissionsCount: todayCommissions.length
+    };
+
+    // حساب إجمالي الإيرادات
+    let totalIncome = 0;
+    todayPayments.forEach(p => totalIncome += p.amount);
+    todayFees.forEach(f => totalIncome += f.amount);
+    summary.totalIncome = totalIncome;
+
+    // حساب إجمالي المصروفات
+    let totalExpenses = 0;
+    todayExpenses.forEach(e => totalExpenses += e.amount);
+    todayCommissions.forEach(c => totalExpenses += c.amount);
+    summary.totalExpenses = totalExpenses;
+
+    summary.totalTransactions = 
+      transactions.length + 
+      todayPayments.length + 
+      todayFees.length + 
+      todayExpenses.length + 
+      todayCommissions.length;
+
+    // تجميع جميع المعاملات في مصفوفة واحدة
+    const allTransactions = [
+      ...transactions.map(t => ({
+        ...t.toObject(),
+        _type: 'financial_transaction',
+        typeLabel: 'معاملة مالية',
+        icon: 'fa-exchange-alt'
+      })),
+      ...todayPayments.map(p => ({
+        ...p.toObject(),
+        _type: 'payment',
+        typeLabel: 'دفعة طالب',
+        icon: 'fa-money-bill-wave',
+        description: `دفعة من الطالب ${p.student?.name || 'غير معروف'}`
+      })),
+      ...todayFees.map(f => ({
+        ...f.toObject(),
+        _type: 'registration_fee',
+        typeLabel: 'رسوم تسجيل',
+        icon: 'fa-file-invoice',
+        description: `رسوم تسجيل الطالب ${f.student?.name || 'غير معروف'}`
+      })),
+      ...todayExpenses.map(e => ({
+        ...e.toObject(),
+        _type: 'expense',
+        typeLabel: 'مصروف',
+        icon: 'fa-receipt',
+        description: e.description
+      })),
+      ...todayCommissions.map(c => ({
+        ...c.toObject(),
+        _type: 'commission',
+        typeLabel: 'عمولة أستاذ',
+        icon: 'fa-user-graduate',
+        description: `عمولة الأستاذ ${c.teacher?.name || 'غير معروف'}`
+      }))
+    ];
+
+    // ترتيب حسب التاريخ (الأحدث أولاً)
+    allTransactions.sort((a, b) => {
+      const dateA = a.paymentDate || a.date || a.createdAt;
+      const dateB = b.paymentDate || b.date || b.createdAt;
+      return new Date(dateB) - new Date(dateA);
+    });
+
+    res.json({
+      success: true,
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
+      },
+      date: {
+        start: startOfDay,
+        end: endOfDay,
+        formatted: startOfDay.toLocaleDateString('ar-EG', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      },
+      summary: summary,
+      transactions: allTransactions,
+      counts: {
+        financialTransactions: transactions.length,
+        payments: todayPayments.length,
+        fees: todayFees.length,
+        expenses: todayExpenses.length,
+        commissions: todayCommissions.length
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب معاملات اليوم:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 14. جلب الحصص حسب المستوى الدراسي
+// ==============================================
+app.get('/api/classes/by-level/:academicYear', async (req, res) => {
+  try {
+    const academicYear = req.params.academicYear;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب حصص المستوى: ${academicYear}`);
+    
+    const query = { academicYear: academicYear };
+    if (schoolId) query.schoolId = schoolId;
+
+    const classes = await Class.find(query)
+      .populate('teacher', 'name')
+      .populate('students', 'name studentId')
+      .populate('schedule.classroom', 'name')
+      .sort({ name: 1 });
+
+    res.json({
+      success: true,
+      data: classes,
+      count: classes.length
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص المستوى:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   // PUT /api/payments/:id/amount
   app.put('/api/payments/:id/amount', async (req, res) => {
     try {
@@ -6705,69 +11588,674 @@ app.get('/api/payments/:id', async (req, res) => {
 
 
     // Live Classes Routes
-    app.get('/api/live-classes',  async (req, res) => {
-      try {
-        const { status, date, class: classId } = req.query;
-        const query = {};
+// ==============================================
+// ✅ GET /api/live-classes - With School ID Filtering
+// ==============================================
+app.get('/api/live-classes', async (req, res) => {
+  try {
+    // 1. Get schoolId from query (priority) or from authenticated user
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log('📚 Fetching live classes - schoolId:', schoolId);
+    
+    // 2. Validate schoolId
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)',
+        message: 'School ID is required to fetch live classes'
+      });
+    }
 
-        if (status) query.status = status;
-        if (date) {
-          const startDate = new Date(date);
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 1);
-          query.date = { $gte: startDate, $lt: endDate };
-        }
-        if (classId) query.class = classId;
+    // 3. Validate schoolId format
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح',
+        message: 'Invalid school ID format'
+      });
+    }
 
-        const liveClasses = await LiveClass.find(query)
-          .populate('class')
-          .populate('teacher')
-          .populate('classroom')
-          .populate('attendance.student')
-          .sort({ date: -1, startTime: -1 });
-        
-        res.json(liveClasses);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
+    // 4. Check if school exists
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة',
+        message: 'School not found'
+      });
+    }
+
+    // 5. Build query filters
+    const { status, date, class: classId, teacher, month, limit = 100 } = req.query;
+    const query = { schoolId: schoolId };
+
+    if (status) query.status = status;
+    if (classId) query.class = classId;
+    if (teacher) query.teacher = teacher;
+    if (month) query.month = month;
+    
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      query.date = { $gte: startDate, $lte: endDate };
+    }
+
+    console.log('🔍 Query filters:', JSON.stringify(query, null, 2));
+
+    // 6. Fetch live classes with population
+    const liveClasses = await LiveClass.find(query)
+      .populate('class', 'name subject price academicYear')
+      .populate('teacher', 'name phone email')
+      .populate('classroom', 'name location capacity status equipment')
+      .populate('attendance.student', 'name studentId parentPhone')
+      .populate('createdBy', 'username fullName')
+      .sort({ date: -1, startTime: -1 })
+      .limit(parseInt(limit));
+
+    console.log(`✅ Found ${liveClasses.length} live classes for school ${schoolId}`);
+
+    // 7. Calculate statistics
+    const stats = {
+      total: liveClasses.length,
+      scheduled: liveClasses.filter(lc => lc.status === 'scheduled').length,
+      ongoing: liveClasses.filter(lc => lc.status === 'ongoing').length,
+      completed: liveClasses.filter(lc => lc.status === 'completed').length,
+      cancelled: liveClasses.filter(lc => lc.status === 'cancelled').length,
+      totalAttendance: liveClasses.reduce((sum, lc) => sum + (lc.attendance?.length || 0), 0)
+    };
+
+    // 8. Return response
+    res.json({
+      success: true,
+      data: liveClasses,
+      stats: stats,
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
+      },
+      count: liveClasses.length,
+      filters: {
+        status: status || 'all',
+        date: date || 'all',
+        class: classId || 'all',
+        teacher: teacher || 'all',
+        month: month || 'all'
       }
     });
 
-    app.post('/api/live-classes', async (req, res) => {
-      try {
-        console.log('Received live class creation request:', req.body);
-        
-        // Auto-generate missing required fields
-        const liveClassData = {
-          ...req.body,
-          month: req.body.month || new Date(req.body.date).toISOString().slice(0, 7),
-          createdBy: req.body.createdBy || new mongoose.Types.ObjectId(), // Temporary for testing
-          status: req.body.status || 'scheduled'
-        };
-        
-        console.log('Processed live class data:', liveClassData);
-        
-        const liveClass = new LiveClass(liveClassData);
-        await liveClass.save();
-        
-        const populated = await LiveClass.findById(liveClass._id)
-          .populate('class')
-          .populate('teacher')
-          .populate('classroom');
-        
-        res.status(201).json(populated);
-      } catch (err) {
-        console.error('Error creating live class:', err);
-        console.error('Validation errors:', err.errors);
-        
-        res.status(400).json({ 
-          error: err.message,
-          validationErrors: err.errors 
+  } catch (err) {
+    console.error('❌ Error fetching live classes:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في جلب الحصص الحية',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// Create Live Class - مع تحديث حالة الغرفة
+// ==============================================
+// ✅ POST /api/live-classes - Create Live Class with School ID
+// ==============================================
+// ==============================================
+// ✅ POST /api/live-classes - Create Live Class (FIXED)
+// ==============================================
+app.post('/api/live-classes', async (req, res) => {
+  try {
+    console.log('📝 Creating live class - Request body:', req.body);
+    console.log('👤 User:', req.user);
+    
+    // 1. Extract data from request
+    const { 
+      classId, 
+      date, 
+      startTime, 
+      endTime, 
+      teacherId, 
+      classroomId, 
+      status,
+      notes,
+      schoolId: bodySchoolId
+    } = req.body;
+    
+    // 2. Get schoolId (priority: body > user token)
+    const schoolId = bodySchoolId || req.user?.schoolId;
+    
+    console.log('🏫 schoolId:', schoolId);
+    
+    // 3. Validate schoolId
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)',
+        message: 'School ID is required to create a live class'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح',
+        message: 'Invalid school ID format'
+      });
+    }
+
+    // 4. Check if school exists
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة',
+        message: 'School not found'
+      });
+    }
+
+    // 5. Validate required fields
+    if (!classId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد الحصة (classId)',
+        message: 'Class ID is required'
+      });
+    }
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد التاريخ (date)',
+        message: 'Date is required'
+      });
+    }
+
+    if (!startTime) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد وقت البداية (startTime)',
+        message: 'Start time is required'
+      });
+    }
+
+    if (!teacherId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد الأستاذ (teacherId)',
+        message: 'Teacher ID is required'
+      });
+    }
+
+    // 6. Validate class exists and belongs to school
+    const classObj = await Class.findOne({
+      _id: classId,
+      schoolId: schoolId
+    }).populate('teacher').populate('students');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة أو لا تنتمي للمدرسة',
+        message: 'Class not found or does not belong to this school'
+      });
+    }
+
+    console.log('📚 Class found:', classObj.name);
+
+    // 7. Validate teacher exists and belongs to school
+    const teacher = await Teacher.findOne({
+      _id: teacherId,
+      schoolId: schoolId
+    });
+
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة',
+        message: 'Teacher not found or does not belong to this school'
+      });
+    }
+
+    console.log('👨‍🏫 Teacher found:', teacher.name);
+
+    // 8. Validate classroom if provided
+    let classroom = null;
+    if (classroomId) {
+      classroom = await Classroom.findOne({
+        _id: classroomId,
+        schoolId: schoolId
+      });
+
+      if (!classroom) {
+        return res.status(404).json({
+          success: false,
+          error: 'الغرفة غير موجودة أو لا تنتمي للمدرسة',
+          message: 'Classroom not found or does not belong to this school'
         });
       }
+
+      // Check if classroom is in maintenance
+      if (classroom.status === 'maintenance') {
+        return res.status(400).json({
+          success: false,
+          error: 'الغرفة قيد الصيانة ولا يمكن استخدامها حالياً',
+          message: 'Classroom is under maintenance'
+        });
+      }
+
+      // Check if classroom is already occupied
+      if (classroom.status === 'occupied') {
+        return res.status(400).json({
+          success: false,
+          error: 'الغرفة مشغولة حالياً بحصة أخرى',
+          message: 'Classroom is currently occupied'
+        });
+      }
+
+      console.log('🏫 Classroom found:', classroom.name);
+    }
+
+    // 9. Parse and validate date
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'تاريخ غير صالح',
+        message: 'Invalid date format'
+      });
+    }
+
+    // 10. Check for duplicate live class
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingLiveClass = await LiveClass.findOne({
+      schoolId: schoolId,
+      class: classId,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      startTime: startTime,
+      status: { $in: ['scheduled', 'ongoing'] }
     });
 
+    if (existingLiveClass) {
+      return res.status(400).json({
+        success: false,
+        error: 'توجد حصة مجدولة في نفس الوقت',
+        message: 'A live class already exists at this time',
+        existingLiveClass: {
+          _id: existingLiveClass._id,
+          date: existingLiveClass.date,
+          startTime: existingLiveClass.startTime,
+          status: existingLiveClass.status
+        }
+      });
+    }
 
+    // 11. Check classroom conflict
+    if (classroomId) {
+      const conflictingClass = await LiveClass.findOne({
+        schoolId: schoolId,
+        classroom: classroomId,
+        date: { $gte: startOfDay, $lte: endOfDay },
+        startTime: startTime,
+        status: { $in: ['scheduled', 'ongoing'] }
+      });
 
+      if (conflictingClass) {
+        return res.status(400).json({
+          success: false,
+          error: 'الغرفة محجوزة لحصة أخرى في هذا الوقت',
+          message: 'Classroom is already booked for another class at this time',
+          conflictingClass: {
+            _id: conflictingClass._id,
+            date: conflictingClass.date,
+            startTime: conflictingClass.startTime
+          }
+        });
+      }
+    }
+
+    // 12. Create attendance records for all students in the class
+    const students = classObj.students || [];
+    const attendance = students.map(student => ({
+      student: student._id,
+      status: 'absent',
+      joinedAt: null,
+      leftAt: null,
+      timestamp: new Date(),
+      method: 'auto'
+    }));
+
+    console.log(`👥 Creating attendance for ${students.length} students`);
+
+    // 13. Create the live class
+    const liveClassData = {
+      schoolId: schoolId, // ✅ Add schoolId
+      class: classId,
+      date: targetDate,
+      month: targetDate.toISOString().slice(0, 7),
+      startTime: startTime,
+      endTime: endTime || calculateEndTime(startTime),
+      teacher: teacherId,
+      classroom: classroomId || undefined,
+      attendance: attendance,
+      status: status || 'scheduled',
+      notes: notes || '',
+      createdBy: req.user?.id || null
+    };
+
+    const liveClass = new LiveClass(liveClassData);
+    await liveClass.save();
+    console.log('✅ Live class created:', liveClass._id);
+
+    // 14. Update classroom status to "occupied" if classroom is provided
+    let classroomUpdated = false;
+    if (classroomId && classroom) {
+      classroom.status = 'occupied';
+      classroom.updatedAt = new Date();
+      await classroom.save();
+      classroomUpdated = true;
+      console.log(`✅ Classroom ${classroom.name} status updated to "occupied"`);
+    }
+
+    // 15. Populate the created live class for response
+    const populatedLiveClass = await LiveClass.findById(liveClass._id)
+      .populate('class', 'name subject price academicYear')
+      .populate('teacher', 'name phone email')
+      .populate('classroom', 'name location status')
+      .populate('attendance.student', 'name studentId')
+      .populate('createdBy', 'username fullName');
+
+    // 16. Return success response
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء الحصة الحية بنجاح',
+      data: populatedLiveClass,
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
+      },
+      statistics: {
+        totalStudents: students.length,
+        attendanceRecords: attendance.length,
+        classroomUpdated: classroomUpdated
+      },
+      classroomStatus: classroomUpdated ? {
+        classroomId: classroomId,
+        newStatus: 'occupied',
+        message: 'تم تحديث حالة الغرفة إلى مشغولة'
+      } : null
+    });
+
+  } catch (err) {
+    console.error('❌ Error creating live class:', err);
+    console.error('❌ Stack:', err.stack);
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: 'خطأ في صحة البيانات',
+        message: errors.join(', '),
+        details: errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إنشاء الحصة الحية',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// ✅ Helper function to calculate end time
+// ==============================================
+function calculateEndTime(startTime) {
+  if (!startTime) return '10:00';
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const endHours = hours + 2; // Default 2 hours duration
+  return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+// Start a live class - تحديث حالة الغرفة إلى مشغولة
+app.put('/api/live-classes/:id/start', async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+    
+    const liveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('classroom', 'name location status');
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة الحية غير موجودة'
+      });
+    }
+    
+    // التحقق من أن الحصة في حالة مجدولة
+    if (liveClass.status === 'ongoing') {
+      return res.status(400).json({
+        success: false,
+        error: 'الحصة قيد التشغيل بالفعل'
+      });
+    }
+    
+    if (liveClass.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        error: 'الحصة منتهية ولا يمكن بدئها'
+      });
+    }
+    
+    // ==============================================
+    // تحديث حالة الغرفة إلى "مشغولة" إذا كانت متاحة
+    // ==============================================
+    let classroomUpdated = false;
+    if (liveClass.classroom) {
+      const classroom = await Classroom.findById(liveClass.classroom._id);
+      if (classroom) {
+        if (classroom.status === 'maintenance') {
+          return res.status(400).json({
+            success: false,
+            error: 'الغرفة قيد الصيانة ولا يمكن استخدامها'
+          });
+        }
+        
+        // تحديث حالة الغرفة إلى مشغولة
+        classroom.status = 'occupied';
+        classroom.updatedAt = new Date();
+        await classroom.save();
+        classroomUpdated = true;
+        console.log(`✅ تم تحديث حالة الغرفة ${classroom.name} إلى "مشغولة"`);
+      }
+    }
+    
+    // تحديث حالة الحصة
+    liveClass.status = 'ongoing';
+    liveClass.startTime = liveClass.startTime || new Date().toLocaleTimeString();
+    await liveClass.save();
+    
+    // جلب البيانات المحدثة
+    const updatedLiveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .populate('classroom', 'name location status')
+      .populate('attendance.student', 'name studentId');
+    
+    res.json({
+      success: true,
+      message: 'تم بدء الحصة بنجاح',
+      data: updatedLiveClass,
+      classroomUpdated: classroomUpdated ? {
+        classroomId: liveClass.classroom._id,
+        newStatus: 'occupied'
+      } : null
+    });
+    
+  } catch (err) {
+    console.error('Error starting live class:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Complete a live class - تحديث حالة الغرفة إلى متاحة
+app.put('/api/live-classes/:id/complete', async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    const { notes, autoMarkAbsent = true, sendSMS = true } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+    
+    const liveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .populate('classroom', 'name location status')
+      .populate('attendance.student', 'name studentId parentPhone');
+    
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة الحية غير موجودة'
+      });
+    }
+    
+    // التحقق من أن الحصة قيد التشغيل
+    if (liveClass.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        error: 'الحصة منتهية بالفعل'
+      });
+    }
+    
+    if (liveClass.status === 'scheduled') {
+      return res.status(400).json({
+        success: false,
+        error: 'الحصة لم تبدأ بعد'
+      });
+    }
+    
+    // ==============================================
+    // تحديث حالة الغرفة إلى "متاحة"
+    // ==============================================
+    let classroomUpdated = false;
+    if (liveClass.classroom) {
+      const classroom = await Classroom.findById(liveClass.classroom._id);
+      if (classroom) {
+        classroom.status = 'available';
+        classroom.updatedAt = new Date();
+        await classroom.save();
+        classroomUpdated = true;
+        console.log(`✅ تم تحديث حالة الغرفة ${classroom.name} إلى "متاحة"`);
+      }
+    }
+    
+    // تحديث حالة الحصة
+    liveClass.status = 'completed';
+    liveClass.endTime = liveClass.endTime || new Date().toLocaleTimeString();
+    if (notes) liveClass.notes = notes;
+    await liveClass.save();
+    
+    // تسجيل الغياب التلقائي للطلاب الغائبين
+    let autoMarkResult = null;
+    if (autoMarkAbsent) {
+      try {
+        // استدعاء دالة تسجيل الغياب التلقائي
+        const absentStudents = liveClass.attendance.filter(
+          att => att.status === 'absent' || !att.status
+        );
+        
+        if (absentStudents.length > 0) {
+          // تحديث سجلات الحضور في Attendance Schema
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          for (const att of absentStudents) {
+            const student = att.student;
+            let attendanceRecord = await Attendance.findOne({
+              student: student._id,
+              class: liveClass.class._id,
+              date: { $gte: today, $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+            });
+            
+            if (!attendanceRecord) {
+              attendanceRecord = new Attendance({
+                student: student._id,
+                class: liveClass.class._id,
+                date: liveClass.date,
+                status: 'absent',
+                recordedBy: req.user?.id || null
+              });
+              await attendanceRecord.save();
+            }
+          }
+          
+          autoMarkResult = {
+            markedAbsent: absentStudents.length,
+            totalStudents: liveClass.attendance.length
+          };
+          
+          // إرسال رسائل SMS للطلاب الغائبين
+          if (sendSMS) {
+            const smsResults = await sendAbsenceNotifications(absentStudents, liveClass);
+            autoMarkResult.sms = smsResults;
+          }
+        }
+      } catch (err) {
+        console.error('Error in auto-mark absent:', err);
+        autoMarkResult = { error: err.message };
+      }
+    }
+    
+    // جلب البيانات المحدثة
+    const updatedLiveClass = await LiveClass.findById(liveClassId)
+      .populate('class', 'name subject')
+      .populate('teacher', 'name')
+      .populate('classroom', 'name location status')
+      .populate('attendance.student', 'name studentId');
+    
+    res.json({
+      success: true,
+      message: 'تم إنهاء الحصة بنجاح',
+      data: updatedLiveClass,
+      autoMarkResult: autoMarkResult,
+      classroomUpdated: classroomUpdated ? {
+        classroomId: liveClass.classroom._id,
+        newStatus: 'available'
+      } : null
+    });
+    
+  } catch (err) {
+    console.error('Error completing live class:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
     app.put('/api/live-classes/:id',  async (req, res) => {
       try {
         const liveClassId = req.params.id;
@@ -6815,21 +12303,51 @@ app.get('/api/payments/:id', async (req, res) => {
 
     
 
-    app.get('/api/live-classes/:id',  async (req, res) => {
-      try {
-        const liveClass = await LiveClass.findById(req.params.id)
-          .populate('class')
-          .populate('teacher')
-          .populate('classroom')
-          .populate('attendance.student');
-        
-        if (!liveClass) return res.status(404).json({ error: 'الحصة غير موجودة' });
-        
-        res.json(liveClass);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
+// ==============================================
+// ✅ GET /api/live-classes/:id - Get single live class
+// ==============================================
+app.get('/api/live-classes/:id', async (req, res) => {
+  try {
+    const liveClassId = req.params.id;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    if (!mongoose.Types.ObjectId.isValid(liveClassId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    const query = { _id: liveClassId };
+    if (schoolId) query.schoolId = schoolId;
+
+    const liveClass = await LiveClass.findOne(query)
+      .populate('class', 'name subject price academicYear')
+      .populate('teacher', 'name phone email')
+      .populate('classroom', 'name location status')
+      .populate('attendance.student', 'name studentId parentPhone')
+      .populate('createdBy', 'username fullName');
+
+    if (!liveClass) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة الحية غير موجودة أو لا تنتمي للمدرسة'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: liveClass
     });
+
+  } catch (err) {
+    console.error('❌ Error fetching live class:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
     
 
@@ -7842,119 +13360,135 @@ app.post('/api/live-classes/:id/attendance', async (req, res) => {
   // Get payments for a specific student
   // الحصول على مدفوعات الطالب
   // الحصول على جميع مدفوعات الطالب مع تفاصيل كاملة
-  app.get('/api/payments/student/:studentId',  async (req, res) => {
+// الحصول على مدفوعات الطالب مع تصفية حسب المدرسة
+app.get('/api/payments/student/:studentId', async (req, res) => {
     try {
-      const { studentId } = req.params;
-      const { status, startDate, endDate, limit = 100 } = req.query;
-      
-      console.log(`جلب مدفوعات الطالب: ${studentId}`);
-      
-      // بناء الاستعلام
-      const query = { student: studentId };
-      
-      if (status && status !== 'all') {
-        query.status = status;
-      }
-      
-      if (startDate || endDate) {
-        query.createdAt = {};
-        if (startDate) query.createdAt.$gte = new Date(startDate);
-        if (endDate) query.createdAt.$lte = new Date(endDate);
-      }
-      
-      // الحصول على المدفوعات مع جميع البيانات
-      const payments = await Payment.find(query)
-        .populate({
-          path: 'student',
-          select: 'name studentId parentPhone academicYear'
-        })
-        .populate({
-          path: 'class',
-          select: 'name subject price paymentSystem',
-          populate: [
-            { path: 'teacher', model: 'Teacher', select: 'name' },
-            { path: 'schedule.classroom', model: 'Classroom', select: 'name' }
-          ]
-        })
-        .populate('recordedBy', 'username fullName')
-        .sort({ createdAt: -1 })
-        .limit(parseInt(limit));
-      
-      console.log(`تم العثور على ${payments.length} دفعة للطالب ${studentId}`);
-      
-      // إضافة بيانات إضافية لكل دفعة
-      const enhancedPayments = payments.map(payment => {
-        const paymentObj = payment.toObject();
-        
-        // حساب إذا كانت الدفعة متأخرة
-        if (payment.status === 'pending' && payment.monthCode) {
-          const monthDate = moment(payment.monthCode, 'YYYY-MM');
-          if (monthDate.isBefore(moment(), 'month')) {
-            paymentObj.isLate = true;
-          }
+        const { studentId } = req.params;
+        const { status, startDate, endDate, limit = 100 } = req.query;
+
+        // جلب schoolId من التوكن (أفضل) أو من الـ query
+        const schoolId = req.user?.schoolId || req.query.schoolId;
+
+        // التحقق من وجود schoolId
+        if (!schoolId) {
+            return res.status(400).json({
+                success: false,
+                error: 'schoolId مطلوب للحصول على مدفوعات الطالب'
+            });
         }
-        
-        // إضافة معلومات الحصة
-        if (payment.class) {
-          paymentObj.className = payment.class.name;
-          paymentObj.subject = payment.class.subject;
-          paymentObj.teacherName = payment.class.teacher?.name || 'غير محدد';
+
+        console.log(`جلب مدفوعات الطالب: ${studentId} للمدرسة: ${schoolId}`);
+
+        // بناء الاستعلام - إضافة schoolId كشرط أساسي
+        const query = {
+            student: studentId,
+            schoolId: schoolId // ✅ تصفية المدفوعات حسب المدرسة
+        };
+
+        if (status && status !== 'all') {
+            query.status = status;
         }
-        
-        // إضافة معلومات الطالب
-        if (payment.student) {
-          paymentObj.studentName = payment.student.name;
-          paymentObj.studentId = payment.student.studentId;
+
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
         }
-        
-        // تنسيق التاريخ
-        paymentObj.formattedDate = payment.paymentDate 
-          ? moment(payment.paymentDate).format('YYYY-MM-DD HH:mm')
-          : 'لم يتم الدفع';
-          
-        paymentObj.createdAtFormatted = moment(payment.createdAt).format('YYYY-MM-DD HH:mm');
-        
-        return paymentObj;
-      });
-      
-      // حساب الإحصائيات
-      const summary = {
-        total: enhancedPayments.length,
-        totalAmount: enhancedPayments.reduce((sum, p) => sum + p.amount, 0),
-        paid: enhancedPayments.filter(p => p.status === 'paid').length,
-        paidAmount: enhancedPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
-        pending: enhancedPayments.filter(p => p.status === 'pending').length,
-        pendingAmount: enhancedPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
-        late: enhancedPayments.filter(p => p.isLate).length,
-        lateAmount: enhancedPayments.filter(p => p.isLate).reduce((sum, p) => sum + p.amount, 0)
-      };
-      
-      res.json({
-        success: true,
-        payments: enhancedPayments,
-        summary: summary,
-        studentInfo: payments[0]?.student || null
-      });
-      
+
+        // الحصول على المدفوعات مع جميع البيانات
+        const payments = await Payment.find(query)
+            .populate({
+                path: 'student',
+                select: 'name studentId parentPhone academicYear'
+            })
+            .populate({
+                path: 'class',
+                select: 'name subject price paymentSystem',
+                populate: [
+                    { path: 'teacher', model: 'Teacher', select: 'name' },
+                    { path: 'schedule.classroom', model: 'Classroom', select: 'name' }
+                ]
+            })
+            .populate('recordedBy', 'username fullName')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit));
+
+        console.log(`تم العثور على ${payments.length} دفعة للطالب ${studentId} في المدرسة ${schoolId}`);
+
+        // إضافة بيانات إضافية لكل دفعة
+        const enhancedPayments = payments.map(payment => {
+            const paymentObj = payment.toObject();
+
+            // حساب إذا كانت الدفعة متأخرة
+            if (payment.status === 'pending' && payment.monthCode) {
+                const monthDate = moment(payment.monthCode, 'YYYY-MM');
+                if (monthDate.isBefore(moment(), 'month')) {
+                    paymentObj.isLate = true;
+                }
+            }
+
+            // إضافة معلومات الحصة
+            if (payment.class) {
+                paymentObj.className = payment.class.name;
+                paymentObj.subject = payment.class.subject;
+                paymentObj.teacherName = payment.class.teacher?.name || 'غير محدد';
+            }
+
+            // إضافة معلومات الطالب
+            if (payment.student) {
+                paymentObj.studentName = payment.student.name;
+                paymentObj.studentId = payment.student.studentId;
+            }
+
+            // تنسيق التاريخ
+            paymentObj.formattedDate = payment.paymentDate
+                ? moment(payment.paymentDate).format('YYYY-MM-DD HH:mm')
+                : 'لم يتم الدفع';
+
+            paymentObj.createdAtFormatted = moment(payment.createdAt).format('YYYY-MM-DD HH:mm');
+
+            return paymentObj;
+        });
+
+        // حساب الإحصائيات
+        const summary = {
+            total: enhancedPayments.length,
+            totalAmount: enhancedPayments.reduce((sum, p) => sum + p.amount, 0),
+            paid: enhancedPayments.filter(p => p.status === 'paid').length,
+            paidAmount: enhancedPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+            pending: enhancedPayments.filter(p => p.status === 'pending').length,
+            pendingAmount: enhancedPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
+            late: enhancedPayments.filter(p => p.isLate).length,
+            lateAmount: enhancedPayments.filter(p => p.isLate).reduce((sum, p) => sum + p.amount, 0)
+        };
+
+        res.json({
+            success: true,
+            payments: enhancedPayments,
+            summary: summary,
+            studentInfo: payments[0]?.student || null,
+            schoolId: schoolId
+        });
+
     } catch (err) {
-      console.error('❌ خطأ في جلب مدفوعات الطالب:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message,
-        payments: [],
-        summary: {
-          total: 0,
-          totalAmount: 0,
-          paid: 0,
-          paidAmount: 0,
-          pending: 0,
-          pendingAmount: 0,
-          late: 0,
-          lateAmount: 0
-        }
-      });
+        console.error('❌ خطأ في جلب مدفوعات الطالب:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            payments: [],
+            summary: {
+                total: 0,
+                totalAmount: 0,
+                paid: 0,
+                paidAmount: 0,
+                pending: 0,
+                pendingAmount: 0,
+                late: 0,
+                lateAmount: 0
+            }
+        });
     }
-  });
+});
   app.post('/api/live-classes/:id/mark-absent', async (req, res) => {
     try {
       const liveClassId = req.params.id;
@@ -8720,7 +14254,7 @@ app.post('/api/live-classes/:id/attendance', async (req, res) => {
           status: 'pending',
           active: false,
           hasPaidRegistration: false, // Default to not paid
-          registrationDate: new Date()
+          registrationDate: new Date(),
         });
     
         await student.save();
@@ -9040,16 +14574,19 @@ app.post('/api/live-classes/:id/attendance', async (req, res) => {
           return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
         }
 
-        const token = jwt.sign(
-          { 
-            id: studentAccount._id, 
-            username: studentAccount.username, 
-            role: studentAccount.role,
-            studentId: studentAccount.studentId
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: '8h' }
-        );
+// في نقطة /api/auth/login
+const token = jwt.sign(
+    {
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
+        schoolId: school._id, // ✅ تم إضافة schoolId هنا
+        schoolKey: school.schoolKey,
+        permissions: admin.permissions
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '8h' }
+);
 
         res.json({ 
           token, 
@@ -10158,7 +15695,8 @@ app.get('/api/attendance/available-class/:studentId', async (req, res) => {
     }
   });
 // DELETE /api/live-classes/:id - حذف حصة حية
-app.delete('/api/live-classes/:id',  async (req, res) => {
+// Cancel a live class - تحديث حالة الغرفة إلى متاحة
+app.delete('/api/live-classes/:id', async (req, res) => {
   try {
     const liveClassId = req.params.id;
     
@@ -10169,7 +15707,8 @@ app.delete('/api/live-classes/:id',  async (req, res) => {
       });
     }
     
-    const liveClass = await LiveClass.findById(liveClassId);
+    const liveClass = await LiveClass.findById(liveClassId)
+      .populate('classroom', 'name status');
     
     if (!liveClass) {
       return res.status(404).json({
@@ -10178,23 +15717,87 @@ app.delete('/api/live-classes/:id',  async (req, res) => {
       });
     }
     
+    // ==============================================
+    // تحديث حالة الغرفة إلى "متاحة" إذا كانت مشغولة
+    // ==============================================
+    let classroomUpdated = false;
+    if (liveClass.classroom) {
+      const classroom = await Classroom.findById(liveClass.classroom._id);
+      if (classroom && classroom.status === 'occupied') {
+        classroom.status = 'available';
+        classroom.updatedAt = new Date();
+        await classroom.save();
+        classroomUpdated = true;
+        console.log(`✅ تم تحديث حالة الغرفة ${classroom.name} إلى "متاحة" (إلغاء الحصة)`);
+      }
+    }
+    
     // حذف الحصة الحية
     await LiveClass.findByIdAndDelete(liveClassId);
     
     res.json({
       success: true,
-      message: 'تم حذف الحصة الحية بنجاح'
+      message: 'تم إلغاء الحصة الحية بنجاح',
+      classroomUpdated: classroomUpdated ? {
+        classroomId: liveClass.classroom._id,
+        newStatus: 'available'
+      } : null
     });
     
   } catch (err) {
-    console.error('❌ خطأ في حذف الحصة الحية:', err);
+    console.error('Error deleting live class:', err);
     res.status(500).json({
       success: false,
       error: err.message
     });
   }
 });
-
+// دالة مساعدة لإرسال إشعارات الغياب
+async function sendAbsenceNotifications(absentStudents, liveClass) {
+  const results = { sent: 0, failed: 0, details: [] };
+  
+  for (const att of absentStudents) {
+    const student = att.student;
+    if (student && student.parentPhone) {
+      try {
+        let cleanPhone = student.parentPhone.trim();
+        if (!cleanPhone.startsWith('+')) {
+          if (cleanPhone.startsWith('0')) {
+            cleanPhone = '+213' + cleanPhone.substring(1);
+          } else {
+            cleanPhone = '+213' + cleanPhone;
+          }
+        }
+        
+        const smsMessage = 
+          `📚 إشعار غياب\n` +
+          `عزيزي ولي أمر الطالب ${student.name}\n` +
+          `يؤسفنا إعلامكم بأن الطالب غائب عن حصة ${liveClass.class?.name || 'المدرسة'}\n` +
+          `📅 التاريخ: ${new Date(liveClass.date).toLocaleDateString('ar-EG')}\n` +
+          `⏰ الوقت: ${liveClass.startTime}\n` +
+          `👨‍🏫 المعلم: ${liveClass.teacher?.name || 'غير محدد'}\n` +
+          `📞 نرجو التواصل مع الإدارة.`;
+        
+        const smsResult = await smsGateway.sendIndividualSMS(cleanPhone, smsMessage);
+        
+        if (smsResult.success) {
+          results.sent++;
+          results.details.push({ student: student.name, success: true });
+        } else {
+          results.failed++;
+          results.details.push({ student: student.name, success: false, error: smsResult.error });
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (err) {
+        results.failed++;
+        results.details.push({ student: student.name, success: false, error: err.message });
+      }
+    }
+  }
+  
+  return results;
+}
 //deletAll
 app.delete('/api/live-classesDeletDg192',  async (req, res) => {
   try {
@@ -12816,6 +18419,8 @@ app.get('*', (req, res) => {
 
 
 
+    
+
     // ==============================================
     // Accounting Routes
     // ==============================================
@@ -12928,58 +18533,122 @@ app.get('*', (req, res) => {
       res.status(500).json({ error: err.message });
     }
   });
-  // في نقطة نهاية دفع رسوم التسجيل (/api/students/:id/pay-registration)
-  // Mark registration as paid
-  app.post('/api/students/:id/pay-registration',  async (req, res) => {
-    try {
-      const { amount, paymentDate, paymentMethod } = req.body;
-      const studentId = req.params.id;
 
-      const student = await Student.findById(studentId);
-      if (!student) {
-        return res.status(404).json({ error: 'الطالب غير موجود' });
-      }
+app.post('/api/students/:id/pay-registration', async (req, res) => {
+  try {
 
-      // Update student payment status
-      student.hasPaidRegistration = true;
-      student.status = 'active'; // Activate student after payment
-      student.active = true;
-      await student.save();
+    const { amount, paymentDate, paymentMethod, notes } = req.body;
+    const studentId = req.params.id;
+  
+    
+    // ✅ Get schoolId from query or body
+    const schoolId = req.query.schoolId || req.body.schoolId || req.user?.schoolId;
+    
+    console.log(`💰 Processing registration payment for student ${studentId}`);
+    console.log(`🏫 School ID: ${schoolId}`);
 
-      // Create a school fee record
-      const schoolFee = new SchoolFee({
-        student: studentId,
-        amount: amount || 600, // 600 DZD default
-        paymentDate: paymentDate || new Date(),
-        paymentMethod: paymentMethod || 'cash',
-        status: 'paid',
-        invoiceNumber: `INV-SF-${Date.now()}`,
-        recordedBy: req.user.id
-      });
-      await schoolFee.save();
-
-      // Record financial transaction
-      const transaction = new FinancialTransaction({
-        type: 'income',
-        amount: amount || 600,
-        description: `رسوم تسجيل الطالب ${student.name}`,
-        category: 'registration',
-        recordedBy: req.user.id,
-        reference: schoolFee._id
-      });
-      await transaction.save();
-
-      res.json({
-        message: 'تم دفع حقوق التسجيل بنجاح',
-        student,
-        receiptNumber: schoolFee.invoiceNumber,
-        transactionId: transaction._id
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    // ✅ Find student with school validation
+    let query = { _id: studentId };
+    if (schoolId) {
+      query.schoolId = schoolId;
     }
-  });
+    
+    const student = await Student.findOne(query);
+    if (!student) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة' 
+      });
+    }
 
+    // Check if already paid
+    if (student.hasPaidRegistration) {
+      return res.status(400).json({
+        success: false,
+        error: 'رسوم التسجيل مدفوعة مسبقاً لهذا الطالب'
+      });
+    }
+
+    // Update student payment status
+    student.hasPaidRegistration = true;
+    student.status = 'active';
+    student.active = true;
+    await student.save();
+
+    // Create school fee record
+    const schoolFee = new SchoolFee({
+      student: studentId,
+      amount: amount || 600,
+      paymentDate: paymentDate || new Date(),
+      paymentMethod: paymentMethod || 'cash',
+      status: 'paid',
+      invoiceNumber: `INV-SF-${Date.now()}`,
+      recordedBy: req.user?.id || null,
+      schoolId: schoolId // Add school reference
+    });
+    await schoolFee.save();
+
+    // Record financial transaction
+    const transaction = new FinancialTransaction({
+      type: 'income',
+      amount: amount || 600,
+      description: `رسوم تسجيل الطالب ${student.name}`,
+      category: 'registration',
+      recordedBy: req.user?.id || null,
+      reference: schoolFee._id,
+      student: studentId,
+      schoolId: schoolId // Add school reference
+    });
+    await transaction.save();
+
+    console.log(`✅ Registration payment successful for ${student.name}`);
+
+    res.json({
+      success: true,
+      message: 'تم دفع حقوق التسجيل بنجاح',
+      student: {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        hasPaidRegistration: student.hasPaidRegistration
+      },
+      receiptNumber: schoolFee.invoiceNumber,
+      transactionId: transaction._id
+    });
+
+  } catch (err) {
+    console.error('❌ Error processing registration payment:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+// get todays transactions for school
+app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+    // Fetch today's transactions for the school
+    const transactions = await FinancialTransaction.find({
+      schoolId: schoolId,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    res.json(transactions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ TODAY'S TRANSACTIONS - Fixed
+// ============================================
 
 
     // Teacher Payments (70% of class fees)
@@ -13748,6 +19417,7 @@ app.get('*', (req, res) => {
   });
 
 
+
   // Teachers count endpoint
   app.get('/api/teachers/count', async (req, res) => {
     try {
@@ -13780,32 +19450,18 @@ app.get('*', (req, res) => {
   //   }
   // });
   // Get all classes
-  app.get('/api/classes', async (req, res) => {
-    try {
-      const { academicYear, subject, teacher } = req.query;
-      const query = {};
+// ==============================================
+// 📚 جلب حصص المدرسة المحددة فقط - FIXED ✅
+// ==============================================
 
-      if (academicYear) query.academicYear = academicYear;
-      if (subject) query.subject = subject;
-      if (teacher) query.teacher = teacher;
+// تأكد من أن هذا الكود موجود في server.js
+// ==============================================
+// 📚 GET CLASSES - Filtered by School ID
+// ==============================================
+// ==============================================
+// 📚 GET CLASSES - Filtered by School ID
+// ==============================================
 
-      const classes = await Class.find(query)
-        .populate('teacher')
-        .populate('students')
-        .populate('schedule.classroom')
-        .sort({ createdAt: -1 });
-      
-      res.json({
-        success: true,
-        data: classes
-      });
-    } catch (err) {
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
-    }
-  });
   app.post('/api/accounting/transactions', async (req, res) => {
     try {
         const { type, amount, description, category, date, reference } = req.body;
@@ -14493,91 +20149,63 @@ app.get('*', (req, res) => {
 
   // Get student classes
   // Get student classes - ADD THIS ENDPOINT
-  app.get('/api/students/:id/classes',  async (req, res) => {
-    try {
-      const studentId = req.params.id;
-      
-      // Find the student and populate classes
-      const student = await Student.findById(studentId)
-        .populate({
-          path: 'classes',
-          populate: [
-            { path: 'teacher', model: 'Teacher' },
-            { path: 'schedule.classroom', model: 'Classroom' }
-          ]
-        });
-
-      if (!student) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الطالب غير موجود' 
-        });
-      }
-
-      res.json({
-        success: true,
-        data: student.classes || []
-      });
-    } catch (err) {
-      console.error('Error fetching student classes:', err);
-      res.status(500).json({ 
+// ==============================================
+// جلب حصص طالب معين
+// ==============================================
+app.get('/api/students/:id/classes', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const schoolId = req.user?.schoolId || req.query.schoolId;
+    
+    console.log(`📚 جلب حصص الطالب: ${studentId}`);
+    console.log(`🏫 schoolId: ${schoolId}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
         success: false,
-        error: err.message 
+        error: 'معرف الطالب غير صالح'
       });
     }
-  });
+
+    // جلب الطالب مع حصصه
+    const student = await Student.findOne({
+      _id: studentId,
+      ...(schoolId && { schoolId: schoolId })
+    }).populate({
+      path: 'classes',
+      match: { schoolId: schoolId }, // ✅ تأكد من أن الحصص تنتمي للمدرسة
+      populate: [
+        { path: 'teacher', model: 'Teacher' },
+        { path: 'schedule.classroom', model: 'Classroom' },
+        { path: 'students', model: 'Student' }
+      ]
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: student.classes || []
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب حصص الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
   // Get students in a specific class
   // In server.js - Update the /api/classes/:id endpoint
-  app.get('/api/classes/:id', async (req, res) => {
-    try {
-      console.log('=== BACKEND: Fetching class details ===');
-      console.log('Class ID:', req.params.id);
-      
-      const classId = req.params.id;
-      
-      if (!mongoose.Types.ObjectId.isValid(classId)) {
-        console.log('Invalid class ID');
-        return res.status(400).json({ 
-          success: false,
-          error: 'معرف الحصة غير صالح'
-        });
-      }
-      
-      const classObj = await Class.findById(classId)
-        .populate('teacher', 'name phone email')
-        .populate({
-          path: 'students',
-          model: 'Student',
-          select: 'name studentId parentPhone parentEmail academicYear status'
-        })
-        .populate('schedule.classroom', 'name location');
-      
-      if (!classObj) {
-        console.log('Class not found');
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة'
-        });
-      }
-      
-      console.log('Class found:', classObj.name);
-      console.log('Students count:', classObj.students?.length || 0);
-      console.log('Students:', classObj.students?.map(s => ({ id: s._id, name: s.name })));
-      
-      res.json({
-        success: true,
-        data: classObj
-      });
-      
-    } catch (err) {
-      console.error('Error fetching class details:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
-    }
-  });
+
   // Get students for a specific class
   app.get('/api/classes/:id/students', async (req, res) => {
     try {
@@ -14614,120 +20242,3 @@ app.get('*', (req, res) => {
     }
   });
   
-  // Get payments for a specific class
-  app.get('/api/payments/class/:classId', async (req, res) => {
-    try {
-      console.log('Fetching payments for class:', req.params.classId);
-      
-      const classId = req.params.classId;
-      
-      if (!mongoose.Types.ObjectId.isValid(classId)) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'معرف الحصة غير صالح'
-        });
-      }
-      
-      const query = { class: classId };
-      const { status, month } = req.query;
-      
-      if (status) query.status = status;
-      if (month) query.monthCode = month;
-      
-      const payments = await Payment.find(query)
-        .populate('student', 'name studentId')
-        .populate('class', 'name subject price')
-        .populate('recordedBy', 'username fullName')
-        .sort({ month: -1, createdAt: -1 });
-      
-      res.json({
-        success: true,
-        payments: payments || [],
-        count: payments.length,
-        totalAmount: payments.reduce((sum, p) => sum + (p.amount || 0), 0)
-      });
-      
-    } catch (err) {
-      console.error('Error fetching class payments:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message
-      });
-    }
-  });
-
-  // Add this endpoint with your other student routes
-
-  // Get lesson details with students and payments
-  app.get('/api/classes/:id', async (req, res) => {
-    try {
-      const classId = req.params.id;
-      
-      console.log('Fetching class details for:', classId);
-      
-      const classObj = await Class.findById(classId)
-        .populate('teacher')
-        .populate('students')
-        .populate('schedule.classroom');
-      
-      if (!classObj) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة' 
-        });
-      }
-      
-      res.json({
-        success: true,
-        data: classObj
-      });
-    } catch (err) {
-      console.error('Error fetching class details:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
-    }
-  });
-
-  // Get students in class
-
-
-  // Get payments for class
-  app.get('/api/payments/class/:classId', async (req, res) => {
-    try {
-      const { classId } = req.params;
-      const { status, month } = req.query;
-      
-      console.log('Fetching payments for class:', classId);
-      
-      const query = { class: classId };
-      
-      if (status) query.status = status;
-      if (month) query.monthCode = month;
-      
-      const payments = await Payment.find(query)
-        .populate('student', 'name studentId parentPhone')
-        .populate('class', 'name subject price')
-        .populate('recordedBy', 'username fullName')
-        .sort({ month: -1, createdAt: -1 });
-      
-      res.json({
-        success: true,
-        payments: payments || [],
-        count: payments.length,
-        totalAmount: payments.reduce((sum, p) => sum + p.amount, 0)
-      });
-      
-    } catch (err) {
-      console.error('Error fetching class payments:', err);
-      res.status(500).json({
-        success: false,
-        error: err.message
-      });
-    }
-  });
-
-
-  // ==============================================
-// نقطة نهاية ذكية لتسجيل الغياب عبر البطاقة
