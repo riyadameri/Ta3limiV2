@@ -417,6 +417,19 @@ const School = mongoose.model('School', schoolSchema);
     
     const RoundPayment = mongoose.model('RoundPayment', roundPaymentSchema);
     const studentSchema = new mongoose.Schema({
+        username: { 
+    type: String, 
+    unique: true,
+    sparse: true 
+  },
+  password: { 
+    type: String 
+  },
+  studentAccountCreated: { 
+    type: Boolean, 
+    default: false 
+  },
+
       
         schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
 
@@ -3532,12 +3545,10 @@ app.get('/api/students', async (req, res) => {
 // 📚 CREATE STUDENT - With School ID and Registration Fee
 // ==============================================
 
+// تعديل دالة إنشاء الطالب
 app.post('/api/students', async (req, res) => {
   try {
-    // Get schoolId from token or body
     const schoolId = req.user?.schoolId || req.body.schoolId;
-    
-    console.log('📝 Creating student - schoolId:', schoolId);
     
     if (!schoolId) {
       return res.status(400).json({
@@ -3546,7 +3557,6 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    // Check if school exists
     const school = await School.findById(schoolId);
     if (!school) {
       return res.status(404).json({
@@ -3557,7 +3567,7 @@ app.post('/api/students', async (req, res) => {
 
     const { name, parentPhone, studentId, academicYear } = req.body;
     
-    // Check for existing student
+    // التحقق من وجود الطالب
     const existingStudent = await Student.findOne({
       schoolId: schoolId,
       $or: [
@@ -3576,57 +3586,90 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    // Create new student with schoolId
+    // إنشاء اسم مستخدم وكلمة مرور للطالب
+    const username = generateStudentUsername(name, academicYear);
+    const password = generateStudentPassword(name, academicYear);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // إنشاء الطالب الجديد
     const studentData = {
       ...req.body,
-      schoolId: schoolId, // ✅ Link student to school
+      schoolId: schoolId,
       registrationDate: req.body.registrationDate || new Date(),
-      status: req.body.status || 'pending'
+      status: req.body.status || 'pending',
+      username: username,
+      password: hashedPassword,
+      studentAccountCreated: false // سيتم إنشاء الحساب لاحقاً عند الدفع
     };
 
     const student = new Student(studentData);
     await student.save();
     
-    // --- MODIFICATION START ---
-    // Always create a registration fee record for the new student
-    // Set default amount to 600 DZD as requested
-    const registrationAmount = 600; // Amount in DZD
-    
+    // إنشاء سجل رسوم التسجيل
+    const registrationAmount = 600; // المبلغ بالدينار
     const schoolFee = new SchoolFee({
       student: student._id,
       amount: registrationAmount,
-      status: 'pending', // Default status is pending
+      status: 'pending',
       schoolId: schoolId,
-      // Optionally set a default payment method or invoice number
-      // paymentMethod: 'cash',
-      // invoiceNumber: `REG-${Date.now()}`,
     });
     await schoolFee.save();
-    console.log(`✅ Registration fee of ${registrationAmount} DZD created for student: ${student.name}`);
-    // --- MODIFICATION END ---
 
-    console.log(`✅ Student created: ${student.name} in school ${schoolId}`);
-    
+    console.log(`✅ تم إنشاء الطالب: ${student.name}`);
+    console.log(`👤 اسم المستخدم: ${username}`);
+    console.log(`🔑 كلمة المرور: ${password}`);
+
+    // إرجاع البيانات مع اسم المستخدم وكلمة المرور (للعرض في واجهة الطباعة)
     res.status(201).json({
       success: true,
       message: "تم إنشاء الطالب بنجاح",
-      student: student,
+      student: {
+        ...student.toObject(),
+        password: password, // إرجاع كلمة المرور غير المشفرة للطباعة
+        plainPassword: password // للطباعة
+      },
       existed: false,
-      // Optional: return the created fee in the response
+      credentials: {
+        username: username,
+        password: password
+      },
       registrationFee: {
         amount: registrationAmount,
         status: 'pending',
         _id: schoolFee._id
       }
     });
+
   } catch (err) {
-    console.error('❌ Error creating student:', err);
+    console.error('❌ خطأ في إنشاء الطالب:', err);
     res.status(400).json({
       success: false,
       error: err.message
     });
   }
-});  
+});
+
+// دوال مساعدة لإنشاء اسم المستخدم وكلمة المرور
+function generateStudentUsername(name, academicYear) {
+  // إزالة المسافات والأحرف الخاصة
+  const cleanName = name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').toLowerCase();
+  const yearCode = academicYear || 'STU';
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+  const timestamp = Date.now().toString().slice(-4);
+  
+  // تنسيق: اسم_الطالب + سنة_دراسية + رقم_عشوائي
+  return `${cleanName}_${yearCode}_${randomNum}`.substring(0, 30);
+}
+
+function generateStudentPassword(name, academicYear) {
+  // إنشاء كلمة مرور: أول 4 أحرف من الاسم + السنة الدراسية + أرقام عشوائية
+  const namePart = name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').substring(0, 4);
+  const yearPart = academicYear || 'STU';
+  const randomPart = Math.floor(1000 + Math.random() * 9000);
+  
+  // كلمة مرور قوية: جزء من الاسم + سنة + أرقام عشوائية
+  return `${namePart}${yearPart}${randomPart}`;
+} 
     
     app.get('/api/accounting/budgets',  async (req, res) => {
       try {
@@ -5572,37 +5615,52 @@ app.get('/api/teachers/:id', async (req, res) => {
 });
 
 
-
 app.put('/api/teachers/:id', async (req, res) => {
   try {
-    const schoolId = req.user?.schoolId || req.body.schoolId;
+    const teacherId = req.params.id;
+    const { schoolId, ...updateData } = req.body;
     
-    if (!schoolId) {
-      return res.status(400).json({
-        success: false,
-        error: 'يجب تحديد المدرسة'
-      });
-    }
-
-    // التحقق من أن الأستاذ ينتمي للمدرسة
-    const existingTeacher = await Teacher.findOne({
-      _id: req.params.id,
-      schoolId: schoolId
-    });
-
+    // التحقق من وجود الأستاذ
+    const existingTeacher = await Teacher.findById(teacherId);
     if (!existingTeacher) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة' 
+        error: 'الأستاذ غير موجود'
       });
     }
 
-    // منع تحديث schoolId
-    delete req.body.schoolId;
+    // إذا تم إرسال schoolId، تحقق من صحته
+    if (schoolId) {
+      if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'معرف المدرسة غير صالح'
+        });
+      }
+      
+      const school = await School.findById(schoolId);
+      if (!school) {
+        return res.status(404).json({
+          success: false,
+          error: 'المدرسة غير موجودة'
+        });
+      }
+      
+      // تأكد من أن الأستاذ ينتمي للمدرسة
+      if (existingTeacher.schoolId?.toString() !== schoolId.toString()) {
+        return res.status(403).json({
+          success: false,
+          error: 'لا يمكن تعديل أستاذ من مدرسة مختلفة'
+        });
+      }
+    }
+
+    // منع تحديث schoolId (يتم التحقق منه فقط)
+    delete updateData.schoolId;
 
     const teacher = await Teacher.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+      teacherId,
+      updateData,
       { new: true, runValidators: true }
     );
     
@@ -5613,59 +5671,62 @@ app.put('/api/teachers/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ خطأ في تحديث الأستاذ:', err);
-    res.status(400).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message
     });
   }
 });
+
+
 
 
 app.delete('/api/teachers/:id', async (req, res) => {
   try {
-    const schoolId = req.user?.schoolId || req.query.schoolId;
+    const teacherId = req.params.id;
+    const { schoolId } = req.query;
     
-    if (!schoolId) {
-      return res.status(400).json({
-        success: false,
-        error: 'يجب تحديد المدرسة'
-      });
-    }
-
-    // التحقق من أن الأستاذ ينتمي للمدرسة
-    const teacher = await Teacher.findOne({
-      _id: req.params.id,
-      schoolId: schoolId
-    });
-
+    // التحقق من وجود الأستاذ
+    const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة' 
+        error: 'الأستاذ غير موجود'
       });
     }
 
-    // إزالة الأستاذ من الحصص أولاً
+    // إذا تم إرسال schoolId، تحقق من تطابقه مع schoolId الخاص بالأستاذ
+    if (schoolId) {
+      if (teacher.schoolId?.toString() !== schoolId.toString()) {
+        return res.status(403).json({
+          success: false,
+          error: 'لا يمكن حذف أستاذ من مدرسة مختلفة'
+        });
+      }
+    }
+
+    // إزالة الأستاذ من الحصص
     await Class.updateMany(
-      { teacher: req.params.id, schoolId: schoolId },
+      { teacher: teacherId },
       { $unset: { teacher: "" } }
     );
 
     // حذف الأستاذ
-    await Teacher.findByIdAndDelete(req.params.id);
+    await Teacher.findByIdAndDelete(teacherId);
 
-    res.json({ 
+    res.json({
       success: true,
-      message: 'تم حذف الأستاذ بنجاح' 
+      message: 'تم حذف الأستاذ بنجاح'
     });
   } catch (err) {
     console.error('❌ خطأ في حذف الأستاذ:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message 
+      error: err.message
     });
   }
 });
+
 
 
     // Classrooms
@@ -5924,9 +5985,10 @@ app.get('/api/teachers/school/:schoolId', async (req, res) => {
       });
     }
 
-    const teachers = await Teacher.find({ schoolId })
+    const teachers = await Teacher.find({ schoolId: schoolId })
       .sort({ name: 1 });
     
+    console.log(`✅ تم جلب ${teachers.length} أستاذ للمدرسة ${schoolId}`);
     res.json(teachers);
   } catch (err) {
     console.error('❌ خطأ في جلب أساتذة المدرسة:', err);
@@ -11038,6 +11100,78 @@ app.get('/api/classes/:id/stats', async (req, res) => {
     });
   }
 });
+app.get('/api/teachers/:id/live-classes', async (req, res) => {
+  try {
+    const teacherId = req.params.id;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    const query = { teacher: teacherId };
+    if (schoolId) query.schoolId = schoolId;
+
+    const liveClasses = await LiveClass.find(query)
+      .populate('class', 'name subject')
+      .populate('classroom', 'name')
+      .sort({ date: -1 });
+    
+    res.json({
+      success: true,
+      data: liveClasses,
+      count: liveClasses.length
+    });
+  } catch (err) {
+    console.error('❌ خطأ في جلب الحصص الحية للأستاذ:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+app.get('/api/teachers/:id/stats', async (req, res) => {
+  try {
+    const teacherId = req.params.id;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    // الحصول على حصص الأستاذ
+    const classQuery = { teacher: teacherId };
+    if (schoolId) classQuery.schoolId = schoolId;
+    
+    const classes = await Class.find(classQuery).populate('students');
+    
+    // حساب الإحصائيات
+    const totalClasses = classes.length;
+    const totalStudents = classes.reduce((sum, cls) => sum + (cls.students?.length || 0), 0);
+    
+    // الحصول على الحصص الحية
+    const liveClassQuery = { teacher: teacherId };
+    if (schoolId) liveClassQuery.schoolId = schoolId;
+    
+    const liveClasses = await LiveClass.find(liveClassQuery);
+    const totalLiveClasses = liveClasses.length;
+    
+    // الحصص هذا الشهر
+    const now = new Date();
+    const thisMonthClasses = liveClasses.filter(lc => {
+      const d = new Date(lc.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+    
+    res.json({
+      success: true,
+      stats: {
+        totalClasses,
+        totalStudents,
+        totalLiveClasses,
+        thisMonthClasses
+      }
+    });
+  } catch (err) {
+    console.error('❌ خطأ في جلب إحصائيات الأستاذ:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 // ==============================================
 // 13. جلب الحصص حسب المعلم
@@ -11045,17 +11179,8 @@ app.get('/api/classes/:id/stats', async (req, res) => {
 app.get('/api/teachers/:id/classes', async (req, res) => {
   try {
     const teacherId = req.params.id;
-    const schoolId = req.user?.schoolId || req.query.schoolId;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
     
-    console.log(`📚 جلب حصص المعلم: ${teacherId}`);
-    
-    if (!mongoose.Types.ObjectId.isValid(teacherId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'معرف المعلم غير صالح'
-      });
-    }
-
     const query = { teacher: teacherId };
     if (schoolId) query.schoolId = schoolId;
 
@@ -11063,52 +11188,21 @@ app.get('/api/teachers/:id/classes', async (req, res) => {
       .populate('students', 'name studentId')
       .populate('schedule.classroom', 'name location')
       .sort({ name: 1 });
-
-    // إضافة إحصائيات لكل حصة
-    const classesWithStats = await Promise.all(classes.map(async (cls) => {
-      const studentCount = cls.students?.length || 0;
-      
-      // جلب إحصائيات المدفوعات
-      const paymentStats = await Payment.aggregate([
-        { $match: { class: cls._id } },
-        {
-          $group: {
-            _id: '$status',
-            total: { $sum: '$amount' }
-          }
-        }
-      ]);
-
-      const totalPaid = paymentStats
-        .filter(s => s._id === 'paid')
-        .reduce((sum, s) => sum + s.total, 0);
-
-      const totalPending = paymentStats
-        .filter(s => s._id !== 'paid')
-        .reduce((sum, s) => sum + s.total, 0);
-
-      return {
-        ...cls.toObject(),
-        studentCount: studentCount,
-        totalPaid: totalPaid,
-        totalPending: totalPending
-      };
-    }));
-
+    
     res.json({
       success: true,
-      data: classesWithStats,
-      count: classesWithStats.length
+      data: classes,
+      count: classes.length
     });
-
   } catch (err) {
-    console.error('❌ خطأ في جلب حصص المعلم:', err);
+    console.error('❌ خطأ في جلب حصص الأستاذ:', err);
     res.status(500).json({
       success: false,
       error: err.message
     });
   }
 });
+
 app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
   try {
     const { schoolId } = req.params;
@@ -11311,6 +11405,401 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
 
   } catch (err) {
     console.error('❌ خطأ في جلب معاملات اليوم:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ BACKEND ENDPOINT - إضافة مصروف جديد
+// ==============================================
+
+// أضف هذا الكود في ملف server.js الخاص بك
+
+// ==============================================
+// نقطة نهاية لإضافة مصروف (Expense)
+// ==============================================
+app.post('/api/accounting/expenses', async (req, res) => {
+  try {
+    console.log('📝 استلام طلب إضافة مصروف جديد:');
+    console.log('📦 Body:', req.body);
+    
+    const { 
+      schoolId, 
+      description, 
+      amount, 
+      category, 
+      type, 
+      paymentMethod, 
+      date, 
+      notes,
+      recipient,
+      receiptNumber,
+      status,
+      recordedBy
+    } = req.body;
+
+    // ==============================================
+    // ✅ 1. التحقق من البيانات المطلوبة
+    // ==============================================
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'وصف المصروف مطلوب'
+      });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'المبلغ يجب أن يكون أكبر من صفر'
+      });
+    }
+
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        error: 'تصنيف المصروف مطلوب'
+      });
+    }
+
+    // ==============================================
+    // ✅ 2. التحقق من وجود المدرسة
+    // ==============================================
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    console.log(`🏫 المدرسة: ${school.name} (${schoolId})`);
+
+    // ==============================================
+    // ✅ 3. إنشاء سجل المصروف في Expense Schema
+    // ==============================================
+    const expenseData = {
+      schoolId: schoolId,
+      description: description.trim(),
+      amount: amount,
+      category: category,
+      type: type || 'operational',
+      paymentMethod: paymentMethod || 'cash',
+      date: date ? new Date(date) : new Date(),
+      status: status || 'paid',
+      receiptNumber: receiptNumber || `EXP-${Date.now().toString().slice(-8)}`,
+      recordedBy: recordedBy || null,
+      notes: notes || '',
+      recipient: recipient || ''
+    };
+
+    const expense = new Expense(expenseData);
+    await expense.save();
+    
+    console.log(`✅ تم حفظ المصروف في Expense: ${expense._id}`);
+
+    // ==============================================
+    // ✅ 4. إنشاء سجل في FinancialTransaction (للتكامل مع المعاملات اليومية)
+    // ==============================================
+    const transactionData = {
+      schoolId: schoolId,
+      type: 'expense',
+      amount: amount,
+      description: description.trim(),
+      category: category,
+      date: date ? new Date(date) : new Date(),
+      recordedBy: recordedBy || null,
+      reference: expense._id.toString()
+    };
+
+    const transaction = new FinancialTransaction(transactionData);
+    await transaction.save();
+    
+    console.log(`✅ تم حفظ المعاملة المالية: ${transaction._id}`);
+
+    // ==============================================
+    // ✅ 5. إرجاع الاستجابة
+    // ==============================================
+    res.status(201).json({
+      success: true,
+      message: 'تم إضافة المصروف بنجاح',
+      expense: {
+        _id: expense._id,
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        paymentMethod: expense.paymentMethod,
+        date: expense.date,
+        status: expense.status,
+        receiptNumber: expense.receiptNumber,
+        notes: expense.notes
+      },
+      transaction: {
+        _id: transaction._id,
+        type: transaction.type,
+        amount: transaction.amount,
+        description: transaction.description,
+        category: transaction.category,
+        date: transaction.date
+      },
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إضافة المصروف:', err);
+    
+    // معالجة أخطاء التحقق
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: 'خطأ في صحة البيانات',
+        details: errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إضافة المصروف: ' + err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية بديلة لإضافة مصروف (متوافقة مع الطلب)
+// ==============================================
+app.post('/api/accounting/transactions', async (req, res) => {
+  try {
+    console.log('📝 استلام طلب إضافة معاملة مالية:');
+    console.log('📦 Body:', req.body);
+    
+    const { 
+      schoolId, 
+      type, 
+      amount, 
+      description, 
+      category, 
+      date, 
+      recordedBy,
+      reference,
+      student
+    } = req.body;
+
+    // التحقق من البيانات المطلوبة
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    if (!type || !['income', 'expense'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'نوع المعاملة غير صالح (يجب أن يكون income أو expense)'
+      });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'المبلغ يجب أن يكون أكبر من صفر'
+      });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'وصف المعاملة مطلوب'
+      });
+    }
+
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        error: 'تصنيف المعاملة مطلوب'
+      });
+    }
+
+    // التحقق من المدرسة
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    // إنشاء المعاملة المالية
+    const transactionData = {
+      schoolId: schoolId,
+      type: type,
+      amount: amount,
+      description: description.trim(),
+      category: category,
+      date: date ? new Date(date) : new Date(),
+      recordedBy: recordedBy || null,
+      reference: reference || `TRX-${Date.now().toString().slice(-8)}`,
+      student: student || null
+    };
+
+    const transaction = new FinancialTransaction(transactionData);
+    await transaction.save();
+    
+    console.log(`✅ تم حفظ المعاملة المالية: ${transaction._id}`);
+
+    // إذا كانت المعاملة من نوع expense، قم بإنشاء سجل في Expense أيضاً
+    if (type === 'expense') {
+      try {
+        const expenseData = {
+          schoolId: schoolId,
+          description: description.trim(),
+          amount: amount,
+          category: category,
+          type: 'operational',
+          paymentMethod: 'cash',
+          date: date ? new Date(date) : new Date(),
+          status: 'paid',
+          receiptNumber: `EXP-${Date.now().toString().slice(-8)}`,
+          recordedBy: recordedBy || null,
+          notes: `تم إنشاؤها من المعاملة المالية ${transaction._id}`
+        };
+
+        const expense = new Expense(expenseData);
+        await expense.save();
+        console.log(`✅ تم إنشاء سجل مصروف مرتبط: ${expense._id}`);
+      } catch (expenseErr) {
+        console.warn('⚠️ لم يتم إنشاء سجل المصروف:', expenseErr.message);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إضافة المعاملة المالية بنجاح',
+      transaction: {
+        _id: transaction._id,
+        type: transaction.type,
+        amount: transaction.amount,
+        description: transaction.description,
+        category: transaction.category,
+        date: transaction.date,
+        reference: transaction.reference
+      },
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إضافة المعاملة المالية:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إضافة المعاملة المالية: ' + err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية للحصول على جميع المصروفات (للاختبار)
+// ==============================================
+app.get('/api/accounting/expenses', async (req, res) => {
+  try {
+    const { schoolId, startDate, endDate, category, status } = req.query;
+    
+    const query = {};
+    if (schoolId) query.schoolId = schoolId;
+    if (category) query.category = category;
+    if (status) query.status = status;
+    
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    const expenses = await Expense.find(query)
+      .populate('recordedBy', 'username fullName')
+      .sort({ date: -1 });
+
+    res.json({
+      success: true,
+      count: expenses.length,
+      expenses: expenses
+    });
+  } catch (err) {
+    console.error('❌ خطأ في جلب المصروفات:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لحذف مصروف
+// ==============================================
+app.delete('/api/accounting/expenses/:id', async (req, res) => {
+  try {
+    const expenseId = req.params.id;
+    
+    if (!mongoose.Types.ObjectId.isValid(expenseId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المصروف غير صالح'
+      });
+    }
+
+    const expense = await Expense.findById(expenseId);
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        error: 'المصروف غير موجود'
+      });
+    }
+
+    // حذف المعاملة المالية المرتبطة
+    await FinancialTransaction.deleteMany({
+      reference: expenseId
+    });
+
+    // حذف المصروف
+    await Expense.findByIdAndDelete(expenseId);
+
+    res.json({
+      success: true,
+      message: 'تم حذف المصروف بنجاح'
+    });
+  } catch (err) {
+    console.error('❌ خطأ في حذف المصروف:', err);
     res.status(500).json({
       success: false,
       error: err.message
@@ -16837,621 +17326,6 @@ app.get('*', (req, res) => {
     });
 
 
-
-    app.post('/api/accounting/budget',  async (req, res) => {
-      try {
-        const { type, amount, description } = req.body;
-        
-        const budget = new Budget({
-          type,
-          amount,
-          description,
-          recordedBy: req.user.id
-        });
-
-        await budget.save();
-        
-        // تحديث الرصيد الإجمالي
-        await updateTotalBalance(amount);
-        
-        res.status(201).json(budget);
-      } catch (err) {
-        res.status(400).json({ error: err.message });
-      }
-    });
-
-    app.get('/api/accounting/balance',  async (req, res) => {
-      try {
-        const balance = await calculateCurrentBalance();
-        res.json({ balance });
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
-
-    // Add expense with validation
-    app.post('/api/accounting/expenses',  async (req, res) => {
-      try {
-        console.log('=== ADD EXPENSE REQUEST ===');
-        console.log('Headers:', req.headers);
-        console.log('User:', req.user);
-        console.log('Body:', req.body);
-        
-        // تأكد من وجود المستخدم
-        if (!req.user || !req.user.id) {
-          return res.status(401).json({ 
-            success: false,
-            error: 'يجب تسجيل الدخول أولاً'
-          });
-        }
-    
-        const { description, amount, category, paymentMethod } = req.body;
-        
-        // Validate required fields
-        if (!description || !amount || !category) {
-          return res.status(400).json({ 
-            success: false,
-            error: 'يجب إدخال جميع الحقول المطلوبة' 
-          });
-        }
-    
-        // Create expense with default type if not provided
-        const expense = new Expense({
-          description,
-          amount,
-          category,
-          type: req.body.type || 'operational', // Add default type
-          paymentMethod: paymentMethod || 'cash',
-          receiptNumber: `EXP-${Date.now()}`,
-          recordedBy: req.user.id
-        });
-    
-        await expense.save();
-    
-        // Record financial transaction
-        const transaction = new FinancialTransaction({
-          type: 'expense',
-          amount: expense.amount,
-          description: expense.description,
-          category: expense.category,
-          recordedBy: req.user.id,
-          reference: expense._id
-        });
-        await transaction.save();
-    
-        res.status(201).json({
-          success: true,
-          message: 'تمت إضافة المصروف بنجاح',
-          expense
-        });
-      } catch (err) {
-        console.error('Error adding expense:', err);
-        res.status(500).json({ 
-          success: false,
-          error: err.message 
-        });
-      }
-    });
-  // Diagnostic endpoint to check date formats in your database
-  app.get('/api/accounting/debug-dates', async (req, res) => {
-    try {
-      const results = {
-        payments: {
-          count: await Payment.countDocuments({ status: 'paid' }),
-          recent: await Payment.find({ status: 'paid' })
-            .sort({ paymentDate: -1 })
-            .limit(10)
-            .select('paymentDate amount month student')
-            .populate('student', 'name'),
-          first: await Payment.findOne({ status: 'paid' })
-            .sort({ paymentDate: 1 })
-            .select('paymentDate amount month'),
-          withoutDate: await Payment.countDocuments({ 
-            status: 'paid', 
-            paymentDate: null 
-          })
-        },
-        expenses: {
-          count: await Expense.countDocuments({ status: 'paid' }),
-          recent: await Expense.find({ status: 'paid' })
-            .sort({ date: -1 })
-            .limit(10)
-            .select('date amount description')
-        },
-        commissions: {
-          count: await TeacherCommission.countDocuments({ status: 'paid' }),
-          recent: await TeacherCommission.find({ status: 'paid' })
-            .sort({ paymentDate: -1 })
-            .limit(10)
-            .select('paymentDate amount month teacher')
-            .populate('teacher', 'name')
-        }
-      };
-
-      res.json(results);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Endpoint to get stats for a specific date
-  app.get('/api/accounting/date-stats/:date', async (req, res) => {
-    try {
-      const { date } = req.params;
-      const targetDate = new Date(date);
-      targetDate.setHours(0, 0, 0, 0);
-      const nextDate = new Date(targetDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-
-      const payments = await Payment.aggregate([
-        {
-          $match: {
-            $or: [
-              { paymentDate: { $gte: targetDate, $lt: nextDate } },
-              { 
-                $expr: {
-                  $and: [
-                    { $eq: [{ $ifNull: ["$paymentDate", null] }, null] },
-                    { $gte: ["$createdAt", targetDate] },
-                    { $lt: ["$createdAt", nextDate] }
-                  ]
-                }
-              }
-            ],
-            status: 'paid'
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: '$amount' },
-            count: { $sum: 1 }
-          }
-        }
-      ]);
-
-      res.json({
-        date: targetDate,
-        payments: {
-          total: payments[0]?.total || 0,
-          count: payments[0]?.count || 0
-        }
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Force update payment dates for testing
-  app.post('/api/accounting/test-update-dates', async (req, res) => {
-    try {
-      // Update payments without paymentDate to have today's date
-      const result = await Payment.updateMany(
-        { 
-          status: 'paid',
-          paymentDate: null 
-        },
-        { 
-          $set: { 
-            paymentDate: new Date(),
-            updatedAt: new Date()
-          } 
-        }
-      );
-
-      res.json({
-        message: `Updated ${result.modifiedCount} payments`,
-        result
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-    // ==============================================
-  // نظام دفع العمولة الجديد للحصص الشاملة
-  // ==============================================
-  // Endpoint للتشخيص
-  app.post('/api/accounting/test-payment',  async (req, res) => {
-    try {
-      console.log('=== TEST PAYMENT REQUEST ===');
-      console.log('Body:', req.body);
-      console.log('User:', req.user);
-      
-      // التحقق من أن المستخدم موجود
-      const user = await User.findById(req.user.id);
-      console.log('Database user:', user);
-      
-      res.json({
-        success: true,
-        message: 'الاختبار ناجح',
-        user: {
-          id: req.user.id,
-          username: req.user.username,
-          role: req.user.role
-        },
-        body: req.body
-      });
-    } catch (err) {
-      console.error('Test payment error:', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-  app.post('/api/accounting/pay-class-commission',  async (req, res) => {
-    try {
-      console.log('=== PAY CLASS COMMISSION REQUEST ===');
-      console.log('Body:', req.body);
-      console.log('User:', req.user);
-      
-      // التحقق من أن المستخدم مسجل الدخول
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({ 
-          success: false,
-          error: 'يجب تسجيل الدخول أولاً' 
-        });
-      }
-
-      const { teacherId, classId, month, paymentMethod, notes } = req.body;
-      
-      // التحقق من البيانات المطلوبة
-      if (!teacherId || !classId || !month) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'بيانات ناقصة: يجب توفير teacherId, classId, month' 
-        });
-      }
-
-      // التحقق من وجود الأستاذ
-      const teacher = await Teacher.findById(teacherId);
-      if (!teacher) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الأستاذ غير موجود' 
-        });
-      }
-
-      // التحقق من وجود الحصة
-      const classObj = await Class.findById(classId)
-        .populate('students')
-        .populate('teacher');
-      
-      if (!classObj) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة' 
-        });
-      }
-
-      console.log('Class found:', classObj.name);
-      console.log('Teacher:', teacher.name);
-      console.log('Month:', month);
-
-      // حساب العمولة (70% من سعر الحصة)
-      const totalCommission = classObj.price * 0.7;
-      
-      console.log('Class price:', classObj.price);
-      console.log('Commission (70%):', totalCommission);
-
-      // الحصول على المستخدم الذي قام بالدفع
-      const recordedBy = req.user.id;
-
-      // إنشاء سجل العمولة الشاملة
-      const commission = new TeacherCommission({
-        teacher: teacherId,
-        class: classId,
-        month: month,
-        type: 'class',
-        amount: totalCommission,
-        percentage: 70,
-        status: 'paid',
-        paymentDate: new Date(),
-        paymentMethod: paymentMethod || 'cash',
-        receiptNumber: `CLASS-COMM-${Date.now()}`,
-        recordedBy: recordedBy,
-        notes: notes || '',
-        studentDetails: classObj.students.map(student => ({
-          student: student._id,
-          attendancesCount: 0,
-          teacherShare: (classObj.price / (classObj.students.length || 1)) * 0.7,
-          includedInCommission: true
-        }))
-      });
-
-      console.log('Saving commission...');
-      await commission.save();
-      console.log('Commission saved:', commission._id);
-
-      // تسجيل المعاملة المالية (مصروف)
-      const expense = new Expense({
-        description: `عمولة الأستاذ ${teacher.name} عن حصة ${classObj.name} لشهر ${month}`,
-        amount: totalCommission,
-        category: 'salary',
-        type: 'teacher_payment',
-        recipient: {
-          type: 'teacher',
-          id: teacherId,
-          name: teacher.name
-        },
-        paymentMethod: paymentMethod || 'cash',
-        receiptNumber: commission.receiptNumber,
-        status: 'paid',
-        recordedBy: recordedBy,
-        notes: notes || `عمولة حصة شاملة لـ ${classObj.students.length} طلاب`
-      });
-
-      console.log('Saving expense...');
-      await expense.save();
-      console.log('Expense saved:', expense._id);
-
-      res.json({
-        success: true,
-        message: 'تم دفع عمولة الحصة الشاملة بنجاح',
-        commission: {
-          _id: commission._id,
-          receiptNumber: commission.receiptNumber,
-          amount: totalCommission,
-          month: month,
-          studentsCount: classObj.students.length
-        },
-        details: {
-          teacher: teacher.name,
-          class: classObj.name,
-          amount: totalCommission
-        }
-      });
-
-    } catch (err) {
-      console.error('=== ERROR IN PAY-CLASS-COMMISSION ===');
-      console.error('Error:', err);
-      console.error('Stack:', err.stack);
-      
-      // رسالة خطأ أكثر وضوحاً
-      let errorMessage = 'حدث خطأ أثناء دفع العمولة';
-      if (err.name === 'ValidationError') {
-        errorMessage = 'خطأ في التحقق من البيانات';
-      } else if (err.name === 'CastError') {
-        errorMessage = 'معرف غير صالح';
-      }
-      
-      res.status(500).json({ 
-        success: false,
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
-    }
-  });
-
-  // 2. دفع عمولة الأستاذ للحصة (شاملة لجميع الطلاب)
-  // في server.js، ابحث عن هذا الكود وقم بتحديثه:
-  app.post('/api/accounting/pay-class-commission',  async (req, res) => {
-    try {
-      console.log('=== PAY CLASS COMMISSION REQUEST ===');
-      console.log('Body:', req.body);
-      console.log('User:', req.user);
-      
-
-      const { teacherId, classId, month, round, paymentMethod, notes } = req.body;
-      
-      // التحقق من البيانات المطلوبة
-      if (!teacherId || !classId || !month) {
-        return res.status(400).json({ 
-          error: 'بيانات ناقصة: يجب توفير teacherId, classId, month' 
-        });
-      }
-
-      // التحقق من وجود الأستاذ
-      const teacher = await Teacher.findById(teacherId);
-      if (!teacher) {
-        return res.status(404).json({ error: 'الأستاذ غير موجود' });
-      }
-
-      // التحقق من وجود الحصة
-      const classObj = await Class.findById(classId)
-        .populate('students')
-        .populate('teacher');
-      
-      if (!classObj) {
-        return res.status(404).json({ error: 'الحصة غير موجودة' });
-      }
-
-      console.log('Class found:', classObj.name);
-      console.log('Teacher:', teacher.name);
-      console.log('Month:', month);
-
-      // حساب العمولة (70% من سعر الحصة)
-      const totalCommission = classObj.price * 0.7;
-      
-      console.log('Class price:', classObj.price);
-      console.log('Commission (70%):', totalCommission);
-
-      // الحصول على المستخدم الذي قام بالدفع
-      const recordedBy = req.user.id;
-
-      // إنشاء سجل العمولة الشاملة
-      const commission = new TeacherCommission({
-        teacher: teacherId,
-        class: classId,
-        month: month,
-        round: round || null,
-        type: 'class',
-        amount: totalCommission,
-        percentage: 70,
-        status: 'paid',
-        paymentDate: new Date(),
-        paymentMethod: paymentMethod || 'cash',
-        receiptNumber: `CLASS-COMM-${Date.now()}`,
-        recordedBy: recordedBy, // استخدام req.user.id
-        notes: notes || '',
-        studentDetails: classObj.students.map(student => ({
-          student: student._id,
-          attendancesCount: 0,
-          teacherShare: (classObj.price / (classObj.students.length || 1)) * 0.7,
-          includedInCommission: true
-        }))
-      });
-
-      console.log('Saving commission...');
-      await commission.save();
-      console.log('Commission saved:', commission._id);
-
-      // تسجيل المعاملة المالية (مصروف)
-      const expense = new Expense({
-        description: `عمولة الأستاذ ${teacher.name} عن حصة ${classObj.name} لشهر ${month}`,
-        amount: totalCommission,
-        category: 'salary',
-        type: 'teacher_payment',
-        recipient: {
-          type: 'teacher',
-          id: teacherId,
-          name: teacher.name
-        },
-        paymentMethod: paymentMethod || 'cash',
-        receiptNumber: commission.receiptNumber,
-        status: 'paid',
-        recordedBy: recordedBy, // استخدام req.user.id
-        notes: notes || `عمولة حصة شاملة لـ ${classObj.students.length} طلاب`
-      });
-
-      console.log('Saving expense...');
-      await expense.save();
-      console.log('Expense saved:', expense._id);
-
-      res.json({
-        success: true,
-        message: 'تم دفع عمولة الحصة الشاملة بنجاح',
-        commission: {
-          _id: commission._id,
-          receiptNumber: commission.receiptNumber,
-          amount: totalCommission,
-          month: month,
-          studentsCount: classObj.students.length
-        },
-        details: {
-          teacher: teacher.name,
-          class: classObj.name,
-          amount: totalCommission
-        }
-      });
-
-    } catch (err) {
-      console.error('=== ERROR IN PAY-CLASS-COMMISSION ===');
-      console.error('Error:', err);
-      console.error('Stack:', err.stack);
-      
-      // رسالة خطأ أكثر وضوحاً
-      let errorMessage = 'حدث خطأ أثناء دفع العمولة';
-      if (err.name === 'ValidationError') {
-        errorMessage = 'خطأ في التحقق من البيانات';
-      } else if (err.name === 'CastError') {
-        errorMessage = 'معرف غير صالح';
-      }
-      
-      res.status(500).json({ 
-        success: false,
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
-    }
-  });
-
-  // نقطة نهاية جديدة للحصول على مدفوعات الحصص لشهر معين
-  app.get('/api/accounting/class-payments/month/:month', async (req, res) => {
-    try {
-      const { month } = req.params;
-      
-      console.log(`Getting class payments for month: ${month}`);
-      
-      // الحصول على جميع الحصص مع تفاصيلها
-      const classes = await Class.find()
-        .populate('teacher')
-        .populate('students');
-      
-      if (!classes || classes.length === 0) {
-        return res.json([]);
-      }
-      
-      const classPayments = [];
-      
-      for (const classObj of classes) {
-        if (!classObj.teacher) continue;
-        
-        // حساب سعر الحصة (إجمالي الإيرادات)
-        const classPrice = classObj.price || 0;
-        
-        // حساب عمولة الأستاذ (70%)
-        const teacherCommission = classPrice * 0.7;
-        
-        // التحقق مما إذا تم دفع العمولة لهذا الشهر
-        const existingCommission = await TeacherCommission.findOne({
-          teacher: classObj.teacher._id,
-          class: classObj._id,
-          month: month,
-          type: 'class'
-        });
-        
-        // جمع معلومات الطلاب
-        const studentsInfo = await Promise.all(
-          classObj.students.map(async (student) => {
-            // التحقق من دفع الطالب لهذا الشهر
-            const studentPayment = await Payment.findOne({
-              student: student._id,
-              class: classObj._id,
-              month: month,
-              status: 'paid'
-            });
-            
-            return {
-              studentId: student._id,
-              studentName: student.name,
-              studentIdNumber: student.studentId,
-              hasPaid: !!studentPayment,
-              paymentAmount: studentPayment?.amount || 0
-            };
-          })
-        );
-        
-        // حساب عدد الطلاب الذين دفعوا
-        const paidStudentsCount = studentsInfo.filter(s => s.hasPaid).length;
-        const totalStudentsCount = studentsInfo.length;
-        
-        classPayments.push({
-          class: {
-            _id: classObj._id,
-            name: classObj.name,
-            subject: classObj.subject,
-            price: classPrice,
-            schedule: classObj.schedule
-          },
-          teacher: {
-            _id: classObj.teacher._id,
-            name: classObj.teacher.name,
-            phone: classObj.teacher.phone,
-            email: classObj.teacher.email
-          },
-          month: month,
-          commissionAmount: teacherCommission,
-          status: existingCommission ? existingCommission.status : 'pending',
-          paymentDate: existingCommission?.paymentDate || null,
-          receiptNumber: existingCommission?.receiptNumber || null,
-          students: {
-            total: totalStudentsCount,
-            paid: paidStudentsCount,
-            list: studentsInfo
-          },
-          canPay: paidStudentsCount > 0 && !existingCommission,
-          existingCommissionId: existingCommission?._id
-        });
-      }
-      
-      // تصفية الحصص التي تحتوي على طلاب على الأقل
-      const filteredPayments = classPayments.filter(cp => cp.students.total > 0);
-      
-      res.json(filteredPayments);
-      
-    } catch (err) {
-      console.error('Error getting class payments:', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
   // 3. الحصول على دخل شهري + مصاريف + صافي الربح
   app.get('/api/accounting/monthly-financial-report',  async (req, res) => {
     try {
@@ -18627,24 +18501,7 @@ app.post('/api/students/:id/pay-registration', async (req, res) => {
 
 
 // get todays transactions for school
-app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
-  try {
-    const { schoolId } = req.params;
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-    // Fetch today's transactions for the school
-    const transactions = await FinancialTransaction.find({
-      schoolId: schoolId,
-      date: { $gte: startOfDay, $lte: endOfDay }
-    });
-
-    res.json(transactions);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ==============================================
 // ✅ TODAY'S TRANSACTIONS - Fixed
@@ -18897,173 +18754,8 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     }
     });
 
-    // Expenses
-    app.get('/api/accounting/expenses',  async (req, res) => {
-      try {
-          const { category, startDate, endDate, type } = req.query;
-          const query = {};
-
-          if (category) query.category = category;
-          if (type) query.type = type;
-          if (startDate || endDate) {
-              query.date = {};
-              if (startDate) query.date.$gte = new Date(startDate);
-              if (endDate) query.date.$lte = new Date(endDate);
-          }
-
-          const expenses = await Expense.find(query)
-              .populate('recordedBy')
-              .sort({ date: -1 });
-
-          res.json(expenses);
-      } catch (err) {
-          res.status(500).json({ error: err.message });
-      }
-  });
-  app.get('/api/count/todays-expenses', async (req, res) => {
-    try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const todaysExpensesCount = await Expense.countDocuments({
-            date: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        });
-
-        res.json({ count: todaysExpensesCount });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-  });
-  app.get('/api/accounting/total-expenses', async (req, res) => {
-    try {
-        const totalExpensesResult = await Expense.aggregate([
-            { $match: { status: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]);
-        
-        const totalExpenses = totalExpensesResult[0]?.total || 0;
-        
-        res.json({ totalExpenses });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-  });
-  app.get('/api/accounting/count-amout-todays-expenses', async (req, res) => {
-    try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        const todaysExpensesCount = await Expense.countDocuments({
-            date: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        });
-        
-        res.json({ count: todaysExpensesCount });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-  });
 
 
-  // إضافة نقطة نهاية جديدة في الخادم
-  app.get('/api/accounting/summary',  async (req, res) => {
-    try {
-        // حساب الإيرادات (مدفوعات الطلاب)
-        const incomeResult = await Payment.aggregate([
-            { $match: { status: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]);
-        
-        // حساب المصروفات
-        const expenseResult = await Expense.aggregate([
-            { $match: { status: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]);
-        
-        // حساب المدفوعات المعلقة
-        const pendingCount = await Payment.countDocuments({ status: 'pending' });
-        
-        res.json({
-            totalIncome: incomeResult[0]?.total || 0,
-            totalExpenses: expenseResult[0]?.total || 0,
-            pendingPayments: pendingCount
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-  });
-
-  // دالة محسنة باستخدام النقطة الجديدة
-
-  app.post('/api/accounting/expenses',  async (req, res) => {
-    try {
-      console.log('=== ADD EXPENSE REQUEST ===');
-      console.log('Headers:', req.headers);
-      console.log('User:', req.user);
-      console.log('Body:', req.body);
-      
-      // تأكد من وجود المستخدم
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({ 
-          success: false,
-          error: 'يجب تسجيل الدخول أولاً'
-        });
-      }
-
-      const { description, amount, category, paymentMethod  } = req.body;
-      
-      // Validate required fields
-      if (!description || !amount || !category) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'يجب إدخال جميع الحقول المطلوبة' 
-        });
-      }
-
-      const expense = new Expense({
-        description,
-        amount,
-        category,
-        paymentMethod: paymentMethod || 'cash',
-        receiptNumber: `EXP-${Date.now()}`,
-        recordedBy: req.user.id // استخدم req.user.id مباشرة
-      });
-
-      await expense.save();
-
-      // Record financial transaction
-      const transaction = new FinancialTransaction({
-        type: 'expense',
-        amount: expense.amount,
-        description: expense.description,
-        category: expense.category,
-        recordedBy: req.user.id, // استخدم req.user.id هنا أيضاً
-        reference: expense._id
-      });
-      await transaction.save();
-
-      res.status(201).json({
-        success: true,
-        message: 'تمت إضافة المصروف بنجاح',
-        expense
-      });
-    } catch (err) {
-      console.error('Error adding expense:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
-    }
-  });
 
     // Invoices
     app.get('/api/accounting/invoices',  async (req, res) => {
@@ -19089,321 +18781,6 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     }
     });
 
-    app.get('/api/accounting/invoices/:id',  async (req, res) => {
-    try {
-      const invoice = await Invoice.findById(req.params.id)
-        .populate('recordedBy');
-
-      if (!invoice) {
-        return res.status(404).json({ error: 'الفاتورة غير موجودة' });
-      }
-
-      // Get recipient details based on type
-      let recipientDetails = {};
-      if (invoice.recipient.type === 'student') {
-        const student = await Student.findById(invoice.recipient.id);
-        recipientDetails = {
-          name: student?.name,
-          id: student?.studentId,
-          phone: student?.parentPhone,
-          email: student?.parentEmail
-        };
-      } else if (invoice.recipient.type === 'teacher') {
-        const teacher = await Teacher.findById(invoice.recipient.id);
-        recipientDetails = {
-          name: teacher?.name,
-          phone: teacher?.phone,
-          email: teacher?.email
-        };
-      } else if (invoice.recipient.type === 'staff') {
-        const staff = await User.findById(invoice.recipient.id);
-        recipientDetails = {
-          name: staff?.fullName,
-          phone: staff?.phone,
-          email: staff?.email
-        };
-      }
-
-      res.json({
-        ...invoice.toObject(),
-        recipientDetails
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
-    // Generate invoice for any payment type
-    app.get('/api/accounting/invoices/generate/:type/:id',  async (req, res) => {
-    try {
-      const { type, id } = req.params;
-      
-      let invoiceData = null;
-      
-      switch (type) {
-        case 'school-fee':
-          const fee = await SchoolFee.findById(id).populate('student');
-          if (!fee) return res.status(404).json({ error: 'رسوم التسجيل غير موجودة' });
-          
-          invoiceData = {
-            invoiceNumber: fee.invoiceNumber || `INV-SF-${Date.now()}`,
-            type: 'school-fee',
-            recipient: {
-              type: 'student',
-              id: fee.student._id,
-              name: fee.student.name
-            },
-            items: [{
-              description: 'رسوم تسجيل الطالب',
-              amount: fee.amount,
-              quantity: 1
-            }],
-            totalAmount: fee.amount,
-            date: fee.paymentDate || new Date(),
-            status: fee.status,
-            paymentMethod: fee.paymentMethod
-          };
-          break;
-          
-        case 'teacher-payment':
-          const teacherPayment = await TeacherPayment.findById(id)
-            .populate('teacher')
-            .populate('student')
-            .populate('class');
-          
-          if (!teacherPayment) return res.status(404).json({ error: 'دفع الأستاذ غير موجود' });
-          
-          invoiceData = {
-            invoiceNumber: teacherPayment.invoiceNumber || `INV-TP-${Date.now()}`,
-            type: 'teacher',
-            recipient: {
-              type: 'teacher',
-              id: teacherPayment.teacher._id,
-              name: teacherPayment.teacher.name
-            },
-            items: [{
-              description: `حصة الأستاذ من دفعة الطالب ${teacherPayment.student.name} لحصة ${teacherPayment.class.name} لشهر ${teacherPayment.month}`,
-              amount: teacherPayment.amount,
-              quantity: 1
-            }],
-            totalAmount: teacherPayment.amount,
-            date: teacherPayment.paymentDate || new Date(),
-            status: teacherPayment.status,
-            paymentMethod: teacherPayment.paymentMethod
-          };
-          break;
-          
-        case 'staff-salary':
-          const salary = await StaffSalary.findById(id).populate('employee');
-          if (!salary) return res.status(404).json({ error: 'الراتب غير موجود' });
-          
-          invoiceData = {
-            invoiceNumber: salary.invoiceNumber || `INV-SS-${Date.now()}`,
-            type: 'staff',
-            recipient: {
-              type: 'staff',
-              id: salary.employee._id,
-              name: salary.employee.fullName
-            },
-            items: [{
-              description: `راتب الموظف لشهر ${salary.month}`,
-              amount: salary.amount,
-              quantity: 1
-            }],
-            totalAmount: salary.amount,
-            date: salary.paymentDate || new Date(),
-            status: salary.status,
-            paymentMethod: salary.paymentMethod
-          };
-          break;
-          
-        default:
-          return res.status(400).json({ error: 'نوع الفاتورة غير صالح' });
-      }
-      
-      res.json(invoiceData);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
-    // Detailed financial report with filtering
-    app.get('/api/accounting/reports/detailed',  async (req, res) => {
-    try {
-      const { startDate, endDate, category, type } = req.query;
-      const matchStage = {};
-      
-      // Date filtering
-      if (startDate || endDate) {
-        matchStage.date = {};
-        if (startDate) matchStage.date.$gte = new Date(startDate);
-        if (endDate) matchStage.date.$lte = new Date(endDate);
-      }
-      
-      // Category and type filtering
-      if (category) matchStage.category = category;
-      if (type) matchStage.type = type;
-      
-      const transactions = await FinancialTransaction.find(matchStage)
-        .populate('recordedBy')
-        .sort({ date: -1 });
-      
-      // Calculate totals
-      const incomeTotal = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-      const expenseTotal = transactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-      
-      // Group by category
-      const incomeByCategory = {};
-      const expenseByCategory = {};
-      
-      transactions.forEach(transaction => {
-        if (transaction.type === 'income') {
-          incomeByCategory[transaction.category] = 
-            (incomeByCategory[transaction.category] || 0) + transaction.amount;
-        } else {
-          expenseByCategory[transaction.category] = 
-            (expenseByCategory[transaction.category] || 0) + transaction.amount;
-        }
-      });
-      
-      res.json({
-        summary: {
-          income: incomeTotal,
-          expenses: expenseTotal,
-          profit: incomeTotal - expenseTotal
-        },
-        incomeByCategory,
-        expenseByCategory,
-        transactions
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
-    // Financial Reports
-    app.get('/api/accounting/reports/summary',  async (req, res) => {
-    try {
-      const { year, month } = req.query;
-      const matchStage = {};
-
-      if (year) {
-        matchStage.date = {
-          $gte: new Date(`${year}-01-01`),
-          $lte: new Date(`${year}-12-31`)
-        };
-      }
-
-      if (month) {
-        const [year, monthNum] = month.split('-');
-        const startDate = new Date(year, monthNum - 1, 1);
-        const endDate = new Date(year, monthNum, 0);
-        matchStage.date = {
-          $gte: startDate,
-          $lte: endDate
-        };
-      }
-
-      // Get income (tuition + school fees)
-      const income = await FinancialTransaction.aggregate([
-        { $match: { ...matchStage, type: 'income' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]);
-
-      // Get expenses (teacher payments + staff salaries + other expenses)
-      const expenses = await FinancialTransaction.aggregate([
-        { $match: { ...matchStage, type: 'expense' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]);
-
-      // Get teacher payments
-      const teacherPayments = await FinancialTransaction.aggregate([
-        { $match: { ...matchStage, type: 'expense', category: 'salary' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]);
-
-      // Get staff salaries
-      const staffSalaries = await FinancialTransaction.aggregate([
-        { $match: { ...matchStage, type: 'expense', category: 'salary' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]);
-
-      // Get other expenses
-      const otherExpenses = await FinancialTransaction.aggregate([
-        { $match: { ...matchStage, type: 'expense', category: { $ne: 'salary' } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ]);
-
-      res.json({
-        income: income[0]?.total || 0,
-        expenses: expenses[0]?.total || 0,
-        teacherPayments: teacherPayments[0]?.total || 0,
-        staffSalaries: staffSalaries[0]?.total || 0,
-        otherExpenses: otherExpenses[0]?.total || 0,
-        profit: (income[0]?.total || 0) - (expenses[0]?.total || 0)
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
-
-    // Teacher Payment Reports
-    app.get('/api/accounting/reports/teacher-payments',  async (req, res) => {
-    try {
-      const { teacherId, year } = req.query;
-      const matchStage = { teacher: mongoose.Types.ObjectId(teacherId) };
-
-      if (year) {
-        matchStage.month = { $regex: `^${year}` };
-      }
-
-      const payments = await TeacherPayment.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: { $substr: ['$month', 0, 7] }, // Group by year-month
-            totalAmount: { $sum: '$amount' },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { '_id': 1 } }
-      ]);
-
-      res.json(payments);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
-
-    // Student Payment Reports
-    app.get('/api/accounting/reports/student-payments',  async (req, res) => {
-    try {
-      const { studentId, year } = req.query;
-      const matchStage = { student: mongoose.Types.ObjectId(studentId) };
-
-      if (year) {
-        matchStage.month = { $regex: `^${year}` };
-      }
-
-      const payments = await Payment.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: { $substr: ['$month', 0, 7] }, // Group by year-month
-            totalAmount: { $sum: '$amount' },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { '_id': 1 } }
-      ]);
-
-      res.json(payments);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    });
 
 
   // Students count endpoint
