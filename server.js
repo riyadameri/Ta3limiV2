@@ -626,21 +626,84 @@ const cardSchema = new mongoose.Schema({
 
 
     // في paymentSchema، أضف حقل العمولة
-    const paymentSchema = new mongoose.Schema({
-    schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
-    student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },      class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: false },
-      amount: { type: Number, required: true },
-      month: { type: String, required: true },
-      monthCode: { type: String, required: false },
-      paymentDate: { type: Date, default: null },
-      status: { type: String, enum: ['paid', 'pending', 'late'], default: 'pending' },
-      paymentMethod: { type: String, enum: ['cash', 'bank', 'online'], default: 'cash' },
-      invoiceNumber: String,
-      recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false }, // غير مطلوب
-      commissionRecorded: { type: Boolean, default: false },
-      commissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'TeacherCommission' }
-    }, { timestamps: true });
+// Payment Schema - النسخة المحدثة مع دعم العمولات
+const paymentSchema = new mongoose.Schema({
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true,
+    index: true 
+  },
+  student: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Student', 
+    required: true,
+    index: true 
+  },
+  class: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Class',
+    index: true 
+  },
+  amount: { 
+    type: Number, 
+    required: true 
+  },
+  month: { 
+    type: String, 
+    required: true 
+  },
+  monthCode: { 
+    type: String, 
+    required: false,
+    index: true 
+  },
+  paymentDate: { 
+    type: Date, 
+    default: null 
+  },
+  status: { 
+    type: String, 
+    enum: ['paid', 'pending', 'late', 'cancelled'], 
+    default: 'pending',
+    index: true 
+  },
+  paymentMethod: { 
+    type: String, 
+    enum: ['cash', 'bank', 'online'], 
+    default: 'cash' 
+  },
+  invoiceNumber: { 
+    type: String 
+  },
+  recordedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  // ==============================================
+  // 🔥 حقول جديدة لدعم العمولات
+  // ==============================================
+  commissionRecorded: { 
+    type: Boolean, 
+    default: false 
+  },
+  commissionId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'TeacherCommission',
+    index: true 
+  },
+  notes: { 
+    type: String, 
+    required: false 
+  }
+}, { 
+  timestamps: true 
+});
 
+// فهارس إضافية
+paymentSchema.index({ student: 1, monthCode: 1 });
+paymentSchema.index({ class: 1, monthCode: 1 });
+paymentSchema.index({ commissionId: 1, status: 1 });
 
     const messageSchema = new mongoose.Schema({
       sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -917,34 +980,389 @@ liveClassSchema.methods.isClassroomAvailable = async function() {
     });
 
 // Teacher Commission Schema
+// Teacher Commission Schema - النسخة النهائية المُصححة (احتفظ بهذا فقط)
 const teacherCommissionSchema = new mongoose.Schema({
-    schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
-  teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: false },
-  class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
-  month: { type: String, required: true },
-  round: { type: String, required: false },
-  amount: { type: Number, required: true },
-  percentage: { type: Number, required: true },
-  type: { 
-    type: String, 
-    enum: ['individual', 'class'], 
-    default: 'individual' 
+  // ==============================================
+  // المعلومات الأساسية
+  // ==============================================
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true,
+    index: true 
   },
-  status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
-  paymentDate: { type: Date, default: null },
-  paymentMethod: { type: String, enum: ['cash', 'bank', 'online'], default: 'cash' },
-  receiptNumber: { type: String, required: false },
-  recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  studentDetails: [{
-    student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
-    attendancesCount: Number,
-    teacherShare: Number,
-    includedInCommission: { type: Boolean, default: true }
+  teacher: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Teacher', 
+    required: true,
+    index: true 
+  },
+  class: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Class', 
+    required: true,
+    index: true 
+  },
+  
+  // ==============================================
+  // معلومات الشهر والجولة
+  // ==============================================
+  month: { 
+    type: String, 
+    required: true, 
+    index: true // Format: 'YYYY-MM'
+  },
+  round: { 
+    type: String, 
+    required: false // For periodic rounds
+  },
+  
+  // ==============================================
+  // المعلومات المالية
+  // ==============================================
+  totalAmount: { 
+    type: Number, 
+    required: true, 
+    default: 0 
+  },
+  percentage: { 
+    type: Number, 
+    required: true, 
+    default: 70 
+  },
+  status: { 
+    type: String, 
+    enum: ['pending', 'partial', 'paid', 'cancelled'], 
+    default: 'pending',
+    index: true 
+  },
+  totalPaid: { 
+    type: Number, 
+    default: 0 
+  },
+  remainingAmount: { 
+    type: Number, 
+    default: 0 
+  },
+  
+  // ==============================================
+  // تفاصيل الطلاب في هذه العمولة
+  // ==============================================
+  students: [{
+    student: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Student', 
+      required: true 
+    },
+    studentName: { 
+      type: String 
+    },
+    attendancesCount: { 
+      type: Number, 
+      default: 0 
+    },
+    teacherShare: { 
+      type: Number, 
+      required: true // Individual student's commission
+    },
+    status: { 
+      type: String, 
+      enum: ['pending', 'paid', 'cancelled'], 
+      default: 'pending' 
+    },
+    paymentDate: { 
+      type: Date, 
+      default: null 
+    },
+    paymentMethod: { 
+      type: String, 
+      enum: ['cash', 'bank', 'online'], 
+      default: 'cash' 
+    },
+    receiptNumber: { 
+      type: String 
+    },
+    isActive: { 
+      type: Boolean, 
+      default: true 
+    }
   }],
-  notes: { type: String, required: false }
-}, { timestamps: true });
+  
+  // ==============================================
+  // سجل المدفوعات
+  // ==============================================
+  paymentHistory: [{
+    student: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Student' 
+    },
+    amount: { 
+      type: Number, 
+      required: true 
+    },
+    paymentDate: { 
+      type: Date, 
+      default: Date.now 
+    },
+    paymentMethod: { 
+      type: String, 
+      enum: ['cash', 'bank', 'online'], 
+      default: 'cash' 
+    },
+    receiptNumber: { 
+      type: String 
+    },
+    round: { 
+      type: String 
+    },
+    month: { 
+      type: String 
+    },
+    recordedBy: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User' 
+    },
+    notes: { 
+      type: String 
+    }
+  }],
+  
+  // ==============================================
+  // معلومات إضافية
+  // ==============================================
+  recordedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  notes: { 
+    type: String, 
+    required: false 
+  }
+}, { 
+  timestamps: true 
+});
 
+// ==============================================
+// الفهارس (Indexes) لتحسين الأداء
+// ==============================================
+// ⚠️ قم بإزالة indexes المكررة - احتفظ بواحدة فقط
+teacherCommissionSchema.index({ schoolId: 1, teacher: 1, month: 1, class: 1 });
+teacherCommissionSchema.index({ schoolId: 1, teacher: 1, status: 1 });
+teacherCommissionSchema.index({ schoolId: 1, month: 1, status: 1 });
+teacherCommissionSchema.index({ teacher: 1, month: 1 });
+
+// ==============================================
+// دوال مساعدة (Methods)
+// ==============================================
+
+// 1. حساب المبلغ المتبقي
+teacherCommissionSchema.methods.calculateRemaining = function() {
+  this.remainingAmount = this.totalAmount - this.totalPaid;
+  return this.remainingAmount;
+};
+
+// 2. تحديث الحالة تلقائياً
+teacherCommissionSchema.methods.updateStatus = function() {
+  if (this.status === 'cancelled') return;
+  
+  if (this.totalPaid >= this.totalAmount) {
+    this.status = 'paid';
+  } else if (this.totalPaid > 0) {
+    this.status = 'partial';
+  } else {
+    this.status = 'pending';
+  }
+  return this.status;
+};
+
+// 3. إضافة دفعة جديدة
+teacherCommissionSchema.methods.addPayment = function(studentId, amount, paymentMethod, receiptNumber, recordedBy) {
+  this.paymentHistory.push({
+    student: studentId,
+    amount: amount,
+    paymentDate: new Date(),
+    paymentMethod: paymentMethod || 'cash',
+    receiptNumber: receiptNumber || `PAY-${Date.now()}`,
+    recordedBy: recordedBy
+  });
+  
+  this.totalPaid += amount;
+  this.calculateRemaining();
+  this.updateStatus();
+  
+  return this;
+};
+
+// 4. تحديث حالة طالب معين
+teacherCommissionSchema.methods.updateStudentStatus = function(studentId, status, paymentData = {}) {
+  const studentIndex = this.students.findIndex(
+    s => s.student.toString() === studentId.toString()
+  );
+  
+  if (studentIndex === -1) return null;
+  
+  this.students[studentIndex].status = status;
+  
+  if (status === 'paid') {
+    this.students[studentIndex].paymentDate = paymentData.paymentDate || new Date();
+    this.students[studentIndex].paymentMethod = paymentData.paymentMethod || 'cash';
+    this.students[studentIndex].receiptNumber = paymentData.receiptNumber || `REC-${Date.now()}`;
+  }
+  
+  return this.students[studentIndex];
+};
+
+// 5. حساب إجمالي العمولة للطالب
+teacherCommissionSchema.methods.getStudentTotal = function(studentId) {
+  const student = this.students.find(
+    s => s.student.toString() === studentId.toString()
+  );
+  return student ? student.teacherShare : 0;
+};
+
+// 6. الحصول على عدد الطلاب النشطين
+teacherCommissionSchema.methods.getActiveStudentsCount = function() {
+  return this.students.filter(s => s.isActive !== false).length;
+};
+
+// 7. الحصول على عدد الطلاب المدفوعين
+teacherCommissionSchema.methods.getPaidStudentsCount = function() {
+  return this.students.filter(s => s.status === 'paid').length;
+};
+
+// ==============================================
+// دوال ثابتة (Statics) - مُصححة
+// ==============================================
+
+// 1. البحث عن عمولات أستاذ معين
+teacherCommissionSchema.statics.findByTeacher = function(teacherId, options = {}) {
+  const query = { teacher: teacherId };
+  if (options.month) query.month = options.month;
+  if (options.status) query.status = options.status;
+  if (options.schoolId) query.schoolId = options.schoolId;
+  
+  return this.find(query)
+    .populate('class', 'name subject price')
+    .populate('students.student', 'name studentId')
+    .sort(options.sort || { month: -1 });
+};
+
+// 2. البحث عن عمولات شهر معين
+teacherCommissionSchema.statics.findByMonth = function(month, options = {}) {
+  const query = { month: month };
+  if (options.schoolId) query.schoolId = options.schoolId;
+  if (options.status) query.status = options.status;
+  if (options.teacher) query.teacher = options.teacher;
+  
+  return this.find(query)
+    .populate('teacher', 'name phone email')
+    .populate('class', 'name subject price')
+    .populate('students.student', 'name studentId');
+};
+
+// 3. الحصول على إحصائيات العمولات
+teacherCommissionSchema.statics.getStats = async function(filters = {}) {
+  const matchStage = {};
+  if (filters.schoolId) matchStage.schoolId = filters.schoolId;
+  if (filters.teacher) matchStage.teacher = filters.teacher;
+  if (filters.month) matchStage.month = filters.month;
+  if (filters.status) matchStage.status = filters.status;
+  
+  const stats = await this.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: '$status',
+        totalAmount: { $sum: '$totalAmount' },
+        totalPaid: { $sum: '$totalPaid' },
+        totalRemaining: { $sum: '$remainingAmount' },
+        count: { $sum: 1 },
+        studentsCount: { $sum: { $size: '$students' } }
+      }
+    }
+  ]);
+  
+  const result = {
+    pending: { amount: 0, paid: 0, remaining: 0, count: 0, students: 0 },
+    partial: { amount: 0, paid: 0, remaining: 0, count: 0, students: 0 },
+    paid: { amount: 0, paid: 0, remaining: 0, count: 0, students: 0 },
+    cancelled: { amount: 0, paid: 0, remaining: 0, count: 0, students: 0 }
+  };
+  
+  stats.forEach(stat => {
+    if (stat._id && result[stat._id]) {
+      result[stat._id] = {
+        amount: stat.totalAmount || 0,
+        paid: stat.totalPaid || 0,
+        remaining: stat.totalRemaining || 0,
+        count: stat.count || 0,
+        students: stat.studentsCount || 0
+      };
+    }
+  });
+  
+  return result;
+};
+
+// 4. الحصول على ملخص شهري - مُصحح
+teacherCommissionSchema.statics.getMonthlySummary = async function(schoolId, year) {
+  const matchStage = { schoolId: schoolId };
+  if (year) matchStage.month = { $regex: `^${year}` };
+  
+  return this.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: '$month',
+        totalAmount: { $sum: '$totalAmount' },
+        totalPaid: { $sum: '$totalPaid' },
+        totalRemaining: { $sum: '$remainingAmount' },
+        count: { $sum: 1 },
+        teachers: { $addToSet: '$teacher' },
+        students: { $sum: { $size: '$students' } }
+      }
+    },
+    { $sort: { _id: 1 } },
+    {
+      $project: {
+        month: '$_id',
+        totalAmount: 1,
+        totalPaid: 1,
+        totalRemaining: 1,
+        count: 1,
+        teachersCount: { $size: '$teachers' },
+        studentsCount: '$students'
+      }
+    }
+  ]);
+};
+
+// ==============================================
+// Middleware - قبل الحفظ
+// ==============================================
+teacherCommissionSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  
+  // حساب المبلغ المتبقي تلقائياً
+  this.remainingAmount = this.totalAmount - this.totalPaid;
+  
+  // تحديث الحالة تلقائياً
+  if (this.status !== 'cancelled') {
+    if (this.totalPaid >= this.totalAmount) {
+      this.status = 'paid';
+    } else if (this.totalPaid > 0) {
+      this.status = 'partial';
+    } else {
+      this.status = 'pending';
+    }
+  }
+  
+  next();
+});
+
+// ==============================================
+// إنشاء النموذج - تأكد من وجود هذا السطر مرة واحدة فقط
+// ==============================================
 // Create the model
     // Create models
     const Budget = mongoose.model('Budget', budgetSchema);
@@ -2097,13 +2515,12 @@ app.get('/api/classes/my-school', async (req, res) => {
     });
   }
 });
-
+// POST /api/classes - متوافق مع الواجهة الحالية
 app.post('/api/classes', async (req, res) => {
   try {
-    // جلب schoolId من التوكن أو من الـ body
-    const schoolId = req.user?.schoolId || req.body.schoolId;
+    console.log('📝 استلام طلب إنشاء حصة جديدة:', req.body);
     
-    console.log('📝 إنشاء حصة جديدة - schoolId:', schoolId);
+    const schoolId = req.user?.schoolId || req.body.schoolId;
     
     if (!schoolId) {
       return res.status(400).json({
@@ -2112,7 +2529,6 @@ app.post('/api/classes', async (req, res) => {
       });
     }
 
-    // التحقق من وجود المدرسة
     const school = await School.findById(schoolId);
     if (!school) {
       return res.status(404).json({
@@ -2121,9 +2537,20 @@ app.post('/api/classes', async (req, res) => {
       });
     }
 
-    const { name, subject, teacher, academicYear, description, schedule, price, paymentSystem, roundSettings } = req.body;
+    const { name, subject, teacher, academicYear, description, schedule, price, paymentSystem, roundSettings, students } = req.body;
     
-    // التحقق من وجود حصة بنفس الاسم في نفس المدرسة
+    // التحقق من وجود الأستاذ
+    if (teacher) {
+      const teacherExists = await Teacher.findOne({ _id: teacher, schoolId: schoolId });
+      if (!teacherExists) {
+        return res.status(400).json({
+          success: false,
+          error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة'
+        });
+      }
+    }
+
+    // التحقق من وجود حصة بنفس الاسم
     const existingClass = await Class.findOne({
       name: { $regex: new RegExp(`^${name}$`, 'i') },
       subject: subject,
@@ -2141,17 +2568,7 @@ app.post('/api/classes', async (req, res) => {
       });
     }
 
-    // التحقق من وجود الأستاذ
-    if (teacher) {
-      const teacherExists = await Teacher.findOne({ _id: teacher, schoolId: schoolId });
-      if (!teacherExists) {
-        return res.status(400).json({
-          success: false,
-          error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة'
-        });
-      }
-    }
-
+    // إنشاء الحصة
     const classObj = new Class({
       schoolId: schoolId,
       name: name,
@@ -2162,26 +2579,138 @@ app.post('/api/classes', async (req, res) => {
       schedule: schedule || [],
       price: price || 0,
       paymentSystem: paymentSystem || 'monthly',
-      roundSettings: roundSettings || { sessionCount: 8, sessionDuration: 2, breakBetweenSessions: 0 }
+      roundSettings: roundSettings || { sessionCount: 8, sessionDuration: 2, breakBetweenSessions: 0 },
+      students: students || []
     });
 
     await classObj.save();
     
     console.log(`✅ تم إنشاء الحصة: ${classObj.name} للمدرسة: ${schoolId}`);
+
+    // ==============================================
+    // 🔥 إنشاء عمولات الأساتذة تلقائياً (إذا وجد أستاذ وطلاب)
+    // ==============================================
+    let teacherCommission = null;
+    const commissionResults = [];
     
-    // جلب البيانات المحدثة
+    if (teacher && students && students.length > 0) {
+      console.log(`📊 إنشاء عمولات للأستاذ ${teacher} لـ ${students.length} طالب`);
+      
+      const teacherSharePercentage = 70;
+      const teacherShare = (price || 0) * (teacherSharePercentage / 100);
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      // جلب أسماء الطلاب
+      const studentDocs = await Student.find({ _id: { $in: students } });
+      const studentMap = {};
+      studentDocs.forEach(s => studentMap[s._id] = s.name);
+      
+      // إنشاء سجل العمولة الرئيسي
+      teacherCommission = new TeacherCommission({
+        schoolId: schoolId,
+        teacher: teacher,
+        class: classObj._id,
+        month: currentMonth,
+        totalAmount: teacherShare * students.length,
+        percentage: teacherSharePercentage,
+        status: 'pending',
+        totalPaid: 0,
+        remainingAmount: teacherShare * students.length,
+        recordedBy: req.user?.id || null,
+        students: students.map(studentId => ({
+          student: studentId,
+          studentName: studentMap[studentId] || 'غير معروف',
+          attendancesCount: 0,
+          teacherShare: teacherShare,
+          status: 'pending',
+          isActive: true
+        }))
+      });
+
+      await teacherCommission.save();
+      console.log(`✅ تم إنشاء سجل العمولة الرئيسي: ${teacherCommission._id}`);
+
+      // إنشاء دفعات شهرية للطلاب
+      for (const studentId of students) {
+        const student = await Student.findById(studentId);
+        
+        const payment = new Payment({
+          schoolId: schoolId,
+          student: studentId,
+          class: classObj._id,
+          amount: price || 0,
+          month: new Date(currentMonth).toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+          monthCode: currentMonth,
+          status: 'pending',
+          recordedBy: req.user?.id || null,
+          commissionRecorded: true,
+          commissionId: teacherCommission._id
+        });
+        await payment.save();
+        
+        // إنشاء دفعات للأشهر القادمة (11 شهر)
+        for (let i = 1; i < 12; i++) {
+          const date = new Date(currentMonth);
+          date.setMonth(date.getMonth() + i);
+          const monthStr = date.toISOString().slice(0, 7);
+          
+          const existingPayment = await Payment.findOne({
+            schoolId: schoolId,
+            student: studentId,
+            class: classObj._id,
+            monthCode: monthStr
+          });
+
+          if (!existingPayment) {
+            const futurePayment = new Payment({
+              schoolId: schoolId,
+              student: studentId,
+              class: classObj._id,
+              amount: price || 0,
+              month: date.toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+              monthCode: monthStr,
+              status: 'pending',
+              recordedBy: req.user?.id || null,
+              commissionRecorded: true,
+              commissionId: teacherCommission._id
+            });
+            await futurePayment.save();
+          }
+        }
+        
+        commissionResults.push({
+          student: student?.name || 'غير معروف',
+          studentId: studentId,
+          amount: teacherShare,
+          paymentCreated: true
+        });
+      }
+      
+      console.log(`✅ تم إنشاء ${commissionResults.length} عمولة ودفعات للأستاذ`);
+    }
+
+    // جلب البيانات المحدثة (بنفس تنسيق الواجهة الحالية)
     const populatedClass = await Class.findById(classObj._id)
-      .populate('teacher')
-      .populate('students')
-      .populate('schedule.classroom');
-    
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId')
+      .populate('schedule.classroom', 'name location');
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
     res.status(201).json({
       success: true,
       message: "تم إنشاء الحصة بنجاح",
       class: populatedClass,
-      existed: false
+      existed: false,
+      // إضافة معلومات العمولة في نفس الرد (لن تؤثر على الواجهة الحالية)
+      _commission: teacherCommission ? {
+        id: teacherCommission._id,
+        totalAmount: teacherCommission.totalAmount,
+        studentsCount: teacherCommission.students.length,
+        status: teacherCommission.status
+      } : null,
+      _commissionResults: commissionResults
     });
-    
+
   } catch (err) {
     console.error('❌ خطأ في إنشاء الحصة:', err);
     res.status(400).json({
@@ -2819,40 +3348,723 @@ app.get('/api/students', async (req, res) => {
     // })
 
 
+// GET /api/accounting/teacher-commissions - متوافق مع الواجهة الحالية
+app.get('/api/accounting/teacher-commissions', async (req, res) => {
+  try {
+    const { schoolId, teacherId, status, month, classId } = req.query;
+    
+    console.log('📊 جلب العمولات - filters:', { schoolId, teacherId, status, month, classId });
+    
+    const filter = {};
+    
+    // إذا كان هناك schoolId في التوكن أو في الـ query
+    const effectiveSchoolId = schoolId || req.user?.schoolId;
+    if (effectiveSchoolId) filter.schoolId = effectiveSchoolId;
+    if (teacherId) filter.teacher = teacherId;
+    if (status) filter.status = status;
+    if (month) filter.month = month;
+    if (classId) filter.class = classId;
 
-  // في server.js
-  app.get('/api/accounting/teacher-commissions/:id',  async (req, res) => {
-    try {
-      const commission = await TeacherCommission.findById(req.params.id)
-        .populate('teacher', 'name phone email')
-        .populate('student', 'name studentId')
-        .populate('class', 'name subject price')
-        .populate('recordedBy', 'username fullName')
-        .populate({
-          path: 'studentDetails.student',
-          select: 'name studentId'
-        });
-  
-      if (!commission) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'العمولة غير موجودة' 
-        });
+    const commissions = await TeacherCommission.find(filter)
+      .populate('teacher', 'name phone email subjects')
+      .populate('class', 'name subject price')
+      .populate('students.student', 'name studentId parentPhone')
+      .populate('recordedBy', 'username fullName')
+      .sort({ month: -1, createdAt: -1 });
+
+    // حساب الإحصائيات (بنفس تنسيق الواجهة)
+    const summary = {
+      total: commissions.length,
+      totalAmount: commissions.reduce((sum, c) => sum + c.totalAmount, 0),
+      totalPaid: commissions.reduce((sum, c) => sum + c.totalPaid, 0),
+      totalRemaining: commissions.reduce((sum, c) => sum + c.remainingAmount, 0),
+      pendingCount: commissions.filter(c => c.status === 'pending').length,
+      partialCount: commissions.filter(c => c.status === 'partial').length,
+      paidCount: commissions.filter(c => c.status === 'paid').length,
+      cancelledCount: commissions.filter(c => c.status === 'cancelled').length,
+      totalStudents: commissions.reduce((sum, c) => sum + c.students.filter(s => s.isActive !== false).length, 0)
+    };
+
+    // تجميع حسب الشهر (للواجهة)
+    const byMonth = {};
+    commissions.forEach(c => {
+      if (!byMonth[c.month]) {
+        byMonth[c.month] = {
+          month: c.month,
+          total: 0,
+          paid: 0,
+          pending: 0,
+          count: 0,
+          teachers: new Set()
+        };
       }
-  
-      res.json({
-        success: true,
-        data: commission
-      });
-    } catch (err) {
-      console.error('Error fetching commission:', err);
-      res.status(500).json({ 
+      byMonth[c.month].total += c.totalAmount;
+      byMonth[c.month].paid += c.totalPaid;
+      byMonth[c.month].pending += c.remainingAmount;
+      byMonth[c.month].count++;
+      if (c.teacher) byMonth[c.month].teachers.add(c.teacher._id.toString());
+    });
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    res.json({
+      success: true,
+      data: commissions,
+      summary: summary,
+      byMonth: Object.values(byMonth).map(m => ({
+        ...m,
+        teachersCount: m.teachers.size,
+        teachers: undefined
+      })),
+      count: commissions.length
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب العمولات:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// GET /api/accounting/teacher-commissions/pending - متوافق مع الواجهة الحالية
+app.get('/api/accounting/teacher-commissions/pending', async (req, res) => {
+  try {
+    const { schoolId, month, teacherId } = req.query;
+    
+    console.log('📊 جلب العمولات المستحقة - month:', month);
+    
+    if (!month) {
+      return res.status(400).json({
         success: false,
-        error: err.message 
+        error: 'يجب تحديد الشهر (month) بصيغة YYYY-MM'
       });
     }
-  });
-  
+
+    const effectiveSchoolId = schoolId || req.user?.schoolId;
+    
+    const filter = {
+      month: month,
+      status: { $in: ['pending', 'partial'] }
+    };
+    
+    if (effectiveSchoolId) filter.schoolId = effectiveSchoolId;
+    if (teacherId) filter.teacher = teacherId;
+
+    const commissions = await TeacherCommission.find(filter)
+      .populate('teacher', 'name phone email')
+      .populate('class', 'name subject price')
+      .populate('students.student', 'name studentId')
+      .populate('recordedBy', 'username fullName')
+      .sort({ teacher: 1 });
+
+    // تجميع حسب الأستاذ (للواجهة)
+    const byTeacher = {};
+    commissions.forEach(c => {
+      const teacherName = c.teacher?.name || 'غير معروف';
+      const teacherId = c.teacher?._id?.toString() || 'unknown';
+      
+      if (!byTeacher[teacherId]) {
+        byTeacher[teacherId] = {
+          teacherId: teacherId,
+          teacherName: teacherName,
+          totalAmount: 0,
+          totalPaid: 0,
+          totalRemaining: 0,
+          studentsCount: 0,
+          commissions: [],
+          classes: new Set()
+        };
+      }
+      
+      byTeacher[teacherId].totalAmount += c.totalAmount;
+      byTeacher[teacherId].totalPaid += c.totalPaid;
+      byTeacher[teacherId].totalRemaining += c.remainingAmount;
+      byTeacher[teacherId].studentsCount += c.students.filter(s => s.isActive !== false).length;
+      byTeacher[teacherId].commissions.push(c);
+      if (c.class) byTeacher[teacherId].classes.add(c.class.name);
+    });
+
+    // إحصائيات عامة
+    const summary = {
+      totalCommissions: commissions.length,
+      totalAmount: commissions.reduce((sum, c) => sum + c.totalAmount, 0),
+      totalPaid: commissions.reduce((sum, c) => sum + c.totalPaid, 0),
+      totalRemaining: commissions.reduce((sum, c) => sum + c.remainingAmount, 0),
+      totalTeachers: Object.keys(byTeacher).length,
+      totalStudents: commissions.reduce((sum, c) => sum + c.students.filter(s => s.isActive !== false).length, 0)
+    };
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    res.json({
+      success: true,
+      month: month,
+      summary: summary,
+      byTeacher: Object.values(byTeacher).map(t => ({
+        ...t,
+        classesCount: t.classes.size,
+        classes: undefined
+      })),
+      data: commissions
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب العمولات المستحقة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+  // في server.js
+
+  // ==============================================
+// ✅ نقطة نهاية لجلب تفاصيل عمولة أستاذ مع تفاصيل الطلاب
+// ==============================================
+app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`📊 جلب تفاصيل العمولة: ${id}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف العمولة غير صالح'
+      });
+    }
+
+    // جلب العمولة مع البيانات المترابطة
+    const commission = await TeacherCommission.findById(id)
+      .populate('teacher', 'name phone email salaryPercentage')
+      .populate('class', 'name subject price paymentSystem')
+      .populate('students.student', 'name studentId parentPhone academicYear')
+      .populate('recordedBy', 'username fullName');
+
+    if (!commission) {
+      return res.status(404).json({
+        success: false,
+        error: 'العمولة غير موجودة'
+      });
+    }
+
+    console.log(`✅ تم العثور على العمولة: ${commission._id}`);
+
+    // جلب المدفوعات المرتبطة بهذه العمولة
+    const payments = await Payment.find({
+      commissionId: commission._id
+    }).populate('student', 'name studentId');
+
+    // جلب الحضور لكل طالب في الشهر المحدد
+    const month = commission.month;
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    console.log(`📅 الفترة: ${startDate} - ${endDate}`);
+
+    // جلب الحصص الحية لهذه الحصة في الشهر
+    const liveClasses = await LiveClass.find({
+      class: commission.class._id,
+      date: { $gte: startDate, $lte: endDate },
+      status: { $in: ['scheduled', 'ongoing', 'completed'] }
+    }).sort({ date: 1 });
+
+    console.log(`📚 عدد الحصص الحية: ${liveClasses.length}`);
+
+    // بناء بيانات الطلاب مع الحضور والمدفوعات
+    const studentsDetails = await Promise.all(
+      commission.students.map(async (studentData) => {
+        const student = studentData.student;
+        
+        if (!student) {
+          return null;
+        }
+        
+        // حساب المدفوعات
+        const studentPayments = payments.filter(p => 
+          p.student && p.student._id && p.student._id.toString() === student._id.toString()
+        );
+        
+        const totalPaid = studentPayments
+          .filter(p => p.status === 'paid')
+          .reduce((sum, p) => sum + p.amount, 0);
+        
+        const totalPending = studentPayments
+          .filter(p => p.status === 'pending' || p.status === 'late')
+          .reduce((sum, p) => sum + p.amount, 0);
+        
+        const totalAmount = studentPayments.reduce((sum, p) => sum + p.amount, 0);
+        
+        // حساب الحضور لكل يوم
+        const attendanceByDate = {};
+        liveClasses.forEach(lc => {
+          const dateStr = lc.date.toISOString().split('T')[0];
+          const attendanceRecord = lc.attendance.find(
+            att => att.student && att.student.toString() === student._id.toString()
+          );
+          
+          attendanceByDate[dateStr] = {
+            status: attendanceRecord?.status || 'absent',
+            joinedAt: attendanceRecord?.joinedAt,
+            startTime: lc.startTime
+          };
+        });
+
+        // حساب إحصائيات الحضور
+        const presentCount = Object.values(attendanceByDate).filter(a => a.status === 'present').length;
+        const absentCount = Object.values(attendanceByDate).filter(a => a.status === 'absent').length;
+        const lateCount = Object.values(attendanceByDate).filter(a => a.status === 'late').length;
+        const totalClasses = liveClasses.length;
+
+        return {
+          _id: student._id,
+          name: student.name || 'غير معروف',
+          studentId: student.studentId || 'غير معروف',
+          academicYear: student.academicYear || 'غير محدد',
+          parentPhone: student.parentPhone || '',
+          teacherShare: studentData.teacherShare || 0,
+          status: studentData.status || 'pending',
+          paymentDate: studentData.paymentDate,
+          isActive: studentData.isActive !== false,
+          payment: {
+            totalAmount,
+            totalPaid,
+            totalPending,
+            status: totalPaid >= totalAmount ? 'paid' : totalPaid > 0 ? 'partial' : 'pending',
+            payments: studentPayments
+          },
+          attendance: {
+            byDate: attendanceByDate,
+            summary: {
+              present: presentCount,
+              absent: absentCount,
+              late: lateCount,
+              total: totalClasses,
+              attendanceRate: totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 0
+            }
+          },
+          canEditPayment: true,
+          canEditTeacherShare: true
+        };
+      })
+    );
+
+    // تصفية الطلاب الذين تم جلبهم بنجاح
+    const validStudents = studentsDetails.filter(s => s !== null);
+
+    // أيام الحصص القادمة
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingDays = [];
+    const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    
+    // جلب جدول الحصة
+    const classObj = await Class.findById(commission.class._id);
+    const scheduleDays = classObj?.schedule?.map(s => s.day) || [];
+    
+    // توليد الأيام القادمة (30 يوم)
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dayName = daysOfWeek[date.getDay()];
+      
+      if (scheduleDays.includes(dayName)) {
+        const dateStr = date.toISOString().split('T')[0];
+        const hasClass = liveClasses.some(lc => 
+          lc.date.toISOString().split('T')[0] === dateStr
+        );
+        
+        upcomingDays.push({
+          date: dateStr,
+          dayName: dayName,
+          hasClass: true,
+          isPast: date < today,
+          isToday: date.getTime() === today.getTime(),
+          schedule: classObj?.schedule?.find(s => s.day === dayName) || null
+        });
+      }
+    }
+
+    // إحصائيات عامة
+    const summary = {
+      totalStudents: validStudents.length,
+      totalPaid: validStudents.reduce((sum, s) => sum + s.payment.totalPaid, 0),
+      totalPending: validStudents.reduce((sum, s) => sum + s.payment.totalPending, 0),
+      totalAmount: validStudents.reduce((sum, s) => sum + s.payment.totalAmount, 0),
+      totalTeacherShare: validStudents.reduce((sum, s) => sum + (s.teacherShare || 0), 0),
+      totalPresent: validStudents.reduce((sum, s) => sum + s.attendance.summary.present, 0),
+      totalAbsent: validStudents.reduce((sum, s) => sum + s.attendance.summary.absent, 0),
+      totalLate: validStudents.reduce((sum, s) => sum + s.attendance.summary.late, 0),
+      averageAttendance: validStudents.length > 0 
+        ? Math.round(validStudents.reduce((sum, s) => sum + s.attendance.summary.attendanceRate, 0) / validStudents.length)
+        : 0
+    };
+
+    // إرجاع الاستجابة
+    res.json({
+      success: true,
+      data: {
+        commission: {
+          _id: commission._id,
+          teacher: commission.teacher,
+          class: commission.class,
+          month: commission.month,
+          totalAmount: commission.totalAmount,
+          totalPaid: commission.totalPaid,
+          remainingAmount: commission.remainingAmount,
+          percentage: commission.percentage || 70,
+          status: commission.status,
+          paymentHistory: commission.paymentHistory || [],
+          notes: commission.notes || '',
+          createdAt: commission.createdAt
+        },
+        period: {
+          start: startDate,
+          end: endDate,
+          month: month
+        },
+        summary,
+        upcomingDays: upcomingDays.slice(0, 15), // فقط 15 يوم قادم
+        liveClasses: liveClasses.map(lc => ({
+          _id: lc._id,
+          date: lc.date,
+          startTime: lc.startTime,
+          status: lc.status,
+          attendanceCount: lc.attendance?.length || 0
+        })),
+        students: validStudents
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب تفاصيل العمولة:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث حصة الطالب في العمولة
+// ==============================================
+app.put('/api/accounting/teacher-commissions/:id/student-share', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { studentId, teacherShare, reason } = req.body;
+
+    console.log(`✏️ تحديث حصة الطالب ${studentId} في العمولة ${id}`);
+
+    if (!studentId || teacherShare === undefined || teacherShare < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد الطالب والمبلغ الجديد'
+      });
+    }
+
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    const commission = await TeacherCommission.findById(id);
+    if (!commission) {
+      return res.status(404).json({ success: false, error: 'العمولة غير موجودة' });
+    }
+
+    // البحث عن الطالب في العمولة
+    const studentIndex = commission.students.findIndex(
+      s => s.student.toString() === studentId
+    );
+
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, error: 'الطالب غير موجود في هذه العمولة' });
+    }
+
+    // تخزين المبلغ القديم
+    const oldShare = commission.students[studentIndex].teacherShare || 0;
+    
+    // تحديث المبلغ
+    commission.students[studentIndex].teacherShare = teacherShare;
+    
+    // إضافة ملاحظة التعديل
+    if (reason) {
+      commission.notes = commission.notes 
+        ? `${commission.notes} | تعديل حصة الطالب: ${reason}` 
+        : `تعديل حصة الطالب: ${reason}`;
+    }
+
+    // إعادة حساب المبلغ الإجمالي للعمولة
+    let totalAmount = 0;
+    commission.students.forEach(s => {
+      if (s.isActive !== false) {
+        totalAmount += (s.teacherShare || 0);
+      }
+    });
+    
+    commission.totalAmount = totalAmount;
+    commission.remainingAmount = totalAmount - commission.totalPaid;
+    
+    // تحديث الحالة
+    if (commission.remainingAmount <= 0) {
+      commission.status = 'paid';
+    } else if (commission.totalPaid > 0) {
+      commission.status = 'partial';
+    } else {
+      commission.status = 'pending';
+    }
+    
+    await commission.save();
+
+    res.json({
+      success: true,
+      message: `تم تحديث حصة الطالب من ${oldShare} إلى ${teacherShare} د.ج`,
+      data: {
+        studentId,
+        oldShare,
+        newShare: teacherShare,
+        totalAmount: commission.totalAmount,
+        remainingAmount: commission.remainingAmount,
+        status: commission.status
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث حصة الطالب:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث حضور طالب في يوم معين للعمولة
+// ==============================================
+app.put('/api/accounting/teacher-commissions/:id/attendance', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { studentId, date, status } = req.body;
+
+    console.log(`📝 تحديث حضور الطالب ${studentId} في التاريخ ${date} للعمولة ${id}`);
+
+    if (!studentId || !date || !status) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد الطالب والتاريخ والحالة'
+      });
+    }
+
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    const commission = await TeacherCommission.findById(id)
+      .populate('class', '_id');
+
+    if (!commission) {
+      return res.status(404).json({ success: false, error: 'العمولة غير موجودة' });
+    }
+
+    // البحث عن الحصة الحية في هذا التاريخ
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    let liveClass = await LiveClass.findOne({
+      class: commission.class._id,
+      date: { $gte: startDate, $lte: endDate }
+    });
+
+    // إذا لم توجد حصة حية، قم بإنشائها
+    if (!liveClass) {
+      const classObj = await Class.findById(commission.class._id)
+        .populate('students', 'name studentId');
+      
+      if (!classObj) {
+        return res.status(404).json({ success: false, error: 'الحصة غير موجودة' });
+      }
+
+      const attendance = classObj.students.map(student => ({
+        student: student._id,
+        status: 'absent',
+        joinedAt: null,
+        leftAt: null
+      }));
+
+      liveClass = new LiveClass({
+        class: commission.class._id,
+        date: startDate,
+        startTime: '08:00',
+        endTime: '10:00',
+        teacher: commission.teacher,
+        attendance: attendance,
+        status: 'scheduled',
+        month: startDate.toISOString().slice(0, 7)
+      });
+      await liveClass.save();
+      console.log(`✅ تم إنشاء حصة حية جديدة: ${liveClass._id}`);
+    }
+
+    // تحديث حالة الطالب في الحصة الحية
+    const attendanceIndex = liveClass.attendance.findIndex(
+      att => att.student.toString() === studentId
+    );
+
+    if (attendanceIndex >= 0) {
+      liveClass.attendance[attendanceIndex].status = status;
+      if (status === 'present' || status === 'late') {
+        liveClass.attendance[attendanceIndex].joinedAt = new Date();
+      }
+    } else {
+      liveClass.attendance.push({
+        student: studentId,
+        status: status,
+        joinedAt: status === 'present' || status === 'late' ? new Date() : null,
+        leftAt: null
+      });
+    }
+
+    await liveClass.save();
+    console.log(`✅ تم تحديث حضور الطالب في الحصة الحية`);
+
+    res.json({
+      success: true,
+      message: `تم تحديث حضور الطالب بنجاح`,
+      data: {
+        studentId,
+        date,
+        status,
+        liveClassId: liveClass._id
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الحضور:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لجلب تفاصيل العمولة فقط (بدون تفاصيل الطلاب)
+// ==============================================
+app.get('/api/accounting/teacher-commissions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف العمولة غير صالح'
+      });
+    }
+
+    const commission = await TeacherCommission.findById(id)
+      .populate('teacher', 'name phone email')
+      .populate('class', 'name subject price')
+      .populate('students.student', 'name studentId')
+      .populate('recordedBy', 'username fullName');
+
+    if (!commission) {
+      return res.status(404).json({
+        success: false,
+        error: 'العمولة غير موجودة'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: commission
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب العمولة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لجلب إحصائيات العمولات للشهر
+// ==============================================
+app.get('/api/accounting/teacher-commissions/stats', async (req, res) => {
+  try {
+    const { schoolId, month, teacherId } = req.query;
+
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    const matchStage = { schoolId: schoolId };
+    if (month) matchStage.month = month;
+    if (teacherId) matchStage.teacher = teacherId;
+
+    const stats = await TeacherCommission.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$totalAmount' },
+          totalPaid: { $sum: '$totalPaid' },
+          totalRemaining: { $sum: '$remainingAmount' },
+          studentsCount: { $sum: { $size: '$students' } }
+        }
+      }
+    ]);
+
+    const result = {
+      pending: { count: 0, amount: 0, paid: 0, remaining: 0, students: 0 },
+      partial: { count: 0, amount: 0, paid: 0, remaining: 0, students: 0 },
+      paid: { count: 0, amount: 0, paid: 0, remaining: 0, students: 0 },
+      cancelled: { count: 0, amount: 0, paid: 0, remaining: 0, students: 0 }
+    };
+
+    stats.forEach(stat => {
+      if (stat._id && result[stat._id]) {
+        result[stat._id] = {
+          count: stat.count || 0,
+          amount: stat.totalAmount || 0,
+          paid: stat.totalPaid || 0,
+          remaining: stat.totalRemaining || 0,
+          students: stat.studentsCount || 0
+        };
+      }
+    });
+
+    res.json({
+      success: true,
+      stats: result,
+      total: {
+        count: stats.reduce((sum, s) => sum + s.count, 0),
+        amount: stats.reduce((sum, s) => sum + s.totalAmount, 0),
+        paid: stats.reduce((sum, s) => sum + s.totalPaid, 0),
+        remaining: stats.reduce((sum, s) => sum + s.totalRemaining, 0),
+        students: stats.reduce((sum, s) => sum + s.studentsCount, 0)
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب إحصائيات العمولات:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   
   // POST /api/accounting/teacher-commissions - Create new commission
   app.post('/api/accounting/teacher-commissions',  async (req, res) => {
@@ -3181,96 +4393,282 @@ app.get('/api/students', async (req, res) => {
   });
   
   // POST /api/accounting/teacher-commissions/generate-for-month - Generate commissions for a month
-  app.post('/api/accounting/teacher-commissions/generate-for-month',  async (req, res) => {
-    try {
-      const { month } = req.body;
-  
-      if (!month) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'الشهر مطلوب' 
-        });
-      }
-  
-      // Get all classes with teachers
-      const classes = await Class.find({ 
-        teacher: { $ne: null },
-        students: { $ne: [] }
-      }).populate('teacher').populate('students');
-  
-      const results = {
-        generated: 0,
-        skipped: 0,
-        total: classes.length,
-        commissions: []
-      };
-  
-      for (const classObj of classes) {
-        // Check if commission already exists for this class and month
-        const existingCommission = await TeacherCommission.findOne({
-          teacher: classObj.teacher._id,
-          class: classObj._id,
-          month: month,
-          type: 'class'
-        });
-  
-        if (existingCommission) {
-          results.skipped++;
-          continue;
-        }
-  
-        // Calculate commission (70% of class price)
-        const commissionAmount = classObj.price * 0.7;
-  
-        // Create student details
-        const studentDetails = classObj.students.map(student => ({
-          student: student._id,
-          attendancesCount: 0,
-          teacherShare: commissionAmount / classObj.students.length,
-          includedInCommission: true
-        }));
-  
-        // Create commission
-        const commission = new TeacherCommission({
-          teacher: classObj.teacher._id,
-          class: classObj._id,
-          month: month,
-          amount: commissionAmount,
-          percentage: 70,
-          type: 'class',
-          status: 'pending',
-          recordedBy: req.user.id,
-          notes: `تم إنشاؤها تلقائياً لشهر ${month}`,
-          studentDetails: studentDetails
-        });
-  
-        await commission.save();
-        
-        results.generated++;
-        results.commissions.push({
-          _id: commission._id,
-          teacher: classObj.teacher.name,
-          class: classObj.name,
-          amount: commissionAmount
-        });
-      }
-  
-      res.json({
-        success: true,
-        message: `تم إنشاء ${results.generated} عمولة جديدة، وتخطي ${results.skipped}`,
-        data: results
-      });
-  
-    } catch (err) {
-      console.error('Error generating commissions:', err);
-      res.status(500).json({ 
+// POST /api/accounting/teacher-commissions/generate - متوافق مع الواجهة الحالية
+app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
+  try {
+    const { schoolId, month, teacherId } = req.body;
+    
+    console.log(`📊 إنشاء عمولات للشهر ${month}`);
+    
+    if (!schoolId || !month) {
+      return res.status(400).json({
         success: false,
-        error: err.message 
+        error: 'يجب تحديد المدرسة (schoolId) والشهر (month)'
       });
     }
-  });
+
+    // جلب جميع الحصص النشطة
+    const classesQuery = { schoolId: schoolId, teacher: { $ne: null } };
+    if (teacherId) classesQuery.teacher = teacherId;
+    
+    const classes = await Class.find(classesQuery)
+      .populate('teacher', 'name')
+      .populate('students', 'name studentId');
+
+    const results = {
+      generated: 0,
+      skipped: 0,
+      errors: 0,
+      details: []
+    };
+
+    const teacherSharePercentage = 70;
+
+    for (const classObj of classes) {
+      try {
+        // التحقق من وجود عمولة سابقة
+        const existingCommission = await TeacherCommission.findOne({
+          schoolId: schoolId,
+          teacher: classObj.teacher._id,
+          class: classObj._id,
+          month: month
+        });
+
+        if (existingCommission) {
+          results.skipped++;
+          results.details.push({
+            class: classObj.name,
+            teacher: classObj.teacher.name,
+            status: 'مسبوقة',
+            commissionId: existingCommission._id
+          });
+          continue;
+        }
+
+        if (!classObj.students || classObj.students.length === 0) {
+          results.skipped++;
+          results.details.push({
+            class: classObj.name,
+            teacher: classObj.teacher.name,
+            status: 'لا يوجد طلاب'
+          });
+          continue;
+        }
+
+        // حساب العمولة
+        const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
+        const totalAmount = teacherShare * classObj.students.length;
+
+        // إنشاء سجل العمولة
+        const commission = new TeacherCommission({
+          schoolId: schoolId,
+          teacher: classObj.teacher._id,
+          class: classObj._id,
+          month: month,
+          totalAmount: totalAmount,
+          percentage: teacherSharePercentage,
+          status: 'pending',
+          totalPaid: 0,
+          remainingAmount: totalAmount,
+          recordedBy: req.user?.id || null,
+          students: classObj.students.map(student => ({
+            student: student._id,
+            studentName: student.name,
+            attendancesCount: 0,
+            teacherShare: teacherShare,
+            status: 'pending',
+            isActive: true
+          }))
+        });
+
+        await commission.save();
+
+        // إنشاء دفعات للطلاب
+        for (const student of classObj.students) {
+          const existingPayment = await Payment.findOne({
+            schoolId: schoolId,
+            student: student._id,
+            class: classObj._id,
+            monthCode: month
+          });
+
+          if (!existingPayment) {
+            const payment = new Payment({
+              schoolId: schoolId,
+              student: student._id,
+              class: classObj._id,
+              amount: classObj.price || 0,
+              month: new Date(month).toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+              monthCode: month,
+              status: 'pending',
+              recordedBy: req.user?.id || null,
+              commissionRecorded: true,
+              commissionId: commission._id
+            });
+            await payment.save();
+          }
+        }
+
+        results.generated++;
+        results.details.push({
+          class: classObj.name,
+          teacher: classObj.teacher.name,
+          status: 'تم الإنشاء',
+          commissionId: commission._id,
+          studentsCount: classObj.students.length,
+          totalAmount: totalAmount
+        });
+
+        console.log(`✅ تم إنشاء عمولة للأستاذ ${classObj.teacher.name}`);
+
+      } catch (err) {
+        results.errors++;
+        results.details.push({
+          class: classObj.name,
+          error: err.message
+        });
+        console.error(`❌ خطأ:`, err.message);
+      }
+    }
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    res.json({
+      success: true,
+      message: `تم إنشاء ${results.generated} عمولة جديدة، تخطي ${results.skipped}`,
+      data: results,
+      month: month,
+      schoolId: schoolId
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء العمولات:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   
-  
+  // PUT /api/accounting/teacher-commissions/:id/cancel - متوافق مع الواجهة الحالية
+app.put('/api/accounting/teacher-commissions/:id/cancel', async (req, res) => {
+  try {
+    const commissionId = req.params.id;
+    const { studentId, reason } = req.body;
+    
+    console.log(`🗑️ إلغاء عمولة: ${commissionId}`);
+
+    const commission = await TeacherCommission.findById(commissionId)
+      .populate('teacher', 'name')
+      .populate('class', 'name');
+
+    if (!commission) {
+      return res.status(404).json({
+        success: false,
+        error: 'العمولة غير موجودة'
+      });
+    }
+
+    // إذا تم تحديد طالب معين
+    if (studentId) {
+      const studentIndex = commission.students.findIndex(
+        s => s.student.toString() === studentId
+      );
+
+      if (studentIndex === -1) {
+        return res.status(404).json({
+          success: false,
+          error: 'الطالب غير موجود في هذه العمولة'
+        });
+      }
+
+      if (commission.students[studentIndex].status === 'paid') {
+        return res.status(400).json({
+          success: false,
+          error: 'لا يمكن إلغاء عمولة طالب مدفوع'
+        });
+      }
+
+      // إلغاء عمولة الطالب
+      commission.students[studentIndex].status = 'cancelled';
+      commission.students[studentIndex].isActive = false;
+      
+      const cancelledAmount = commission.students[studentIndex].teacherShare || 0;
+      commission.totalAmount -= cancelledAmount;
+      commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+
+      if (commission.remainingAmount <= 0) {
+        commission.status = 'paid';
+      } else if (commission.totalPaid > 0) {
+        commission.status = 'partial';
+      } else {
+        commission.status = 'pending';
+      }
+
+      if (reason) {
+        commission.notes = `إلغاء عمولة الطالب: ${reason}`;
+      }
+
+      await commission.save();
+
+      // تحديث الدفعة المرتبطة
+      await Payment.updateOne(
+        {
+          student: studentId,
+          class: commission.class,
+          monthCode: commission.month,
+          commissionId: commission._id
+        },
+        { status: 'cancelled' }
+      );
+
+      res.json({
+        success: true,
+        message: 'تم إلغاء عمولة الطالب بنجاح',
+        commission: commission,
+        studentId: studentId
+      });
+
+    } else {
+      // إلغاء العمولة بالكامل
+      if (commission.status === 'paid') {
+        return res.status(400).json({
+          success: false,
+          error: 'لا يمكن إلغاء عمولة مدفوعة بالكامل'
+        });
+      }
+
+      commission.status = 'cancelled';
+      commission.remainingAmount = 0;
+      if (reason) {
+        commission.notes = `إلغاء العمولة: ${reason}`;
+      }
+      await commission.save();
+
+      // تحديث جميع الدفعات المرتبطة
+      await Payment.updateMany(
+        {
+          class: commission.class,
+          monthCode: commission.month,
+          commissionId: commission._id
+        },
+        { status: 'cancelled' }
+      );
+
+      res.json({
+        success: true,
+        message: 'تم إلغاء العمولة بنجاح',
+        commission: commission
+      });
+    }
+
+  } catch (err) {
+    console.error('❌ خطأ في إلغاء العمولة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
   
   // PUT /api/accounting/teacher-commissions/:id - Update commission
   app.put('/api/accounting/teacher-commissions/:id',  async (req, res) => {
@@ -10259,47 +11657,30 @@ app.get('/api/classes/:id/available-students', async (req, res) => {
 // 📚 ENROLL STUDENT IN CLASS - مع إنشاء نظام الدفع
 // ==============================================
 
+// POST /api/classes/:classId/enroll/:studentId - متوافق مع الواجهة الحالية
 app.post('/api/classes/:classId/enroll/:studentId', async (req, res) => {
   try {
-    const classId = req.params.classId;
-    const studentId = req.params.studentId;
-    const { paymentSystem, sessionCount, startDate } = req.body;
+    const { classId, studentId } = req.params;
+    const { month } = req.body;
+    
+    const schoolId = req.user?.schoolId || req.body.schoolId;
     
     console.log(`📝 تسجيل الطالب ${studentId} في الحصة ${classId}`);
-    
-    // التحقق من صحة المعرفات
-    if (!mongoose.Types.ObjectId.isValid(classId) || !mongoose.Types.ObjectId.isValid(studentId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'معرف غير صالح'
-      });
-    }
 
     // جلب الحصة والطالب
-    const [classObj, student] = await Promise.all([
-      Class.findById(classId),
-      Student.findById(studentId)
-    ]);
+    const classObj = await Class.findOne({ _id: classId, schoolId: schoolId });
+    const student = await Student.findOne({ _id: studentId, schoolId: schoolId });
 
-    if (!classObj) {
+    if (!classObj || !student) {
       return res.status(404).json({
         success: false,
-        error: 'الحصة غير موجودة'
-      });
-    }
-
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: 'الطالب غير موجود'
+        error: 'الحصة أو الطالب غير موجود'
       });
     }
 
     // التحقق من التسجيل المسبق
-    const isAlreadyEnrolled = classObj.students.some(s => s.toString() === studentId);
-    
-    if (isAlreadyEnrolled) {
-      // ✅ إذا كان الطالب مسجلاً، نتحقق من وجود نظام دفع
+    if (classObj.students.includes(studentId)) {
+      // التحقق من وجود نظام دفع
       const existingPayments = await Payment.find({
         student: studentId,
         class: classId
@@ -10309,157 +11690,149 @@ app.post('/api/classes/:classId/enroll/:studentId', async (req, res) => {
         return res.status(200).json({
           success: true,
           message: 'الطالب مسجل مسبقاً ونظام الدفع موجود',
-          data: {
-            class: classObj,
-            student: student,
-            payments: existingPayments,
-            alreadyEnrolled: true,
-            hasPaymentSystem: true
-          }
-        });
-      } else {
-        // ✅ الطالب مسجل ولكن لا يوجد نظام دفع → ننشئه
-        console.log(`⚠️ الطالب مسجل ولكن لا يوجد نظام دفع، جاري الإنشاء...`);
-        
-        let paymentResult = null;
-        const recordedById = req.user?.id || null;
-        const enrollmentDate = startDate ? new Date(startDate) : new Date();
-        
-        // تحديد نظام الدفع (من الجسم أو من الحصة)
-        const systemType = paymentSystem || classObj.paymentSystem || 'monthly';
-        
-        if (systemType === 'monthly') {
-          paymentResult = await createMonthlyPaymentSystem(
-            studentId,
-            classId,
-            classObj.price || 0,
-            enrollmentDate,
-            recordedById,
-            `نظام دفع شهري - ${student.name} - ${classObj.name}`
-          );
-          console.log(`✅ تم إنشاء نظام دفع شهري للطالب المسجل مسبقاً`);
-          
-        } else if (systemType === 'rounds') {
-          const roundSettings = classObj.roundSettings || {
-            sessionCount: sessionCount || 8,
-            sessionDuration: 2,
-            breakBetweenSessions: 0
-          };
-          
-          paymentResult = await createRoundPaymentSystem(
-            studentId,
-            classId,
-            classObj.price || 0,
-            roundSettings,
-            enrollmentDate,
-            recordedById,
-            `نظام جولات - ${student.name} - ${classObj.name}`
-          );
-          console.log(`✅ تم إنشاء نظام جولات للطالب المسجل مسبقاً`);
-        }
-        
-        return res.json({
-          success: true,
-          message: 'تم إنشاء نظام الدفع للطالب المسجل',
-          data: {
-            class: classObj,
-            student: student,
-            paymentSystem: paymentResult,
-            alreadyEnrolled: true,
-            hasPaymentSystem: true
-          }
+          class: classObj,
+          existed: true,
+          _hasPaymentSystem: true
         });
       }
     }
 
-    // ==============================================
-    // 🚀 الحالة: طالب غير مسجل → تسجيل + إنشاء نظام دفع
-    // ==============================================
-    
-    console.log(`📝 تسجيل طالب جديد في الحصة`);
+    // إضافة الطالب للحصة
+    if (!classObj.students.includes(studentId)) {
+      classObj.students.push(studentId);
+      await classObj.save();
+    }
 
-    // 1. تسجيل الطالب في الحصة
-    classObj.students.push(studentId);
-    await classObj.save();
-
-    // 2. إضافة الحصة للطالب
+    // إضافة الحصة للطالب
     if (!student.classes.includes(classId)) {
       student.classes.push(classId);
       await student.save();
     }
 
-    // 3. 🔥 إنشاء نظام الدفع تلقائياً
-    let paymentResult = null;
-    const recordedById = req.user?.id || null;
-    const enrollmentDate = startDate ? new Date(startDate) : new Date();
+    // ==============================================
+    // 🔥 تحديث أو إنشاء عمولة الأستاذ
+    // ==============================================
+    const targetMonth = month || new Date().toISOString().slice(0, 7);
+    const teacherId = classObj.teacher;
+    let teacherCommission = null;
     
-    // تحديد نظام الدفع
-    const systemType = paymentSystem || classObj.paymentSystem || 'monthly';
-    
-    if (systemType === 'monthly') {
-      paymentResult = await createMonthlyPaymentSystem(
-        studentId,
-        classId,
-        classObj.price || 0,
-        enrollmentDate,
-        recordedById,
-        `نظام دفع شهري - ${student.name} - ${classObj.name}`
-      );
-      console.log(`✅ تم إنشاء نظام دفع شهري للطالب الجديد`);
-      
-    } else if (systemType === 'rounds') {
-      const roundSettings = classObj.roundSettings || {
-        sessionCount: sessionCount || 8,
-        sessionDuration: 2,
-        breakBetweenSessions: 0
-      };
-      
-      paymentResult = await createRoundPaymentSystem(
-        studentId,
-        classId,
-        classObj.price || 0,
-        roundSettings,
-        enrollmentDate,
-        recordedById,
-        `نظام جولات - ${student.name} - ${classObj.name}`
-      );
-      console.log(`✅ تم إنشاء نظام جولات للطالب الجديد`);
-    }
+    if (teacherId) {
+      const teacherSharePercentage = 70;
+      const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
 
-    // 4. جلب البيانات المحدثة
-    const updatedClass = await Class.findById(classId)
-      .populate('teacher', 'name phone email')
-      .populate('students', 'name studentId parentPhone parentEmail academicYear');
+      teacherCommission = await TeacherCommission.findOne({
+        schoolId: schoolId,
+        teacher: teacherId,
+        class: classId,
+        month: targetMonth
+      });
 
-    // 5. جلب الدفعات التي تم إنشاؤها
-    const createdPayments = await Payment.find({
-      student: studentId,
-      class: classId
-    }).populate('student', 'name studentId');
+      if (teacherCommission) {
+        // تحديث العمولة الموجودة
+        const existingStudent = teacherCommission.students.find(
+          s => s.student.toString() === studentId
+        );
+        
+        if (!existingStudent) {
+          teacherCommission.students.push({
+            student: studentId,
+            studentName: student.name,
+            attendancesCount: 0,
+            teacherShare: teacherShare,
+            status: 'pending',
+            isActive: true
+          });
+          teacherCommission.totalAmount += teacherShare;
+          teacherCommission.remainingAmount += teacherShare;
+          await teacherCommission.save();
+        }
+      } else {
+        // إنشاء عمولة جديدة
+        teacherCommission = new TeacherCommission({
+          schoolId: schoolId,
+          teacher: teacherId,
+          class: classId,
+          month: targetMonth,
+          totalAmount: teacherShare,
+          percentage: teacherSharePercentage,
+          status: 'pending',
+          totalPaid: 0,
+          remainingAmount: teacherShare,
+          recordedBy: req.user?.id || null,
+          students: [{
+            student: studentId,
+            studentName: student.name,
+            attendancesCount: 0,
+            teacherShare: teacherShare,
+            status: 'pending',
+            isActive: true
+          }]
+        });
+        await teacherCommission.save();
+      }
 
-    res.status(201).json({
-      success: true,
-      message: `تم تسجيل الطالب ${student.name} في الحصة ${classObj.name} بنجاح مع نظام الدفع`,
-      data: {
-        class: updatedClass,
-        student: {
-          _id: student._id,
-          name: student.name,
-          studentId: student.studentId,
-          academicYear: student.academicYear
-        },
-        paymentSystem: {
-          type: systemType,
-          details: paymentResult,
-          payments: createdPayments
-        },
-        enrollment: {
-          date: enrollmentDate,
-          classPrice: classObj.price,
-          totalPayments: createdPayments.length,
-          totalAmount: createdPayments.reduce((sum, p) => sum + p.amount, 0)
+      // إنشاء دفعات للطالب
+      const existingPayment = await Payment.findOne({
+        schoolId: schoolId,
+        student: studentId,
+        class: classId,
+        monthCode: targetMonth
+      });
+
+      if (!existingPayment) {
+        const payment = new Payment({
+          schoolId: schoolId,
+          student: studentId,
+          class: classId,
+          amount: classObj.price || 0,
+          month: new Date(targetMonth).toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+          monthCode: targetMonth,
+          status: 'pending',
+          recordedBy: req.user?.id || null,
+          commissionRecorded: true,
+          commissionId: teacherCommission._id
+        });
+        await payment.save();
+
+        // إنشاء دفعات للأشهر القادمة
+        for (let i = 1; i < 12; i++) {
+          const date = new Date(targetMonth);
+          date.setMonth(date.getMonth() + i);
+          const monthStr = date.toISOString().slice(0, 7);
+          
+          const futurePayment = new Payment({
+            schoolId: schoolId,
+            student: studentId,
+            class: classId,
+            amount: classObj.price || 0,
+            month: date.toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+            monthCode: monthStr,
+            status: 'pending',
+            recordedBy: req.user?.id || null,
+            commissionRecorded: true,
+            commissionId: teacherCommission._id
+          });
+          await futurePayment.save();
         }
       }
+    }
+
+    // جلب البيانات المحدثة (بنفس تنسيق الواجهة الحالية)
+    const updatedClass = await Class.findById(classId)
+      .populate('teacher', 'name')
+      .populate('students', 'name studentId');
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    res.json({
+      success: true,
+      message: `تم تسجيل الطالب ${student.name} في الحصة ${classObj.name} بنجاح`,
+      class: updatedClass,
+      // إضافة معلومات إضافية (لن تؤثر على الواجهة الحالية)
+      _commission: teacherCommission ? {
+        id: teacherCommission._id,
+        totalAmount: teacherCommission.totalAmount,
+        status: teacherCommission.status
+      } : null
     });
 
   } catch (err) {
@@ -10756,24 +12129,18 @@ app.put('/api/payments/:id', async (req, res) => {
 // ==============================================
 // 9. تسديد دفعة (تغيير الحالة إلى مدفوع) - مع schoolId
 // ==============================================
+// PUT /api/payments/:id/pay - متوافق مع الواجهة الحالية
 app.put('/api/payments/:id/pay', async (req, res) => {
   try {
     const paymentId = req.params.id;
     const { paymentMethod, paymentDate, notes } = req.body;
     
     console.log(`✅ تسديد الدفعة: ${paymentId}`);
-    
-    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'معرف الدفعة غير صالح'
-      });
-    }
 
-    // جلب الدفعة مع بيانات الطالب والحصة
+    // جلب الدفعة
     const payment = await Payment.findById(paymentId)
-      .populate('student', 'name studentId schoolId')
-      .populate('class', 'name subject');
+      .populate('student', 'name studentId')
+      .populate('class', 'name subject price teacher');
 
     if (!payment) {
       return res.status(404).json({
@@ -10789,59 +12156,89 @@ app.put('/api/payments/:id/pay', async (req, res) => {
       });
     }
 
-    // ✅ الحصول على schoolId من الدفعة أو من الطالب أو من التوكن
-    let schoolId = payment.schoolId;
-    
-    if (!schoolId && payment.student) {
-      schoolId = payment.student.schoolId;
-    }
-    
-    if (!schoolId) {
-      schoolId = req.user?.schoolId;
-    }
-
-    console.log(`🏫 schoolId المستخدم للدفعة ${paymentId}: ${schoolId}`);
-
     // تحديث حالة الدفعة
     payment.status = 'paid';
     payment.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
     payment.paymentMethod = paymentMethod || payment.paymentMethod || 'cash';
     payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
     if (notes) payment.notes = notes;
-
     await payment.save();
 
-    // ✅ تسجيل المعاملة المالية مع schoolId
-    const transactionData = {
+    // ==============================================
+    // 🔥 تحديث عمولة الأستاذ
+    // ==============================================
+    let commissionUpdated = false;
+    
+    if (payment.commissionId) {
+      const teacherCommission = await TeacherCommission.findById(payment.commissionId);
+      
+      if (teacherCommission) {
+        const studentIndex = teacherCommission.students.findIndex(
+          s => s.student.toString() === payment.student._id.toString()
+        );
+
+        if (studentIndex !== -1 && teacherCommission.students[studentIndex].status !== 'paid') {
+          teacherCommission.students[studentIndex].status = 'paid';
+          teacherCommission.students[studentIndex].paymentDate = payment.paymentDate;
+          teacherCommission.students[studentIndex].paymentMethod = payment.paymentMethod;
+          teacherCommission.students[studentIndex].receiptNumber = payment.invoiceNumber;
+          
+          teacherCommission.paymentHistory.push({
+            student: payment.student._id,
+            amount: payment.amount,
+            paymentDate: payment.paymentDate,
+            paymentMethod: payment.paymentMethod,
+            receiptNumber: payment.invoiceNumber,
+            month: payment.monthCode,
+            recordedBy: req.user?.id || null
+          });
+
+          const studentShare = teacherCommission.students[studentIndex].teacherShare || 0;
+          teacherCommission.totalPaid += studentShare;
+          teacherCommission.remainingAmount = teacherCommission.totalAmount - teacherCommission.totalPaid;
+
+          if (teacherCommission.remainingAmount <= 0) {
+            teacherCommission.status = 'paid';
+          } else if (teacherCommission.totalPaid > 0) {
+            teacherCommission.status = 'partial';
+          }
+
+          await teacherCommission.save();
+          commissionUpdated = true;
+          console.log(`✅ تم تحديث عمولة الأستاذ للطالب ${payment.student.name}`);
+        }
+      }
+    }
+
+    // تسجيل المعاملة المالية
+    const transaction = new FinancialTransaction({
+      schoolId: payment.schoolId,
       type: 'income',
       amount: payment.amount,
-      description: `دفعة للطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
+      description: `دفعة من الطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
       category: 'tuition',
       recordedBy: req.user?.id || null,
       reference: payment._id,
       student: payment.student?._id,
       date: payment.paymentDate
-    };
-
-    // ✅ إضافة schoolId إذا وجد
-    if (schoolId) {
-      transactionData.schoolId = schoolId;
-    }
-
-    const transaction = new FinancialTransaction(transactionData);
+    });
     await transaction.save();
 
-    // جلب الدفعة المحدثة
+    // جلب البيانات المحدثة (بنفس تنسيق الواجهة الحالية)
     const updatedPayment = await Payment.findById(paymentId)
       .populate('student', 'name studentId')
+      .populate('class', 'name subject')
       .populate('recordedBy', 'username fullName');
 
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
     res.json({
       success: true,
       message: 'تم تسديد الدفعة بنجاح',
       payment: updatedPayment,
       invoiceNumber: payment.invoiceNumber,
-      transactionId: transaction._id
+      // إضافة معلومات إضافية (لن تؤثر على الواجهة الحالية)
+      _commissionUpdated: commissionUpdated,
+      _transactionId: transaction._id
     });
 
   } catch (err) {
@@ -11203,6 +12600,205 @@ app.get('/api/teachers/:id/classes', async (req, res) => {
   }
 });
 
+// ==============================================
+// ✅ نقطة نهاية ملخص المعاملات (للمعاملات التامة فقط)
+// ==============================================
+
+// ==============================================
+// ✅ نقطة نهاية لحساب صافي الربح (مع خصم عمولة الأساتذة)
+// ==============================================
+app.get('/api/accounting/net-profit', async (req, res) => {
+  try {
+    const { schoolId, month } = req.query;
+
+    if (!schoolId) {
+      return res.status(400).json({ success: false, error: 'يجب تحديد المدرسة (schoolId)' });
+    }
+
+    if (!month) {
+      return res.status(400).json({ success: false, error: 'يجب تحديد الشهر (month) بصيغة YYYY-MM' });
+    }
+
+    // تحويل الشهر إلى نطاق تاريخ
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    // --- 1. حساب إجمالي المداخيل ---
+    // مداخيل المدفوعات (التامة فقط)
+    const payments = await Payment.find({
+      schoolId: schoolId,
+      monthCode: month,
+      status: 'paid'
+    }).select('amount');
+
+    // رسوم التسجيل (التامة فقط)
+    const fees = await SchoolFee.find({
+      schoolId: schoolId,
+      paymentDate: { $gte: startDate, $lte: endDate },
+      status: 'paid'
+    }).select('amount');
+
+    // معاملات مالية دخل (التامة فقط)
+    const incomeTransactions = await FinancialTransaction.find({
+      schoolId: schoolId,
+      date: { $gte: startDate, $lte: endDate },
+      type: 'income'
+    }).select('amount');
+
+    let totalIncome = 0;
+    payments.forEach(p => totalIncome += p.amount);
+    fees.forEach(f => totalIncome += f.amount);
+    incomeTransactions.forEach(t => totalIncome += t.amount);
+
+    // --- 2. حساب مصاريف التشغيل (باستثناء عمولات الأساتذة) ---
+    const expenses = await Expense.find({
+      schoolId: schoolId,
+      date: { $gte: startDate, $lte: endDate },
+      status: 'paid',
+      type: { $ne: 'teacher_payment' } // ✅ استبعاد عمولات الأساتذة
+    }).select('amount');
+
+    let totalExpenses = 0;
+    expenses.forEach(e => totalExpenses += e.amount);
+
+    // --- 3. حساب عمولات الأساتذة (70% من مداخيل الحصص) ---
+    // العمولات التي تم إنشاؤها لهذا الشهر
+    const commissions = await TeacherCommission.find({
+      schoolId: schoolId,
+      month: month
+    }).select('totalAmount status');
+
+    // مبلغ العمولات المستحقة (بغض النظر عن حالة الدفع)
+    let totalCommissions = 0;
+    commissions.forEach(c => {
+      // إذا كانت العمولة مدفوعة أو معلقة أو جزئية، نخصمها
+      if (c.status !== 'cancelled') {
+        totalCommissions += c.totalAmount;
+      }
+    });
+
+    // --- 4. حساب صافي الربح ---
+    const netProfit = totalIncome - (totalExpenses + totalCommissions);
+
+    res.json({
+      success: true,
+      month: month,
+      summary: {
+        totalIncome: totalIncome,
+        totalExpenses: totalExpenses,
+        totalCommissions: totalCommissions,
+        netProfit: netProfit,
+        profitMargin: totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(2) : 0
+      },
+      details: {
+        incomeBreakdown: {
+          payments: payments.length,
+          fees: fees.length,
+          transactions: incomeTransactions.length
+        },
+        expensesBreakdown: {
+          operating: expenses.length,
+          commissions: commissions.length
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في حساب صافي الربح:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.get('/api/accounting/transactions-summary/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({ success: false, error: 'معرف المدرسة غير صالح' });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, error: 'يجب تحديد تاريخ البداية والنهاية (startDate, endDate)' });
+    }
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // --- الإيرادات (المعاملات التامة فقط) ---
+    // 1. المدفوعات التامة
+    const payments = await Payment.find({
+      schoolId: schoolId,
+      paymentDate: { $gte: start, $lte: end },
+      status: 'paid' // ✅ فقط المدفوعة
+    }).select('amount');
+
+    // 2. رسوم التسجيل التامة
+    const fees = await SchoolFee.find({
+      schoolId: schoolId,
+      paymentDate: { $gte: start, $lte: end },
+      status: 'paid' // ✅ فقط المدفوعة
+    }).select('amount');
+
+    // 3. معاملات مالية من نوع دخل (تامة)
+    const incomeTransactions = await FinancialTransaction.find({
+      schoolId: schoolId,
+      date: { $gte: start, $lte: end },
+      type: 'income' // ✅ فقط الدخل
+    }).select('amount');
+
+    // --- المصروفات (المعاملات التامة فقط) ---
+    // 4. المصروفات التامة
+    const expenses = await Expense.find({
+      schoolId: schoolId,
+      date: { $gte: start, $lte: end },
+      status: 'paid' // ✅ فقط المدفوعة
+    }).select('amount');
+
+    // 5. عمولات الأساتذة التامة
+    const commissions = await TeacherCommission.find({
+      schoolId: schoolId,
+      paymentDate: { $gte: start, $lte: end },
+      status: 'paid' // ✅ فقط المدفوعة
+    }).select('amount');
+
+    // حساب الإجماليات
+    let totalIncome = 0;
+    payments.forEach(p => totalIncome += p.amount);
+    fees.forEach(f => totalIncome += f.amount);
+    incomeTransactions.forEach(t => totalIncome += t.amount);
+
+    let totalExpenses = 0;
+    expenses.forEach(e => totalExpenses += e.amount);
+    commissions.forEach(c => totalExpenses += c.amount);
+
+    res.json({
+      success: true,
+      period: { start, end },
+      summary: {
+        totalIncome,
+        totalExpenses,
+        netProfit: totalIncome - totalExpenses,
+        totalTransactions: payments.length + fees.length + incomeTransactions.length + expenses.length + commissions.length,
+        counts: {
+          payments: payments.length,
+          fees: fees.length,
+          incomeTransactions: incomeTransactions.length,
+          expenses: expenses.length,
+          commissions: commissions.length
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب ملخص المعاملات:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
   try {
     const { schoolId } = req.params;
@@ -11411,15 +13007,448 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     });
   }
 });
+//
 // ==============================================
-// ✅ BACKEND ENDPOINT - إضافة مصروف جديد
+// ✅ نقطة نهاية لجلب تفاصيل الحصة مع الطلاب ومدفوعاتهم وحضورهم الافتراضي
 // ==============================================
+app.get('/api/classes/:classId/students-with-attendance', async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { month, startDate, endDate } = req.query;
+    
+    // جلب الحصة مع جميع الطلاب
+    const classObj = await Class.findById(classId)
+      .populate('teacher', 'name salaryPercentage')
+      .populate('students', 'name studentId parentPhone academicYear');
 
-// أضف هذا الكود في ملف server.js الخاص بك
+    if (!classObj) {
+      return res.status(404).json({ success: false, error: 'الحصة غير موجودة' });
+    }
+
+    // تحديد نطاق التاريخ (الشهر الحالي أو المحدد)
+    let targetMonth = month || new Date().toISOString().slice(0, 7);
+    const [year, monthNum] = targetMonth.split('-').map(Number);
+    const start = startDate ? new Date(startDate) : new Date(year, monthNum - 1, 1);
+    const end = endDate ? new Date(endDate) : new Date(year, monthNum, 0);
+    end.setHours(23, 59, 59, 999);
+
+    // جلب جميع الحصص الحية لهذه الحصة في الفترة
+    const liveClasses = await LiveClass.find({
+      class: classId,
+      date: { $gte: start, $lte: end },
+      status: { $in: ['scheduled', 'ongoing', 'completed'] }
+    }).sort({ date: 1, startTime: 1 });
+
+    // جلب المدفوعات للطلاب في هذه الحصة
+    const payments = await Payment.find({
+      class: classId,
+      monthCode: { $regex: `^${targetMonth}` }
+    });
+
+    // بناء بيانات كل طالب
+    const studentsData = classObj.students.map(student => {
+      // حساب المدفوعات
+      const studentPayments = payments.filter(p => 
+        p.student.toString() === student._id.toString()
+      );
+      
+      const totalPaid = studentPayments
+        .filter(p => p.status === 'paid')
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      const totalPending = studentPayments
+        .filter(p => p.status === 'pending' || p.status === 'late')
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      const totalAmount = studentPayments.reduce((sum, p) => sum + p.amount, 0);
+      
+      // حساب الحضور لكل يوم
+      const attendanceByDate = {};
+      liveClasses.forEach(lc => {
+        const dateStr = lc.date.toISOString().split('T')[0];
+        const attendanceRecord = lc.attendance.find(
+          att => att.student.toString() === student._id.toString()
+        );
+        
+        attendanceByDate[dateStr] = {
+          status: attendanceRecord?.status || 'absent',
+          joinedAt: attendanceRecord?.joinedAt,
+          className: lc.class?.name,
+          startTime: lc.startTime
+        };
+      });
+
+      // حساب عدد الحصص الحاضرة والغائبة
+      const presentCount = Object.values(attendanceByDate).filter(a => a.status === 'present').length;
+      const absentCount = Object.values(attendanceByDate).filter(a => a.status === 'absent').length;
+      const lateCount = Object.values(attendanceByDate).filter(a => a.status === 'late').length;
+      const totalClasses = liveClasses.length;
+
+      return {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        academicYear: student.academicYear,
+        parentPhone: student.parentPhone,
+        payment: {
+          totalAmount,
+          totalPaid,
+          totalPending,
+          status: totalPaid >= totalAmount ? 'paid' : totalPaid > 0 ? 'partial' : 'pending',
+          payments: studentPayments
+        },
+        attendance: {
+          byDate: attendanceByDate,
+          summary: {
+            present: presentCount,
+            absent: absentCount,
+            late: lateCount,
+            total: totalClasses,
+            attendanceRate: totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 0
+          }
+        },
+        canEditPayment: true,
+        canEditTeacherShare: true
+      };
+    });
+
+    // حساب إحصائيات عامة
+    const summary = {
+      totalStudents: studentsData.length,
+      totalPaid: studentsData.reduce((sum, s) => sum + s.payment.totalPaid, 0),
+      totalPending: studentsData.reduce((sum, s) => sum + s.payment.totalPending, 0),
+      totalAmount: studentsData.reduce((sum, s) => sum + s.payment.totalAmount, 0),
+      totalPresent: studentsData.reduce((sum, s) => sum + s.attendance.summary.present, 0),
+      totalAbsent: studentsData.reduce((sum, s) => sum + s.attendance.summary.absent, 0),
+      totalLate: studentsData.reduce((sum, s) => sum + s.attendance.summary.late, 0),
+      averageAttendance: studentsData.length > 0 
+        ? Math.round(studentsData.reduce((sum, s) => sum + s.attendance.summary.attendanceRate, 0) / studentsData.length)
+        : 0
+    };
+
+    // أيام الحصص القادمة (للأيام القادمة فقط)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingDays = [];
+    
+    // جلب أيام الأسبوع التي فيها حصص
+    const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const scheduleDays = classObj.schedule?.map(s => s.day) || [];
+    
+    // توليد الأيام القادمة (30 يوم)
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dayName = daysOfWeek[date.getDay()];
+      
+      if (scheduleDays.includes(dayName)) {
+        const dateStr = date.toISOString().split('T')[0];
+        const hasClass = liveClasses.some(lc => 
+          lc.date.toISOString().split('T')[0] === dateStr
+        );
+        
+        upcomingDays.push({
+          date: dateStr,
+          dayName: dayName,
+          hasClass: true,
+          isPast: date < today,
+          isToday: date.getTime() === today.getTime(),
+          className: classObj.name,
+          schedule: classObj.schedule?.find(s => s.day === dayName) || null
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classObj._id,
+          name: classObj.name,
+          subject: classObj.subject,
+          price: classObj.price,
+          paymentSystem: classObj.paymentSystem,
+          teacher: {
+            _id: classObj.teacher?._id,
+            name: classObj.teacher?.name,
+            salaryPercentage: classObj.teacher?.salaryPercentage || 70
+          }
+        },
+        period: {
+          start,
+          end,
+          month: targetMonth
+        },
+        summary,
+        upcomingDays,
+        liveClasses: liveClasses.map(lc => ({
+          _id: lc._id,
+          date: lc.date,
+          startTime: lc.startTime,
+          status: lc.status,
+          attendanceCount: lc.attendance?.length || 0
+        })),
+        students: studentsData
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب بيانات الطلاب مع الحضور:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ==============================================
-// نقطة نهاية لإضافة مصروف (Expense)
+// ✅ نقطة نهاية لتحديد مبلغ دفعة طالب
 // ==============================================
+app.put('/api/payments/:id/adjust-amount', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { amount, reason } = req.body;
+
+    if (!amount || amount < 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'المبلغ يجب أن يكون أكبر من أو يساوي صفر' 
+      });
+    }
+
+    const payment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId')
+      .populate('class', 'name subject');
+
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'الدفعة غير موجودة' });
+    }
+
+    const oldAmount = payment.amount;
+    payment.amount = amount;
+    if (reason) {
+      payment.notes = payment.notes ? `${payment.notes} | تعديل: ${reason}` : `تعديل: ${reason}`;
+    }
+    await payment.save();
+
+    // تحديث العمولة المرتبطة إذا وجدت
+    if (payment.commissionId) {
+      const commission = await TeacherCommission.findById(payment.commissionId);
+      if (commission) {
+        // إعادة حساب المبلغ الإجمالي للعمولة
+        const allPayments = await Payment.find({ 
+          commissionId: payment.commissionId,
+          status: 'paid'
+        });
+        
+        const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
+        
+        // تحديث حصة الطالب في العمولة
+        const studentIndex = commission.students.findIndex(
+          s => s.student.toString() === payment.student._id.toString()
+        );
+        if (studentIndex !== -1) {
+          commission.students[studentIndex].teacherShare = amount * (commission.percentage / 100);
+        }
+        
+        commission.totalAmount = commission.students.reduce((sum, s) => sum + s.teacherShare, 0);
+        commission.totalPaid = totalPaid;
+        commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+        commission.updateStatus();
+        await commission.save();
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `تم تعديل مبلغ الدفعة من ${oldAmount} إلى ${amount} د.ج`,
+      payment: {
+        _id: payment._id,
+        amount: payment.amount,
+        oldAmount: oldAmount,
+        student: payment.student,
+        class: payment.class,
+        notes: payment.notes
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تعديل مبلغ الدفعة:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتعديل نسبة الأستاذ في الحصة
+// ==============================================
+app.put('/api/classes/:classId/teacher-percentage', async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { percentage } = req.body;
+
+    if (!percentage || percentage < 0 || percentage > 100) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'النسبة يجب أن تكون بين 0 و 100' 
+      });
+    }
+
+    // تحديث نسبة الأستاذ في الحصة
+    const classObj = await Class.findById(classId)
+      .populate('teacher', 'name salaryPercentage');
+
+    if (!classObj) {
+      return res.status(404).json({ success: false, error: 'الحصة غير موجودة' });
+    }
+
+    // تحديث نسبة الأستاذ
+    if (classObj.teacher) {
+      const teacher = await Teacher.findById(classObj.teacher._id);
+      if (teacher) {
+        teacher.salaryPercentage = percentage / 100;
+        await teacher.save();
+      }
+    }
+
+    // تحديث العمولات الحالية والمستقبلية بناءً على النسبة الجديدة
+    const commissions = await TeacherCommission.find({
+      class: classId,
+      status: { $in: ['pending', 'partial'] }
+    });
+
+    let updatedCommissions = 0;
+    for (const commission of commissions) {
+      const oldTotal = commission.totalAmount;
+      
+      // إعادة حساب مبالغ العمولة بناءً على النسبة الجديدة
+      commission.percentage = percentage;
+      const totalClassAmount = await Payment.aggregate([
+        { $match: { class: classId, monthCode: commission.month } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]);
+      
+      const classTotal = totalClassAmount[0]?.total || 0;
+      const newTotal = classTotal * (percentage / 100);
+      
+      // توزيع المبلغ الجديد على الطلاب
+      const totalStudents = commission.students.length;
+      if (totalStudents > 0) {
+        const perStudent = newTotal / totalStudents;
+        commission.students.forEach(s => {
+          s.teacherShare = perStudent;
+        });
+      }
+      
+      commission.totalAmount = newTotal;
+      commission.remainingAmount = newTotal - commission.totalPaid;
+      commission.updateStatus();
+      await commission.save();
+      updatedCommissions++;
+    }
+
+    res.json({
+      success: true,
+      message: `تم تحديث نسبة الأستاذ إلى ${percentage}%`,
+      data: {
+        classId: classObj._id,
+        className: classObj.name,
+        teacherName: classObj.teacher?.name,
+        newPercentage: percentage,
+        updatedCommissions: updatedCommissions
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تعديل نسبة الأستاذ:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث حضور طالب في يوم معين
+// ==============================================
+app.put('/api/attendance/update', async (req, res) => {
+  try {
+    const { studentId, classId, date, status } = req.body;
+
+    if (!studentId || !classId || !date || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'البيانات ناقصة: studentId, classId, date, status مطلوبة' 
+      });
+    }
+
+    // البحث عن الحصة الحية في هذا التاريخ
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    let liveClass = await LiveClass.findOne({
+      class: classId,
+      date: { $gte: startDate, $lte: endDate }
+    });
+
+    // إذا لم توجد حصة حية، قم بإنشائها
+    if (!liveClass) {
+      const classObj = await Class.findById(classId)
+        .populate('students', 'name studentId');
+      
+      const attendance = classObj.students.map(student => ({
+        student: student._id,
+        status: 'absent',
+        joinedAt: null,
+        leftAt: null
+      }));
+
+      liveClass = new LiveClass({
+        class: classId,
+        date: startDate,
+        startTime: '08:00',
+        endTime: '10:00',
+        teacher: classObj.teacher,
+        attendance: attendance,
+        status: 'scheduled',
+        month: startDate.toISOString().slice(0, 7)
+      });
+      await liveClass.save();
+    }
+
+    // تحديث حالة الطالب
+    const attendanceIndex = liveClass.attendance.findIndex(
+      att => att.student.toString() === studentId
+    );
+
+    if (attendanceIndex >= 0) {
+      liveClass.attendance[attendanceIndex].status = status;
+      if (status === 'present' || status === 'late') {
+        liveClass.attendance[attendanceIndex].joinedAt = new Date();
+      }
+    } else {
+      liveClass.attendance.push({
+        student: studentId,
+        status: status,
+        joinedAt: status === 'present' || status === 'late' ? new Date() : null,
+        leftAt: null
+      });
+    }
+
+    await liveClass.save();
+
+    res.json({
+      success: true,
+      message: `تم تحديث حضور الطالب بنجاح`,
+      data: {
+        studentId,
+        classId,
+        date,
+        status,
+        liveClassId: liveClass._id
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الحضور:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 app.post('/api/accounting/expenses', async (req, res) => {
   try {
     console.log('📝 استلام طلب إضافة مصروف جديد:');
@@ -11584,7 +13613,7 @@ app.post('/api/accounting/expenses', async (req, res) => {
     });
   }
 });
-
+//
 // ==============================================
 // ✅ نقطة نهاية بديلة لإضافة مصروف (متوافقة مع الطلب)
 // ==============================================
@@ -11727,6 +13756,9 @@ app.post('/api/accounting/transactions', async (req, res) => {
     });
   }
 });
+
+//
+// 
 
 // ==============================================
 // ✅ نقطة نهاية للحصول على جميع المصروفات (للاختبار)
@@ -17807,62 +19839,147 @@ app.get('*', (req, res) => {
     };
   }
 
-    app.post('/api/accounting/teacher-commissions/pay',  async (req, res) => {
-      try {
-        const { commissionId, paymentMethod, paymentDate } = req.body;
+// POST /api/accounting/teacher-commissions/pay - متوافق مع الواجهة الحالية
+app.post('/api/accounting/teacher-commissions/pay', async (req, res) => {
+  try {
+    const { commissionId, paymentMethod, paymentDate, notes } = req.body;
+    
+    console.log(`💰 دفع العمولة: ${commissionId}`);
+
+    if (!commissionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف العمولة مطلوب'
+      });
+    }
+
+    // جلب العمولة
+    const commission = await TeacherCommission.findById(commissionId)
+      .populate('teacher', 'name phone email')
+      .populate('class', 'name subject');
+
+    if (!commission) {
+      return res.status(404).json({
+        success: false,
+        error: 'العمولة غير موجودة'
+      });
+    }
+
+    if (commission.status === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'العمولة مسددة مسبقاً'
+      });
+    }
+
+    const paymentDateObj = paymentDate ? new Date(paymentDate) : new Date();
+
+    // ==============================================
+    // 🔥 تحديث جميع الطلاب في العمولة إلى مدفوع
+    // ==============================================
+    let totalPaidAmount = 0;
+    const updatedStudents = [];
+
+    for (const student of commission.students) {
+      if (student.status !== 'paid' && student.isActive !== false) {
+        student.status = 'paid';
+        student.paymentDate = paymentDateObj;
+        student.paymentMethod = paymentMethod || 'cash';
+        student.receiptNumber = `COMM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         
-        const commission = await TeacherCommission.findById(commissionId)
-          .populate('teacher')
-          .populate('student')
-          .populate('class');
-
-        if (!commission) {
-          return res.status(404).json({ error: 'سجل العمولة غير موجود' });
-        }
-
-        if (commission.status === 'paid') {
-          return res.status(400).json({ error: 'تم دفع العمولة مسبقاً' });
-        }
-
-        commission.status = 'paid';
-        commission.paymentDate = paymentDate || new Date();
-        commission.paymentMethod = paymentMethod || 'cash';
-        commission.receiptNumber = `COMM-${Date.now()}`;
-        commission.recordedBy = req.user.id;
-
-        await commission.save();
+        totalPaidAmount += student.teacherShare || 0;
+        updatedStudents.push(student.student);
         
-        // تسجيل المصروف
-        const expense = new Expense({
-          description: `عمولة الأستاذ ${commission.teacher.name} عن الطالب ${commission.student.name} لشهر ${commission.month}`,
-          amount: commission.amount,
-          category: 'salary',
-          type: 'teacher_payment',
-          recipient: {
-            type: 'teacher',
-            id: commission.teacher._id,
-            name: commission.teacher.name
-          },
-          paymentMethod: commission.paymentMethod,
-          receiptNumber: commission.receiptNumber,
-          status: 'paid',
-          recordedBy: req.user.id
+        // تحديث الدفعة المرتبطة بالطالب
+        const payment = await Payment.findOne({
+          student: student.student,
+          class: commission.class,
+          monthCode: commission.month,
+          commissionId: commission._id
         });
 
-        await expense.save();
-        
-        // تحديث الرصيد (خصم المبلغ)
-        await updateTotalBalance(-commission.amount);
-
-        res.json({
-          message: 'تم دفع عمولة الأستاذ بنجاح',
-          commission,
-          receiptNumber: commission.receiptNumber
-        });
-      } catch (err) {
-        res.status(500).json({ error: err.message });
+        if (payment && payment.status !== 'paid') {
+          payment.status = 'paid';
+          payment.paymentDate = paymentDateObj;
+          payment.paymentMethod = paymentMethod || 'cash';
+          payment.invoiceNumber = student.receiptNumber;
+          await payment.save();
+        }
       }
+    }
+
+    // تحديث إجماليات العمولة
+    commission.totalPaid = commission.totalAmount;
+    commission.remainingAmount = 0;
+    commission.status = 'paid';
+    
+    commission.paymentHistory.push({
+      amount: commission.totalAmount,
+      paymentDate: paymentDateObj,
+      paymentMethod: paymentMethod || 'cash',
+      receiptNumber: `COMM-${Date.now()}`,
+      month: commission.month,
+      recordedBy: req.user?.id || null,
+      notes: notes || 'دفعة جولة كاملة'
     });
+
+    await commission.save();
+
+    // تسجيل المعاملة المالية (مصروف)
+    const expense = new Expense({
+      schoolId: commission.schoolId,
+      description: `راتب الأستاذ ${commission.teacher?.name || 'غير معروف'} عن شهر ${commission.month}`,
+      amount: commission.totalAmount,
+      category: 'salary',
+      type: 'teacher_payment',
+      paymentMethod: paymentMethod || 'cash',
+      status: 'paid',
+      recordedBy: req.user?.id || null,
+      date: paymentDateObj,
+      receiptNumber: `EXP-${Date.now()}`
+    });
+    await expense.save();
+
+    // جلب البيانات المحدثة (بنفس تنسيق الواجهة الحالية)
+    const updatedCommission = await TeacherCommission.findById(commissionId)
+      .populate('teacher', 'name phone email')
+      .populate('class', 'name subject')
+      .populate('students.student', 'name studentId');
+
+    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    res.json({
+      success: true,
+      message: `تم دفع العمولة بنجاح بقيمة ${commission.totalAmount.toLocaleString()} د.ج`,
+      commission: updatedCommission,
+      receiptNumber: commission.paymentHistory[commission.paymentHistory.length - 1]?.receiptNumber,
+      // إضافة معلومات إضافية (لن تؤثر على الواجهة الحالية)
+      _expenseId: expense._id,
+      _studentsUpdated: updatedStudents.length
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في دفع العمولة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لجلب تفاصيل عمولة أستاذ مع تفاصيل الطلاب
+// ==============================================
+
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث حصة الطالب في العمولة
+// ==============================================
+
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث حضور طالب في يوم معين للعمولة
+// ==============================================
+
   // نقطة نهاية جديدة للحصول على العمولات مجمعة حسب الحصة
   app.get('/api/accounting/teacher-commissions-by-class',  async (req, res) => {
     try {
