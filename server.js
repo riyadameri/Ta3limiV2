@@ -476,18 +476,35 @@ const School = mongoose.model('School', schoolSchema);
       }
     }, { strictPopulate: false });
 
-    const teacherSchema = new mongoose.Schema({
+// في server.js
+const teacherSchema = new mongoose.Schema({
+  schoolId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'School', 
+    required: true,
+    index: true 
+  },
+  name: { type: String, required: true },
+  subjects: { 
+    type: [String], 
+    enum: [
+      'رياضيات', 'فيزياء', 'كيمياء', 'علوم طبيعية',
+      'لغة عربية', 'لغة فرنسية', 'لغة انجليزية',
+      'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي',
+      'تربية بدنية', 'تربية فنية', 'تربية موسيقية',
+      'كيمياء', 'بيولوجيا', 'علوم الأرض',
+      'تربية إسلامية', 'تربية مدنية',  "تسيير و اقتصاد",
 
-          schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
-
-      name: { type: String, required: true },
-      subjects: [{ type: String, enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] }],
-      phone: String,
-      email: String,
-      hireDate: { type: Date, default: Date.now },
-      active: { type: Boolean, default: true },
-      salaryPercentage: { type: Number, default: 0.7 }
-    });
+      'لغة أمازيغية', 'لغة تركية', 'لغة ألمانية'
+    ],
+    default: [] 
+  },
+  phone: { type: String },
+  email: { type: String },
+  hireDate: { type: Date, default: Date.now },
+  active: { type: Boolean, default: true },
+  salaryPercentage: { type: Number, default: 0.7 }
+}, { timestamps: true });
 
 // models/Classroom.js - النسخة المحدثة
 // models/Classroom.js - تأكد من وجود حقل status
