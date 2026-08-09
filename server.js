@@ -493,8 +493,7 @@ const teacherSchema = new mongoose.Schema({
       'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي',
       'تربية بدنية', 'تربية فنية', 'تربية موسيقية',
       'كيمياء', 'بيولوجيا', 'علوم الأرض',
-      'تربية إسلامية', 'تربية مدنية',  "تسيير و اقتصاد",
-
+      'تربية إسلامية', 'تربية مدنية', "تسيير و اقتصاد",
       'لغة أمازيغية', 'لغة تركية', 'لغة ألمانية'
     ],
     default: [] 
@@ -566,7 +565,10 @@ classroomSchema.methods.hasEquipment = function(item) {
       schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
 
     name: { type: String, required: true },
-    subject: { type: String, enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] },
+  subject: { 
+    type: String, 
+    enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] 
+  },
     description: String,
     schedule: [{
       day: { type: String, enum: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'] },
@@ -3857,6 +3859,143 @@ app.put('/api/accounting/teacher-commissions/:id/student-share', async (req, res
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+
+// ==============================================
+// 🔧 FIX CLASS - إصلاح بيانات حصة قديمة
+// ==============================================
+app.post('/api/classes/:id/fix', async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    console.log(`🔧 إصلاح الحصة: ${classId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    const classObj = await Class.findById(classId);
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // ✅ إضافة schoolId إذا كان مفقوداً
+    let fixed = false;
+    if (!classObj.schoolId && schoolId) {
+      classObj.schoolId = schoolId;
+      fixed = true;
+      console.log(`✅ تم إضافة schoolId إلى الحصة: ${classObj.name}`);
+    }
+
+    // ✅ التأكد من أن paymentSystem له قيمة صحيحة
+    if (!classObj.paymentSystem || !['monthly', 'rounds'].includes(classObj.paymentSystem)) {
+      classObj.paymentSystem = 'monthly';
+      fixed = true;
+      console.log(`✅ تم إصلاح نظام الدفع للحصة: ${classObj.name}`);
+    }
+
+    // ✅ التأكد من وجود roundSettings
+    if (!classObj.roundSettings) {
+      classObj.roundSettings = {
+        sessionCount: 8,
+        sessionDuration: 2,
+        breakBetweenSessions: 0
+      };
+      fixed = true;
+      console.log(`✅ تم إضافة roundSettings للحصة: ${classObj.name}`);
+    }
+
+    if (fixed) {
+      await classObj.save();
+      console.log(`✅ تم إصلاح الحصة: ${classObj.name}`);
+    } else {
+      console.log(`ℹ️ الحصة سليمة: ${classObj.name}`);
+    }
+
+    res.json({
+      success: true,
+      message: fixed ? 'تم إصلاح الحصة بنجاح' : 'الحصة سليمة ولا تحتاج لإصلاح',
+      fixed: fixed,
+      class: classObj
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إصلاح الحصة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 🔧 FIX ALL CLASSES - إصلاح جميع حصص المدرسة
+// ==============================================
+app.post('/api/classes/fix-all', async (req, res) => {
+  try {
+    const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    console.log(`🔧 إصلاح جميع حصص المدرسة: ${schoolId}`);
+
+    const classes = await Class.find({ schoolId: schoolId });
+    let fixedCount = 0;
+
+    for (const classObj of classes) {
+      let fixed = false;
+      
+      if (!classObj.paymentSystem || !['monthly', 'rounds'].includes(classObj.paymentSystem)) {
+        classObj.paymentSystem = 'monthly';
+        fixed = true;
+      }
+
+      if (!classObj.roundSettings) {
+        classObj.roundSettings = {
+          sessionCount: 8,
+          sessionDuration: 2,
+          breakBetweenSessions: 0
+        };
+        fixed = true;
+      }
+
+      if (fixed) {
+        await classObj.save();
+        fixedCount++;
+        console.log(`✅ تم إصلاح الحصة: ${classObj.name}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `تم إصلاح ${fixedCount} حصة من أصل ${classes.length}`,
+      total: classes.length,
+      fixed: fixedCount
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إصلاح جميع الحصص:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+
 
 // ==============================================
 // ✅ نقطة نهاية لتحديث حضور طالب في يوم معين للعمولة
@@ -8297,13 +8436,36 @@ app.get('/api/classes/:id', async (req, res) => {
 
 
 
+// ==============================================
+// ✅ UPDATE CLASS - متوافق مع المدرسة (School ID)
+// ==============================================
 app.put('/api/classes/:id', async (req, res) => {
   try {
+    const classId = req.params.id;
     const schoolId = req.user?.schoolId || req.body.schoolId;
     
-    // التحقق من أن الحصة تنتمي للمدرسة
+    console.log(`📝 تحديث الحصة: ${classId}`);
+    console.log(`🏫 schoolId: ${schoolId}`);
+    
+    // ✅ التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // ✅ التحقق من وجود schoolId
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    // ✅ التحقق من أن الحصة تنتمي للمدرسة
     const existingClass = await Class.findOne({
-      _id: req.params.id,
+      _id: classId,
       schoolId: schoolId
     });
 
@@ -8314,29 +8476,89 @@ app.put('/api/classes/:id', async (req, res) => {
       });
     }
 
-    // منع تحديث schoolId
-    delete req.body.schoolId;
+    // ✅ استخراج البيانات القابلة للتحديث
+    const { 
+      name, 
+      subject, 
+      academicYear, 
+      teacher, 
+      price, 
+      description, 
+      schedule, 
+      paymentSystem, 
+      roundSettings,
+      schoolId: bodySchoolId // تجاهل schoolId من body
+    } = req.body;
 
-    const classObj = await Class.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    // ✅ التحقق من وجود أستاذ (إذا تم تحديده)
+    if (teacher) {
+      const teacherExists = await Teacher.findOne({ 
+        _id: teacher, 
+        schoolId: schoolId 
+      });
+      
+      if (!teacherExists) {
+        return res.status(400).json({
+          success: false,
+          error: 'الأستاذ غير موجود أو لا ينتمي للمدرسة'
+        });
+      }
+    }
+
+    // ✅ تحديث الحصة
+    const updateData = {
+      name: name || existingClass.name,
+      subject: subject || existingClass.subject,
+      academicYear: academicYear || existingClass.academicYear,
+      teacher: teacher || existingClass.teacher,
+      price: price !== undefined ? price : existingClass.price,
+      description: description !== undefined ? description : existingClass.description,
+      schedule: schedule !== undefined ? schedule : existingClass.schedule,
+      paymentSystem: paymentSystem || existingClass.paymentSystem || 'monthly',
+      roundSettings: roundSettings || existingClass.roundSettings || {
+        sessionCount: 8,
+        sessionDuration: 2,
+        breakBetweenSessions: 0
+      }
+    };
+
+    // ✅ إزالة schoolId من بيانات التحديث (لأنها غير مسموحة)
+    delete updateData.schoolId;
+
+    const updatedClass = await Class.findByIdAndUpdate(
+      classId,
+      updateData,
       { new: true, runValidators: true }
     )
-      .populate('teacher')
-      .populate('students')
-      .populate('schedule.classroom');
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId')
+      .populate('schedule.classroom', 'name location capacity');
 
+    console.log(`✅ تم تحديث الحصة: ${updatedClass.name}`);
+
+    // ✅ إرجاع الاستجابة
     res.json({
       success: true,
       message: 'تم تحديث الحصة بنجاح',
-      data: classObj
+      data: updatedClass
     });
-    
+
   } catch (err) {
     console.error('❌ خطأ في تحديث الحصة:', err);
-    res.status(400).json({
+    
+    // معالجة أخطاء التحقق
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: 'خطأ في صحة البيانات',
+        details: errors
+      });
+    }
+    
+    res.status(500).json({
       success: false,
-      error: err.message
+      error: 'فشل في تحديث الحصة: ' + err.message
     });
   }
 });
