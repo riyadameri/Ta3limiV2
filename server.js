@@ -5103,9 +5103,14 @@ app.put('/api/accounting/teacher-commissions/:id/cancel', async (req, res) => {
 // ==============================================
 
 // تعديل دالة إنشاء الطالب
+// ==============================================
+// 📚 CREATE STUDENT - بدون أي تحقق مسبق
+// ==============================================
 app.post('/api/students', async (req, res) => {
   try {
     const schoolId = req.user?.schoolId || req.body.schoolId;
+    
+    console.log('📝 إنشاء طالب جديد:', req.body);
     
     if (!schoolId) {
       return res.status(400).json({
@@ -5114,6 +5119,7 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
+    // ✅ التحقق من وجود المدرسة
     const school = await School.findById(schoolId);
     if (!school) {
       return res.status(404).json({
@@ -5122,70 +5128,103 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    const { name, parentPhone, studentId, academicYear } = req.body;
-    
-    // التحقق من وجود الطالب
-    const existingStudent = await Student.findOne({
-      schoolId: schoolId,
-      $or: [
-        { name: { $regex: new RegExp(`^${name}$`, 'i') } },
-        { parentPhone: parentPhone },
-        ...(studentId ? [{ studentId: studentId }] : [])
-      ]
-    });
+    const { name, parentPhone, academicYear } = req.body;
 
-    if (existingStudent) {
-      return res.status(200).json({
-        success: true,
-        message: "الطالب موجود مسبقاً",
-        student: existingStudent,
-        existed: true
+    // ✅ التحقق من البيانات الأساسية فقط
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'اسم الطالب مطلوب'
       });
     }
 
-    // إنشاء اسم مستخدم وكلمة مرور للطالب
+    if (!parentPhone || !parentPhone.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'رقم هاتف ولي الأمر مطلوب'
+      });
+    }
+
+    if (!academicYear) {
+      return res.status(400).json({
+        success: false,
+        error: 'السنة الدراسية مطلوبة'
+      });
+    }
+
+    // ✅ إنشاء معرف طالب فريد
+    const studentId = `STU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // ✅ إنشاء اسم مستخدم وكلمة مرور للطالب
     const username = generateStudentUsername(name, academicYear);
     const password = generateStudentPassword(name, academicYear);
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // إنشاء الطالب الجديد
+    // ✅ إنشاء الطالب الجديد (بدون أي تحقق مسبق)
     const studentData = {
-      ...req.body,
       schoolId: schoolId,
-      registrationDate: req.body.registrationDate || new Date(),
+      name: name.trim(),
+      studentId: studentId,
+      parentPhone: parentPhone.trim(),
+      parentName: req.body.parentName || '',
+      parentEmail: req.body.parentEmail || '',
+      birthDate: req.body.birthDate ? new Date(req.body.birthDate) : null,
+      academicYear: academicYear,
+      registrationDate: new Date(),
       status: req.body.status || 'pending',
+      active: true,
+      new: true,
       username: username,
       password: hashedPassword,
-      studentAccountCreated: false // سيتم إنشاء الحساب لاحقاً عند الدفع
+      studentAccountCreated: false,
+      classes: req.body.classes || [],
+      registrationData: {
+        address: req.body.address || '',
+        previousSchool: req.body.previousSchool || '',
+        healthInfo: req.body.healthInfo || '',
+        documents: req.body.documents || []
+      }
     };
 
     const student = new Student(studentData);
     await student.save();
     
-    // إنشاء سجل رسوم التسجيل
-    const registrationAmount = 600; // المبلغ بالدينار
+    console.log(`✅ تم إنشاء الطالب: ${student.name} (${student.studentId})`);
+    console.log(`👤 اسم المستخدم: ${username}`);
+    console.log(`🔑 كلمة المرور: ${password}`);
+
+    // ✅ إنشاء سجل رسوم التسجيل (اختياري)
+    const registrationAmount = 600;
     const schoolFee = new SchoolFee({
       student: student._id,
       amount: registrationAmount,
       status: 'pending',
       schoolId: schoolId,
+      recordedBy: req.user?.id || null
     });
     await schoolFee.save();
 
-    console.log(`✅ تم إنشاء الطالب: ${student.name}`);
-    console.log(`👤 اسم المستخدم: ${username}`);
-    console.log(`🔑 كلمة المرور: ${password}`);
-
-    // إرجاع البيانات مع اسم المستخدم وكلمة المرور (للعرض في واجهة الطباعة)
+    // ✅ إرجاع الاستجابة مع بيانات الطالب
     res.status(201).json({
       success: true,
-      message: "تم إنشاء الطالب بنجاح",
+      message: "✅ تم إنشاء الطالب بنجاح",
       student: {
-        ...student.toObject(),
-        password: password, // إرجاع كلمة المرور غير المشفرة للطباعة
-        plainPassword: password // للطباعة
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        academicYear: student.academicYear,
+        parentName: student.parentName,
+        parentPhone: student.parentPhone,
+        parentEmail: student.parentEmail,
+        birthDate: student.birthDate,
+        registrationDate: student.registrationDate,
+        status: student.status,
+        active: student.active,
+        username: student.username,
+        password: password, // كلمة المرور غير المشفرة للطباعة
+        plainPassword: password,
+        hasPaidRegistration: student.hasPaidRegistration || false
       },
-      existed: false,
       credentials: {
         username: username,
         password: password
@@ -5194,28 +5233,57 @@ app.post('/api/students', async (req, res) => {
         amount: registrationAmount,
         status: 'pending',
         _id: schoolFee._id
+      },
+      school: {
+        _id: school._id,
+        name: school.name,
+        schoolKey: school.schoolKey
       }
     });
 
   } catch (err) {
     console.error('❌ خطأ في إنشاء الطالب:', err);
-    res.status(400).json({
+    
+    // معالجة أخطاء التحقق من صحة البيانات
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: 'خطأ في صحة البيانات',
+        details: errors
+      });
+    }
+    
+    // معالجة أخطاء التكرار (إذا كان هناك فهرس فريد)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        error: `القيمة المكررة في حقل ${field}`,
+        field: field,
+        value: err.keyValue[field]
+      });
+    }
+    
+    res.status(500).json({
       success: false,
-      error: err.message
+      error: 'فشل في إنشاء الطالب: ' + err.message
     });
   }
 });
 
+// ==============================================
 // دوال مساعدة لإنشاء اسم المستخدم وكلمة المرور
+// ==============================================
 function generateStudentUsername(name, academicYear) {
   // إزالة المسافات والأحرف الخاصة
   const cleanName = name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').toLowerCase();
   const yearCode = academicYear || 'STU';
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
   const timestamp = Date.now().toString().slice(-4);
+  const randomNum = Math.floor(100 + Math.random() * 900);
   
   // تنسيق: اسم_الطالب + سنة_دراسية + رقم_عشوائي
-  return `${cleanName}_${yearCode}_${randomNum}`.substring(0, 30);
+  return `${cleanName}_${yearCode}_${timestamp}${randomNum}`.substring(0, 30);
 }
 
 function generateStudentPassword(name, academicYear) {
@@ -5226,7 +5294,7 @@ function generateStudentPassword(name, academicYear) {
   
   // كلمة مرور قوية: جزء من الاسم + سنة + أرقام عشوائية
   return `${namePart}${yearPart}${randomPart}`;
-} 
+}
     
     app.get('/api/accounting/budgets',  async (req, res) => {
       try {
@@ -8939,7 +9007,137 @@ async function createRoundPaymentSystem(studentId, classId, price, roundSettings
   }
 }
 
+// ==============================================
+// ✅ إلغاء دفع حقوق التسجيل للطالب
+// ==============================================
+app.put('/api/students/:id/cancel-registration', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const { reason } = req.body;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log(`🔄 إلغاء دفع حقوق التسجيل للطالب: ${studentId}`);
+    console.log(`📝 سبب الإلغاء: ${reason || 'غير محدد'}`);
+    console.log(`🏫 المدرسة: ${schoolId}`);
 
+    // ✅ التحقق من وجود schoolId
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    // ✅ التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الطالب غير صالح'
+      });
+    }
+
+    // ✅ البحث عن الطالب مع التحقق من المدرسة
+    const student = await Student.findOne({
+      _id: studentId,
+      schoolId: schoolId
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة'
+      });
+    }
+
+    // ✅ التحقق من أن الطالب قد دفع حقوق التسجيل
+    if (!student.hasPaidRegistration) {
+      return res.status(400).json({
+        success: false,
+        error: 'الطالب لم يدفع حقوق التسجيل بعد'
+      });
+    }
+
+    // ✅ تحديث حالة الدفع
+    student.hasPaidRegistration = false;
+    student.status = 'pending';
+    student.active = true;
+    await student.save();
+
+    console.log(`✅ تم إلغاء دفع حقوق التسجيل للطالب: ${student.name}`);
+
+    // ✅ تحديث سجل رسوم التسجيل
+    const schoolFee = await SchoolFee.findOne({
+      student: studentId,
+      schoolId: schoolId,
+      status: 'paid'
+    }).sort({ paymentDate: -1 });
+
+    if (schoolFee) {
+      schoolFee.status = 'pending';
+      schoolFee.paymentDate = null;
+      schoolFee.paymentMethod = null;
+      schoolFee.invoiceNumber = null;
+      schoolFee.notes = `إلغاء الدفع: ${reason || 'لم يتم تحديد سبب'}`;
+      await schoolFee.save();
+      console.log(`✅ تم تحديث سجل رسوم التسجيل: ${schoolFee._id}`);
+    }
+
+    // ✅ إلغاء المعاملة المالية المرتبطة
+    const transaction = await FinancialTransaction.findOne({
+      reference: schoolFee?._id,
+      type: 'income',
+      schoolId: schoolId
+    });
+
+    if (transaction) {
+      transaction.type = 'refund';
+      transaction.category = 'refund';
+      transaction.description = `إلغاء رسوم تسجيل الطالب ${student.name} - ${reason || ''}`;
+      await transaction.save();
+      console.log(`✅ تم تحديث المعاملة المالية: ${transaction._id}`);
+    }
+
+    // ✅ تسجيل عملية الإلغاء في سجل الرسائل (اختياري)
+    try {
+      const messageRecord = new Message({
+        sender: req.user?.id || null,
+        recipients: [{
+          student: student._id,
+          parentPhone: student.parentPhone,
+          parentEmail: student.parentEmail
+        }],
+        content: `تم إلغاء دفع رسوم التسجيل للطالب ${student.name} - ${reason || 'لم يتم تحديد سبب'}`,
+        messageType: 'individual',
+        status: 'sent'
+      });
+      await messageRecord.save({ validateBeforeSave: false });
+    } catch (msgError) {
+      console.warn('⚠️ لم يتم حفظ سجل الرسالة:', msgError.message);
+    }
+
+    // ✅ إرجاع الاستجابة
+    res.json({
+      success: true,
+      message: 'تم إلغاء دفع حقوق التسجيل بنجاح',
+      student: {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        hasPaidRegistration: student.hasPaidRegistration,
+        status: student.status
+      },
+      reason: reason || 'لم يتم تحديد سبب',
+      schoolId: schoolId
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إلغاء دفع حقوق التسجيل:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 
 // ==============================================
