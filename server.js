@@ -2451,6 +2451,9 @@ app.get('/api/dashboard/stats', async (req, res) => {
     });
   }
 });
+// ==============================================
+// 📚 GET CLASSES - Filtered by School ID
+// ==============================================
 app.get('/api/classes', async (req, res) => {
   try {
     // Get schoolId from query (priority) or user token
@@ -5469,23 +5472,22 @@ function generateStudentPassword(name, academicYear) {
 // ==============================================
 // ✅ نقطة نهاية الحصص المتاحة - مع تصفية حسب المدرسة
 // ==============================================
+// ==============================================
+// ✅ نقطة نهاية الحصص المتاحة - مع تصفية حسب المدرسة
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية الحصص المتاحة - نسخة مبسطة ومصححة
+// ==============================================
 app.get('/api/classes/available', async (req, res) => {
   try {
-    // 1. جلب schoolId من الـ query (أولوية) أو من التوكن
+    // 1. جلب schoolId من الـ query
     const schoolId = req.query.schoolId || req.user?.schoolId;
     
     console.log('📚 جلب الحصص المتاحة - schoolId:', schoolId);
     
-    // 2. بناء استعلام البحث مع تصفية حسب schoolId
-    let query = {};
-    
-    if (schoolId) {
-      // ✅ تطبيق التصفية حسب المدرسة
-      query.schoolId = schoolId;
-      console.log('🔍 تصفية الحصص حسب schoolId:', schoolId);
-    } else {
-      // ⚠️ إذا لم يكن هناك schoolId، نرجع مصفوفة فارغة مع رسالة تحذير
-      console.warn('⚠️ لا يوجد schoolId، سيتم إرجاع قائمة فارغة');
+    // 2. التحقق من وجود schoolId
+    if (!schoolId) {
+      console.warn('⚠️ لا يوجد schoolId');
       return res.json({
         success: true,
         count: 0,
@@ -5494,13 +5496,27 @@ app.get('/api/classes/available', async (req, res) => {
       });
     }
 
-    // 3. إضافة معايير تصفية إضافية (اختيارية)
-    const { academicYear, subject, excludeEnrolled = 'true', studentId, limit = 50 } = req.query;
+    // 3. التحقق من صحة schoolId
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      console.error('❌ schoolId غير صالح:', schoolId);
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    // 4. بناء الاستعلام - نفس استعلام /api/classes الذي يعمل
+    const query = { schoolId: schoolId };
+    
+    // 5. إضافة معايير تصفية إضافية (اختيارية)
+    const { academicYear, subject, excludeEnrolled, studentId, limit = 100 } = req.query;
     
     if (academicYear) query.academicYear = academicYear;
     if (subject) query.subject = subject;
+    
+    console.log('🔍 Query:', JSON.stringify(query, null, 2));
 
-    // 4. جلب الحصص من قاعدة البيانات مع التصفية
+    // 6. جلب الحصص - نفس طريقة /api/classes
     let classes = await Class.find(query)
       .populate('teacher', 'name subjects phone email')
       .populate('students', 'name studentId academicYear')
@@ -5510,34 +5526,134 @@ app.get('/api/classes/available', async (req, res) => {
 
     console.log(`✅ تم جلب ${classes.length} حصة للمدرسة ${schoolId}`);
 
-    // 5. تصفية الحصص التي الطالب مسجل فيها بالفعل (إذا تم تمرير studentId)
+    // 7. تصفية الحصص التي الطالب مسجل فيها (إذا تم تمرير studentId)
     if (studentId && excludeEnrolled === 'true') {
       const student = await Student.findOne({ 
         _id: studentId,
-        schoolId: schoolId // تأكد أن الطالب ينتمي لنفس المدرسة
+        schoolId: schoolId
       });
       
-      if (student && student.classes) {
+      if (student && student.classes && student.classes.length > 0) {
         const enrolledClassIds = student.classes.map(c => c.toString());
+        const originalCount = classes.length;
         classes = classes.filter(c => !enrolledClassIds.includes(c._id.toString()));
-        console.log(`🔍 بعد استبعاد الحصص المسجل فيها: ${classes.length} حصة متاحة`);
+        console.log(`🔍 تم استبعاد ${originalCount - classes.length} حصة مسجل فيها الطالب`);
       }
     }
 
-    // 6. إرجاع النتائج
-    res.json({
-      success: true,
-      count: classes.length,
-      schoolId: schoolId,
-      classes: classes
-    });
-    
+    // 8. إرجاع النتائج بنفس تنسيق /api/classes
+    res.json(classes); // ✅ نفس التنسيق الذي يعمل
+
   } catch (err) {
     console.error('❌ خطأ في جلب الحصص المتاحة:', err);
     res.status(500).json({
       success: false,
       error: 'فشل في جلب الحصص المتاحة',
       message: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ FIX - إصلاح الحصص التي تفتقر إلى schoolId
+// ==============================================
+app.post('/api/debug/fix-classes-schoolid', async (req, res) => {
+  try {
+    const { schoolId, dryRun = false } = req.body;
+    
+    console.log(`🔧 إصلاح schoolId للحصص: ${schoolId}`);
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد schoolId'
+      });
+    }
+
+    // جلب جميع الحصص التي ليس لديها schoolId أو لها schoolId مختلف
+    const classesToFix = await Class.find({
+      $or: [
+        { schoolId: { $exists: false } },
+        { schoolId: null },
+        { schoolId: '' }
+      ]
+    });
+
+    console.log(`📚 عدد الحصص التي تحتاج إصلاح: ${classesToFix.length}`);
+
+    if (dryRun) {
+      return res.json({
+        success: true,
+        dryRun: true,
+        message: `سيتم إصلاح ${classesToFix.length} حصة`,
+        classes: classesToFix.map(c => ({
+          _id: c._id,
+          name: c.name,
+          currentSchoolId: c.schoolId || 'غير موجود'
+        }))
+      });
+    }
+
+    // تحديث الحصص
+    let updatedCount = 0;
+    const updatedClasses = [];
+
+    for (const classObj of classesToFix) {
+      classObj.schoolId = schoolId;
+      await classObj.save();
+      updatedCount++;
+      updatedClasses.push({
+        _id: classObj._id,
+        name: classObj.name,
+        newSchoolId: classObj.schoolId
+      });
+      console.log(`✅ تم إصلاح الحصة: ${classObj.name}`);
+    }
+
+    // أيضاً تحديث الحصص التي لها schoolId مختلف (إذا كان المطلوب توحيدها)
+    const classesWithDifferentSchoolId = await Class.find({
+      schoolId: { $ne: schoolId, $exists: true }
+    });
+
+    console.log(`📚 حصص ذات schoolId مختلف: ${classesWithDifferentSchoolId.length}`);
+
+    let updatedDifferentCount = 0;
+    const updatedDifferentClasses = [];
+
+    for (const classObj of classesWithDifferentSchoolId) {
+      const oldSchoolId = classObj.schoolId;
+      classObj.schoolId = schoolId;
+      await classObj.save();
+      updatedDifferentCount++;
+      updatedDifferentClasses.push({
+        _id: classObj._id,
+        name: classObj.name,
+        oldSchoolId: oldSchoolId,
+        newSchoolId: classObj.schoolId
+      });
+      console.log(`✅ تم توحيد schoolId للحصة: ${classObj.name} (${oldSchoolId} -> ${schoolId})`);
+    }
+
+    res.json({
+      success: true,
+      message: `تم إصلاح ${updatedCount + updatedDifferentCount} حصة`,
+      details: {
+        missingSchoolId: {
+          count: updatedCount,
+          classes: updatedClasses
+        },
+        differentSchoolId: {
+          count: updatedDifferentCount,
+          classes: updatedDifferentClasses
+        },
+        totalFixed: updatedCount + updatedDifferentCount
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إصلاح الحصص:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
     });
   }
 });
@@ -8822,6 +8938,625 @@ async function createRoundPaymentSystem(studentId, classId, price, roundSettings
     };
   }
 }
+
+
+
+
+// ==============================================
+// 📅 نظام الجدولة التلقائية للحصص الحية
+// ==============================================
+
+// ==============================================
+// 1. دالة إنشاء الحصص الحية لليوم المحدد
+// ==============================================
+async function createLiveClassesForDate(targetDate, schoolId = null) {
+  try {
+    console.log(`📅 بدء إنشاء الحصص الحية لتاريخ: ${targetDate.toISOString().split('T')[0]}`);
+    
+    // الحصول على يوم الأسبوع بالعربية
+    const daysMap = {
+      0: 'الأحد',
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت'
+    };
+    const dayName = daysMap[targetDate.getDay()];
+    
+    console.log(`📅 اليوم: ${dayName}`);
+    
+    // بناء استعلام للحصص
+    let classQuery = {
+      'schedule.day': dayName
+    };
+    
+    // إذا تم تحديد مدرسة، أضف التصفية
+    if (schoolId) {
+      classQuery.schoolId = schoolId;
+    }
+    
+    // جلب جميع الحصص التي لها جدول في هذا اليوم
+    const classes = await Class.find(classQuery)
+      .populate('teacher', 'name phone email')
+      .populate('students', 'name studentId parentPhone')
+      .populate('schedule.classroom', 'name location');
+    
+    console.log(`📚 تم العثور على ${classes.length} حصة مجدولة ليوم ${dayName}`);
+    
+    const results = {
+      created: 0,
+      skipped: 0,
+      failed: 0,
+      details: []
+    };
+    
+    // بداية ونهاية اليوم
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    for (const classObj of classes) {
+      try {
+        // التحقق من وجود حصة حية مسبقاً لهذا اليوم
+        const existingLiveClass = await LiveClass.findOne({
+          class: classObj._id,
+          date: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        });
+        
+        if (existingLiveClass) {
+          console.log(`⏭️ حصة ${classObj.name} موجودة مسبقاً، تخطي`);
+          results.skipped++;
+          results.details.push({
+            classId: classObj._id,
+            className: classObj.name,
+            status: 'مجدولة مسبقاً',
+            liveClassId: existingLiveClass._id
+          });
+          continue;
+        }
+        
+        // العثور على الجدول المناسب لهذا اليوم
+        const scheduleEntry = classObj.schedule.find(s => s.day === dayName);
+        
+        if (!scheduleEntry) {
+          console.log(`⚠️ لا يوجد جدول للحصة ${classObj.name} في يوم ${dayName}`);
+          results.failed++;
+          results.details.push({
+            classId: classObj._id,
+            className: classObj.name,
+            status: 'لا يوجد جدول لهذا اليوم'
+          });
+          continue;
+        }
+        
+        // حساب وقت النهاية (افتراضي: ساعتين بعد البداية)
+        const startTime = scheduleEntry.time || '08:00';
+        const [hour, minute] = startTime.split(':').map(Number);
+        const endHour = hour + 2;
+        const endTime = `${endHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        
+        // إنشاء سجلات الحضور للطلاب
+        const attendance = classObj.students.map(student => ({
+          student: student._id,
+          status: 'absent',
+          joinedAt: null,
+          leftAt: null,
+          timestamp: new Date(),
+          method: 'auto'
+        }));
+        
+        // إنشاء الحصة الحية
+        const liveClass = new LiveClass({
+          schoolId: classObj.schoolId,
+          class: classObj._id,
+          date: targetDate,
+          month: targetDate.toISOString().slice(0, 7),
+          startTime: startTime,
+          endTime: endTime,
+          teacher: classObj.teacher?._id,
+          classroom: scheduleEntry.classroom,
+          attendance: attendance,
+          status: 'scheduled',
+          notes: `تم إنشاؤها تلقائياً في ${new Date().toLocaleString()}`,
+          createdBy: null // تم إنشاؤها بواسطة النظام
+        });
+        
+        await liveClass.save();
+        console.log(`✅ تم إنشاء حصة حية: ${classObj.name} - ${startTime}`);
+        
+        results.created++;
+        results.details.push({
+          classId: classObj._id,
+          className: classObj.name,
+          subject: classObj.subject,
+          teacher: classObj.teacher?.name || 'غير محدد',
+          time: startTime,
+          studentsCount: classObj.students.length,
+          status: 'تم الإنشاء',
+          liveClassId: liveClass._id
+        });
+        
+      } catch (err) {
+        console.error(`❌ خطأ في إنشاء حصة ${classObj.name}:`, err.message);
+        results.failed++;
+        results.details.push({
+          classId: classObj._id,
+          className: classObj.name,
+          status: 'فشل الإنشاء',
+          error: err.message
+        });
+      }
+    }
+    
+    return results;
+    
+  } catch (err) {
+    console.error('❌ خطأ في دالة إنشاء الحصص:', err);
+    return {
+      created: 0,
+      skipped: 0,
+      failed: 0,
+      details: [],
+      error: err.message
+    };
+  }
+}
+
+// ==============================================
+// 2. دالة إنشاء الحصص لجميع المدارس
+// ==============================================
+async function createLiveClassesForAllSchools(targetDate) {
+  try {
+    console.log(`🏫 إنشاء حصص لجميع المدارس بتاريخ ${targetDate.toISOString().split('T')[0]}`);
+    
+    // جلب جميع المدارس النشطة
+    const schools = await School.find({ status: 'active' });
+    console.log(`🏫 عدد المدارس النشطة: ${schools.length}`);
+    
+    const allResults = {
+      totalSchools: schools.length,
+      processedSchools: 0,
+      totalCreated: 0,
+      totalSkipped: 0,
+      totalFailed: 0,
+      schools: []
+    };
+    
+    for (const school of schools) {
+      console.log(`\n🏫 معالجة مدرسة: ${school.name} (${school.schoolKey})`);
+      
+      // التحقق من صلاحية الاشتراك
+      if (!school.isSubscriptionActive()) {
+        console.log(`⚠️ اشتراك المدرسة ${school.name} غير نشط، تخطي`);
+        allResults.schools.push({
+          schoolId: school._id,
+          schoolName: school.name,
+          status: 'اشتراك غير نشط',
+          created: 0,
+          skipped: 0,
+          failed: 0
+        });
+        continue;
+      }
+      
+      const results = await createLiveClassesForDate(targetDate, school._id);
+      
+      allResults.processedSchools++;
+      allResults.totalCreated += results.created || 0;
+      allResults.totalSkipped += results.skipped || 0;
+      allResults.totalFailed += results.failed || 0;
+      
+      allResults.schools.push({
+        schoolId: school._id,
+        schoolName: school.name,
+        status: 'تم المعالجة',
+        created: results.created || 0,
+        skipped: results.skipped || 0,
+        failed: results.failed || 0,
+        details: results.details || []
+      });
+    }
+    
+    return allResults;
+    
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء حصص لجميع المدارس:', err);
+    return {
+      totalSchools: 0,
+      processedSchools: 0,
+      totalCreated: 0,
+      totalSkipped: 0,
+      totalFailed: 0,
+      schools: [],
+      error: err.message
+    };
+  }
+}
+
+// ==============================================
+// 3. دالة إرسال التقرير اليومي
+// ==============================================
+async function sendDailyScheduleReport(results, targetDate) {
+  try {
+    console.log(`📧 إرسال تقرير الجدولة اليومي`);
+    
+    // إعداد التقرير
+    const dateStr = targetDate.toISOString().split('T')[0];
+    const formattedDate = new Date(dateStr).toLocaleDateString('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    let reportText = `📅 تقرير الجدولة التلقائية للحصص الحية\n`;
+    reportText += `📆 التاريخ: ${formattedDate}\n`;
+    reportText += `🕐 وقت التقرير: ${new Date().toLocaleString()}\n`;
+    reportText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    reportText += `📊 ملخص النتائج:\n`;
+    reportText += `   ✅ تم إنشاء: ${results.totalCreated} حصة\n`;
+    reportText += `   ⏭️ تم تخطي: ${results.totalSkipped} حصة\n`;
+    reportText += `   ❌ فشل: ${results.totalFailed} حصة\n`;
+    reportText += `   🏫 تم معالجة: ${results.processedSchools} مدرسة\n\n`;
+    
+    if (results.schools && results.schools.length > 0) {
+      reportText += `📋 تفاصيل المدارس:\n`;
+      for (const school of results.schools) {
+        reportText += `\n🏫 ${school.schoolName}:\n`;
+        reportText += `   ✅ ${school.created || 0} حصة تم إنشاؤها\n`;
+        reportText += `   ⏭️ ${school.skipped || 0} حصة تخطي\n`;
+        reportText += `   ❌ ${school.failed || 0} حصة فشل\n`;
+        
+        if (school.details && school.details.length > 0) {
+          const createdDetails = school.details.filter(d => d.status === 'تم الإنشاء');
+          if (createdDetails.length > 0) {
+            reportText += `   📚 الحصص المنشأة:\n`;
+            for (const d of createdDetails.slice(0, 5)) {
+              reportText += `      - ${d.className} (${d.time || 'غير محدد'}) - ${d.studentsCount || 0} طالب\n`;
+            }
+            if (createdDetails.length > 5) {
+              reportText += `      ... و ${createdDetails.length - 5} حصص أخرى\n`;
+            }
+          }
+        }
+      }
+    }
+    
+    if (results.error) {
+      reportText += `\n⚠️ أخطاء: ${results.error}\n`;
+    }
+    
+    console.log('📧 التقرير:');
+    console.log(reportText);
+    
+    // تسجيل التقرير في قاعدة البيانات (اختياري)
+    try {
+      const reportRecord = new Message({
+        sender: null,
+        recipients: [],
+        content: reportText,
+        messageType: 'system',
+        status: 'sent'
+      });
+      await reportRecord.save({ validateBeforeSave: false });
+      console.log(`✅ تم تسجيل التقرير في قاعدة البيانات: ${reportRecord._id}`);
+    } catch (err) {
+      console.error('⚠️ فشل في تسجيل التقرير:', err.message);
+    }
+    
+    return {
+      success: true,
+      reportText: reportText
+    };
+    
+  } catch (err) {
+    console.error('❌ خطأ في إرسال التقرير:', err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+// ==============================================
+// 4. دالة الجدولة الرئيسية
+// ==============================================
+async function runDailySchedule() {
+  try {
+    console.log('\n' + '='.repeat(60));
+    console.log(`🔄 بدء الجدولة التلقائية في ${new Date().toLocaleString()}`);
+    console.log('='.repeat(60));
+    
+    // التاريخ المستهدف: اليوم
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // إنشاء الحصص لجميع المدارس
+    const results = await createLiveClassesForAllSchools(today);
+    
+    console.log('\n📊 ملخص النتائج:');
+    console.log(`   ✅ تم إنشاء: ${results.totalCreated} حصة`);
+    console.log(`   ⏭️ تم تخطي: ${results.totalSkipped} حصة`);
+    console.log(`   ❌ فشل: ${results.totalFailed} حصة`);
+    console.log(`   🏫 تم معالجة: ${results.processedSchools} مدرسة`);
+    
+    // إرسال التقرير
+    await sendDailyScheduleReport(results, today);
+    
+    console.log('='.repeat(60));
+    console.log(`✅ اكتملت الجدولة التلقائية في ${new Date().toLocaleString()}`);
+    console.log('='.repeat(60) + '\n');
+    
+    return results;
+    
+  } catch (err) {
+    console.error('❌ خطأ في الجدولة التلقائية:', err);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+// ==============================================
+// 5. جدولة المهام التلقائية
+// ==============================================
+
+// تشغيل الجدولة فور بدء الخادم (للتأكد من إنشاء حصص اليوم)
+setTimeout(async () => {
+  console.log('🚀 بدء الجدولة التلقائية عند بدء الخادم...');
+  await runDailySchedule();
+}, 5000); // تأخير 5 ثوانٍ لضمان اكتمال اتصال قاعدة البيانات
+
+// جدولة الجدولة كل يوم في الساعة 5:00 صباحاً
+function scheduleDailyJob() {
+  const now = new Date();
+  const scheduledTime = new Date();
+  scheduledTime.setHours(5, 0, 0, 0); // 5:00 صباحاً
+  
+  // إذا كان الوقت قد تجاوز 5:00 صباحاً، جدولة لليوم التالي
+  if (now > scheduledTime) {
+    scheduledTime.setDate(scheduledTime.getDate() + 1);
+  }
+  
+  const timeUntilSchedule = scheduledTime.getTime() - now.getTime();
+  
+  console.log(`⏰ سيتم تشغيل الجدولة التلقائية في ${scheduledTime.toLocaleString()}`);
+  console.log(`⏱️ الوقت المتبقي: ${Math.round(timeUntilSchedule / 1000 / 60)} دقيقة`);
+  
+  setTimeout(() => {
+    // تشغيل الجدولة
+    runDailySchedule();
+    
+    // إعادة الجدولة لليوم التالي
+    scheduleDailyJob();
+  }, timeUntilSchedule);
+}
+
+// بدء الجدولة اليومية
+scheduleDailyJob();
+
+// ==============================================
+// 6. نقاط النهاية (Endpoints) للتحكم في الجدولة
+// ==============================================
+
+// تشغيل الجدولة يدوياً (للاختبار)
+app.post('/api/schedule/run-now', async (req, res) => {
+  try {
+    console.log('🔄 تشغيل الجدولة يدوياً...');
+    const results = await runDailySchedule();
+    res.json({
+      success: true,
+      message: 'تم تشغيل الجدولة بنجاح',
+      results: results
+    });
+  } catch (err) {
+    console.error('❌ خطأ في التشغيل اليدوي:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// إنشاء حصص لتاريخ محدد
+app.post('/api/schedule/create-for-date', async (req, res) => {
+  try {
+    const { date, schoolId } = req.body;
+    
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد التاريخ (date) بصيغة YYYY-MM-DD'
+      });
+    }
+    
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'التاريخ غير صالح'
+      });
+    }
+    
+    targetDate.setHours(0, 0, 0, 0);
+    
+    let results;
+    if (schoolId) {
+      results = await createLiveClassesForDate(targetDate, schoolId);
+    } else {
+      results = await createLiveClassesForAllSchools(targetDate);
+    }
+    
+    res.json({
+      success: true,
+      message: `تم إنشاء الحصص لتاريخ ${date}`,
+      results: results
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في إنشاء حصص لتاريخ محدد:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// الحصول على حالة الجدولة
+app.get('/api/schedule/status', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // عدد الحصص المجدولة اليوم
+    const todayCount = await LiveClass.countDocuments({
+      date: {
+        $gte: today,
+        $lt: tomorrow
+      }
+    });
+    
+    // عدد الحصص المجدولة غداً
+    const dayAfterTomorrow = new Date(tomorrow);
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+    const tomorrowCount = await LiveClass.countDocuments({
+      date: {
+        $gte: tomorrow,
+        $lt: dayAfterTomorrow
+      }
+    });
+    
+    // عدد الحصص الإجمالي
+    const totalCount = await LiveClass.countDocuments();
+    
+    // التوزيع حسب الحالة
+    const statusStats = await LiveClass.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const statusMap = {};
+    statusStats.forEach(stat => {
+      statusMap[stat._id] = stat.count;
+    });
+    
+    res.json({
+      success: true,
+      stats: {
+        today: todayCount,
+        tomorrow: tomorrowCount,
+        total: totalCount,
+        byStatus: statusMap
+      },
+      nextSchedule: '5:00 صباحاً يومياً'
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في جلب حالة الجدولة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ==============================================
+// 7. نقطة نهاية لإعادة جدولة جميع الحصص (إعادة إنشاء)
+// ==============================================
+app.post('/api/schedule/recreate-all', async (req, res) => {
+  try {
+    const { startDate, endDate, schoolId } = req.body;
+    
+    console.log('🔄 إعادة جدولة جميع الحصص...');
+    
+    // تحديد نطاق التواريخ
+    let start, end;
+    
+    if (startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate);
+    } else {
+      // افتراضي: الأسبوع القادم (7 أيام)
+      start = new Date();
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(end.getDate() + 7);
+    }
+    
+    console.log(`📅 النطاق: ${start.toISOString().split('T')[0]} - ${end.toISOString().split('T')[0]}`);
+    
+    // حذف الحصص الحية في النطاق (اختياري)
+    // await LiveClass.deleteMany({
+    //   date: { $gte: start, $lte: end }
+    // });
+    // console.log('🗑️ تم حذف الحصص القديمة');
+    
+    const allResults = {
+      totalDays: 0,
+      totalCreated: 0,
+      totalSkipped: 0,
+      totalFailed: 0,
+      days: []
+    };
+    
+    // إنشاء حصص لكل يوم في النطاق
+    let currentDate = new Date(start);
+    while (currentDate <= end) {
+      console.log(`\n📅 معالجة يوم: ${currentDate.toISOString().split('T')[0]}`);
+      
+      let results;
+      if (schoolId) {
+        results = await createLiveClassesForDate(currentDate, schoolId);
+      } else {
+        results = await createLiveClassesForAllSchools(currentDate);
+      }
+      
+      allResults.totalDays++;
+      allResults.totalCreated += results.totalCreated || 0;
+      allResults.totalSkipped += results.totalSkipped || 0;
+      allResults.totalFailed += results.totalFailed || 0;
+      
+      allResults.days.push({
+        date: currentDate.toISOString().split('T')[0],
+        created: results.totalCreated || 0,
+        skipped: results.totalSkipped || 0,
+        failed: results.totalFailed || 0
+      });
+      
+      // الانتقال إلى اليوم التالي
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    res.json({
+      success: true,
+      message: `تم إعادة جدولة ${allResults.totalDays} يوم`,
+      results: allResults
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في إعادة الجدولة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+console.log('📅 تم تحميل نظام الجدولة التلقائية للحصص الحية');
     // Enroll Student in Class
     // Enroll Student in Class
   // في server.js، تحديث نقطة النهاية /api/classes/:classId/enroll/:studentId
