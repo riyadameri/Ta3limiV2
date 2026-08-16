@@ -228,6 +228,16 @@
             transform: translateY(-2px);
         }
 
+        .btn-secondary {
+            background: var(--gray);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+
         /* ============================================
            Stats Cards
            ============================================ */
@@ -430,6 +440,7 @@
         .form-group select:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            background: var(--light-gray);
         }
 
         .form-actions {
@@ -885,6 +896,7 @@
         .flex-wrap { flex-wrap: wrap; }
         .flex-center { display: flex; align-items: center; gap: 8px; }
         .w-100 { width: 100%; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -1006,7 +1018,7 @@
                             <th>📋 الخطة</th>
                             <th>📅 الاشتراك</th>
                             <th>📊 الحالة</th>
-                            <th style="min-width:160px;">⚙️ الإجراءات</th>
+                            <th style="min-width:180px;">⚙️ الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="schoolsTableBody">
@@ -1026,7 +1038,7 @@
     </div>
 
     <!-- ==========================================
-    MODAL - إنشاء مدرسة
+    MODAL - إنشاء / تعديل مدرسة
     ========================================== -->
     <div class="modal-overlay" id="createModal">
         <div class="modal">
@@ -1052,7 +1064,7 @@
                             </div>
                             <div class="form-group">
                                 <label>رقم الهاتف <span class="required">*</span></label>
-                                <input type="tel" id="schoolPhone" placeholder="+213 551 234 567" required>
+                                <input type="tel" id="schoolPhone" placeholder="0555123456" required>
                             </div>
                             <div class="form-group">
                                 <label>المفتاح (Key) <span class="required">*</span></label>
@@ -1066,8 +1078,8 @@
                         </div>
                     </div>
 
-                    <!-- معلومات المدير -->
-                    <div style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
+                    <!-- معلومات المدير (تظهر فقط عند الإضافة) -->
+                    <div id="adminSection" style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
                         <h3 style="color:var(--primary);font-size:16px;margin-bottom:12px;">👤 حساب المدير <span style="color:var(--danger);font-size:13px;">(مطلوب)</span></h3>
                         <div class="form-grid">
                             <div class="form-group">
@@ -1086,13 +1098,13 @@
                             </div>
                             <div class="form-group">
                                 <label>رقم الهاتف</label>
-                                <input type="tel" id="adminPhone" placeholder="+213 551 234 567">
+                                <input type="tel" id="adminPhone" placeholder="0555123456">
                             </div>
                         </div>
                     </div>
 
-                    <!-- الاشتراك -->
-                    <div style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
+                    <!-- الاشتراك (يظهر فقط عند الإضافة) -->
+                    <div id="subscriptionSection" style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
                         <h3 style="color:var(--primary);font-size:16px;margin-bottom:12px;">📋 الاشتراك السنوي</h3>
                         <div class="form-grid">
                             <div class="form-group">
@@ -1100,7 +1112,7 @@
                                 <select id="planSelect">
                                     <option value="trial">تجريبي - مجاني</option>
                                     <option value="basic">أساسي - 15,000 د.ج</option>
-                                    <option value="standard">قياسي - 30,000 د.ج</option>
+                                    <option value="standard" selected>قياسي - 30,000 د.ج</option>
                                     <option value="premium">مميز - 50,000 د.ج</option>
                                     <option value="enterprise">مؤسسات - 100,000 د.ج</option>
                                 </select>
@@ -1117,7 +1129,7 @@
                             </div>
                             <div class="form-group">
                                 <label>المبلغ (د.ج)</label>
-                                <input type="number" id="subscriptionAmount" value="0" readonly>
+                                <input type="number" id="subscriptionAmount" value="30000" readonly>
                                 <span class="hint">يتم حسابه تلقائياً</span>
                             </div>
                         </div>
@@ -1334,10 +1346,10 @@
                     </td>
                     <td>
                         <div class="actions-cell">
-                            <button class="btn btn-info btn-xs" onclick="viewSchool('${school._id}')">👁️</button>
-                            <button class="btn btn-warning btn-xs" onclick="editSchool('${school._id}')">✏️</button>
-                            <button class="btn btn-success btn-xs" onclick="renewSubscription('${school._id}')">🔄 تجديد</button>
-                            <button class="btn btn-danger btn-xs" onclick="toggleSchool('${school._id}', '${school.status}')">
+                            <button class="btn btn-info btn-xs" onclick="viewSchool('${school._id}')" title="عرض التفاصيل">👁️</button>
+                            <button class="btn btn-warning btn-xs" onclick="editSchool('${school._id}')" title="تعديل">✏️</button>
+                            <button class="btn btn-success btn-xs" onclick="renewSubscription('${school._id}')" title="تجديد الاشتراك">🔄</button>
+                            <button class="btn ${school.status === 'active' ? 'btn-danger' : 'btn-secondary'} btn-xs" onclick="toggleSchool('${school._id}', '${school.status}')" title="${school.status === 'active' ? 'تعطيل' : 'تفعيل'}">
                                 ${school.status === 'active' ? '🔴' : '🟢'}
                             </button>
                         </div>
@@ -1360,7 +1372,9 @@
                 filtered = filtered.filter(s =>
                     s.name?.toLowerCase().includes(search) ||
                     s.email?.toLowerCase().includes(search) ||
-                    s.schoolKey?.toLowerCase().includes(search)
+                    s.schoolKey?.toLowerCase().includes(search) ||
+                    s.phone?.toLowerCase().includes(search) ||
+                    s.address?.toLowerCase().includes(search)
                 );
             }
 
@@ -1412,17 +1426,25 @@
             document.getElementById('submitBtn').innerHTML = '💾 إنشاء';
             document.getElementById('schoolId').value = '';
             document.getElementById('schoolForm').reset();
-            document.getElementById('subscriptionAmount').value = '0';
+            document.getElementById('subscriptionAmount').value = '30000';
             document.getElementById('schoolAddress').value = '';
             document.getElementById('schoolKey').value = 'SCH-' + Date.now().toString().slice(-6);
+            document.getElementById('schoolKey').disabled = false;
+            
+            // إظهار أقسام المدير والاشتراك
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('subscriptionSection').style.display = 'block';
+            
             openModal('createModal');
         }
 
         // ============================================
-        // Edit School
+        // Edit School - محسّن لتعديل جميع البيانات
         // ============================================
         async function editSchool(id) {
             try {
+                showToast('🔄 جاري تحميل بيانات المدرسة...', 'info');
+                
                 const response = await fetch(`${API_URL}/api/redox-admin/school/${id}`);
                 const result = await response.json();
 
@@ -1430,7 +1452,7 @@
                     const school = result.school;
                     isEditing = true;
                     
-                    document.getElementById('modalTitle').textContent = 'تعديل المدرسة';
+                    document.getElementById('modalTitle').textContent = '✏️ تعديل المدرسة: ' + school.name;
                     document.getElementById('submitBtn').innerHTML = '💾 تحديث';
                     document.getElementById('schoolId').value = school._id;
                     document.getElementById('schoolName').value = school.name || '';
@@ -1438,18 +1460,15 @@
                     document.getElementById('schoolPhone').value = school.phone || '';
                     document.getElementById('schoolAddress').value = school.address || '';
                     document.getElementById('schoolKey').value = school.schoolKey || '';
-                    document.getElementById('schoolKey').disabled = true;
+                    document.getElementById('schoolKey').disabled = true; // المفتاح غير قابل للتعديل
                     
-                    // إخفاء قسم المدير والاشتراك عند التعديل
-                    document.querySelectorAll('.modal-body h3').forEach(el => {
-                        if (el.textContent.includes('المدير') || el.textContent.includes('الاشتراك')) {
-                            el.closest('div').style.display = 'none';
-                        }
-                    });
+                    // إخفاء أقسام المدير والاشتراك عند التعديل
+                    document.getElementById('adminSection').style.display = 'none';
+                    document.getElementById('subscriptionSection').style.display = 'none';
                     
                     openModal('createModal');
                 } else {
-                    showToast('❌ فشل في تحميل بيانات المدرسة', 'error');
+                    showToast('❌ فشل في تحميل بيانات المدرسة: ' + (result.error || 'خطأ غير معروف'), 'error');
                 }
             } catch (err) {
                 console.error('Error loading school:', err);
@@ -1458,7 +1477,7 @@
         }
 
         // ============================================
-        // Save School
+        // Save School (Create or Update)
         // ============================================
         async function saveSchool(event) {
             event.preventDefault();
@@ -1467,34 +1486,65 @@
             const schoolId = document.getElementById('schoolId').value;
             const isEdit = !!schoolId;
 
-            const plan = document.getElementById('planSelect').value;
-            const duration = parseInt(document.getElementById('subscriptionDuration').value);
-            const price = PLAN_PRICES[plan] || 0;
-            const totalAmount = price * (duration / 12);
-
-            const data = {
+            // جمع البيانات الأساسية
+            const schoolData = {
                 name: document.getElementById('schoolName').value.trim(),
                 email: document.getElementById('schoolEmail').value.trim(),
                 phone: document.getElementById('schoolPhone').value.trim(),
                 address: document.getElementById('schoolAddress').value.trim(),
-                key: document.getElementById('schoolKey').value.trim(),
-                adminUsername: document.getElementById('adminUsername').value.trim(),
-                adminPassword: document.getElementById('adminPassword').value.trim(),
-                adminFullName: document.getElementById('adminFullName').value.trim(),
-                adminPhone: document.getElementById('adminPhone').value.trim(),
-                plan: plan,
-                subscriptionDuration: duration,
-                subscriptionAmount: totalAmount
+                key: document.getElementById('schoolKey').value.trim()
             };
 
-            if (!data.name || !data.email || !data.phone || !data.key) {
-                showToast('❌ يرجى تعبئة جميع الحقول المطلوبة', 'error');
+            // التحقق من الحقول المطلوبة
+            if (!schoolData.name || !schoolData.email || !schoolData.phone || !schoolData.key) {
+                showToast('❌ يرجى تعبئة جميع الحقول المطلوبة (الاسم، البريد، الهاتف، المفتاح)', 'error');
                 return;
             }
 
-            if (!isEdit && (!data.adminUsername || !data.adminPassword)) {
-                showToast('❌ يرجى إدخال بيانات المدير', 'error');
+            // التحقق من صحة البريد الإلكتروني
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(schoolData.email)) {
+                showToast('❌ البريد الإلكتروني غير صحيح', 'error');
                 return;
+            }
+
+            // التحقق من صحة رقم الهاتف
+            const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+            if (!phoneRegex.test(schoolData.phone)) {
+                showToast('❌ رقم الهاتف غير صحيح (يجب أن يكون 8-20 رقم)', 'error');
+                return;
+            }
+
+            // إذا كانت إضافة جديدة، اجمع بيانات المدير والاشتراك
+            if (!isEdit) {
+                const adminData = {
+                    adminUsername: document.getElementById('adminUsername').value.trim(),
+                    adminPassword: document.getElementById('adminPassword').value.trim(),
+                    adminFullName: document.getElementById('adminFullName').value.trim(),
+                    adminPhone: document.getElementById('adminPhone').value.trim()
+                };
+
+                if (!adminData.adminUsername || !adminData.adminPassword) {
+                    showToast('❌ يرجى إدخال اسم المستخدم وكلمة المرور للمدير', 'error');
+                    return;
+                }
+
+                if (adminData.adminPassword.length < 6) {
+                    showToast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                    return;
+                }
+
+                const plan = document.getElementById('planSelect').value;
+                const duration = parseInt(document.getElementById('subscriptionDuration').value);
+                const price = PLAN_PRICES[plan] || 0;
+                const totalAmount = price * (duration / 12);
+
+                // دمج البيانات
+                Object.assign(schoolData, adminData, {
+                    plan: plan,
+                    subscriptionDuration: duration,
+                    subscriptionAmount: totalAmount
+                });
             }
 
             submitBtn.disabled = true;
@@ -1502,25 +1552,30 @@
             submitBtn.classList.add('btn-loading');
 
             try {
-                let url = `${API_URL}/api/redox-admin/school`;
-                let method = 'POST';
-
+                let url, method;
+                
                 if (isEdit) {
                     url = `${API_URL}/api/redox-admin/school/${schoolId}`;
                     method = 'PUT';
-                    delete data.adminUsername;
-                    delete data.adminPassword;
-                    delete data.adminFullName;
-                    delete data.adminPhone;
-                    delete data.plan;
-                    delete data.subscriptionDuration;
-                    delete data.subscriptionAmount;
+                    // إزالة الحقول غير المطلوبة للتحديث
+                    delete schoolData.adminUsername;
+                    delete schoolData.adminPassword;
+                    delete schoolData.adminFullName;
+                    delete schoolData.adminPhone;
+                    delete schoolData.plan;
+                    delete schoolData.subscriptionDuration;
+                    delete schoolData.subscriptionAmount;
+                } else {
+                    url = `${API_URL}/api/redox-admin/school`;
+                    method = 'POST';
                 }
+
+                console.log('📤 إرسال البيانات:', schoolData);
 
                 const response = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(schoolData)
                 });
 
                 const result = await response.json();
@@ -1530,7 +1585,7 @@
                     
                     if (!isEdit && result.school) {
                         setTimeout(() => {
-                            alert(`🔑 مفتاح المدرسة: ${result.school.schoolKey}\n👤 المدير: ${result.admin?.username || data.adminUsername}\n📅 الاشتراك ينتهي: ${new Date(result.school.subscription?.endDate).toLocaleDateString('ar-EG')}`);
+                            alert(`🔑 مفتاح المدرسة: ${result.school.schoolKey}\n👤 المدير: ${result.admin?.username || schoolData.adminUsername}\n📅 الاشتراك ينتهي: ${result.school.subscription?.endDate ? new Date(result.school.subscription.endDate).toLocaleDateString('ar-EG') : 'غير محدد'}`);
                         }, 500);
                     }
                     
@@ -1541,7 +1596,7 @@
                 }
             } catch (err) {
                 console.error('Error saving school:', err);
-                showToast('❌ فشل في الاتصال بالخادم', 'error');
+                showToast('❌ فشل في الاتصال بالخادم: ' + err.message, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = isEdit ? '💾 تحديث' : '💾 إنشاء';
@@ -1550,7 +1605,7 @@
         }
 
         // ============================================
-        // View School
+        // View School - محسّن لعرض جميع البيانات
         // ============================================
         async function viewSchool(id) {
             try {
@@ -1564,17 +1619,18 @@
                     const isActive = sub.isActive || false;
                     const features = sub.features || {};
 
-                    document.getElementById('detailsTitle').textContent = school.name;
+                    document.getElementById('detailsTitle').textContent = '📋 ' + school.name;
                     document.getElementById('detailsContent').innerHTML = `
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:10px 0;">
                             <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);">
                                 <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">📋 معلومات المدرسة</h4>
                                 <p><strong>الاسم:</strong> ${school.name}</p>
-                                <p><strong>البريد:</strong> ${school.email}</p>
+                                <p><strong>البريد:</strong> ${school.email || '—'}</p>
                                 <p><strong>الهاتف:</strong> ${school.phone || '—'}</p>
                                 <p><strong>العنوان:</strong> ${school.address || '—'}</p>
                                 <p><strong>المفتاح:</strong> <span class="school-key">${school.schoolKey}</span></p>
-                                <p><strong>الحالة:</strong> <span class="status-badge ${school.status === 'active' ? 'status-active' : 'status-inactive'}">${school.status}</span></p>
+                                <p><strong>الحالة:</strong> <span class="status-badge ${school.status === 'active' ? 'status-active' : 'status-inactive'}">${school.status === 'active' ? '✅ نشطة' : '❌ غير نشطة'}</span></p>
+                                <p><strong>تاريخ الإنشاء:</strong> ${school.createdAt ? new Date(school.createdAt).toLocaleDateString('ar-EG') : '—'}</p>
                             </div>
                             <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);">
                                 <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">📅 الاشتراك</h4>
@@ -1605,14 +1661,15 @@
                         </div>
                         ` : ''}
                         <div style="margin-top:20px;padding-top:15px;border-top:2px solid var(--light-gray);display:flex;gap:10px;flex-wrap:wrap;">
-                            <button class="btn btn-success btn-sm" onclick="renewSubscription('${school._id}')">🔄 تجديد الاشتراك</button>
-                            <button class="btn btn-info btn-sm" onclick="addAdmin('${school._id}')">➕ إضافة مدير</button>
+                            <button class="btn btn-warning btn-sm" onclick="closeModal('detailsModal');editSchool('${school._id}')">✏️ تعديل المدرسة</button>
+                            <button class="btn btn-success btn-sm" onclick="closeModal('detailsModal');renewSubscription('${school._id}')">🔄 تجديد الاشتراك</button>
+                            <button class="btn btn-secondary btn-sm" onclick="closeModal('detailsModal')">🔙 إغلاق</button>
                         </div>
                     `;
                     
                     openModal('detailsModal');
                 } else {
-                    showToast('❌ فشل في تحميل بيانات المدرسة', 'error');
+                    showToast('❌ فشل في تحميل بيانات المدرسة: ' + (result.error || 'خطأ غير معروف'), 'error');
                 }
             } catch (err) {
                 console.error('Error loading school:', err);
@@ -1642,7 +1699,7 @@
                     showToast(`✅ تم ${action} المدرسة بنجاح`, 'success');
                     loadSchools();
                 } else {
-                    showToast(`❌ فشل في ${action} المدرسة`, 'error');
+                    showToast(`❌ فشل في ${action} المدرسة: ${result.error}`, 'error');
                 }
             } catch (err) {
                 console.error('Error toggling school:', err);
@@ -1654,10 +1711,10 @@
         // Renew Subscription
         // ============================================
         async function renewSubscription(id) {
-            const plan = prompt('اختر الخطة (trial, basic, standard, premium, enterprise):', 'basic');
+            const plan = prompt('اختر الخطة (trial, basic, standard, premium, enterprise):', 'standard');
             if (!plan) return;
 
-            const amount = prompt('المبلغ (د.ج):', '15000');
+            const amount = prompt('المبلغ (د.ج):', '30000');
             if (!amount) return;
 
             const duration = prompt('المدة بالأشهر (1-24):', '12');
@@ -1691,20 +1748,27 @@
         }
 
         // ============================================
-        // Add Admin
-        // ============================================
-        function addAdmin(id) {
-            showToast('🔄 سيتم إضافة هذه الميزة قريباً', 'info');
-        }
-
-        // ============================================
         // Export Data
         // ============================================
         function exportData() {
             showToast('📥 جاري تصدير البيانات...', 'info');
-            setTimeout(() => {
+            
+            try {
+                const dataStr = JSON.stringify(schoolsData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `schools_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
                 showToast('✅ تم تصدير البيانات بنجاح', 'success');
-            }, 1500);
+            } catch (err) {
+                console.error('Error exporting data:', err);
+                showToast('❌ فشل في تصدير البيانات', 'error');
+            }
         }
 
         // ============================================
@@ -1743,5 +1807,5 @@
             });
         });
     </script>
-</body>*
+</body>
 </html>
