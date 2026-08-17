@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الطالب - Redox</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            direction: rtl;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 10px 40px rgba(26, 26, 46, 0.3);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-brand i {
+            font-size: 32px;
+            color: #e94560;
+        }
+
+        .header-brand h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .header-brand span {
+            color: #e94560;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            background: rgba(255, 255, 255, 0.12);
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.active { background: #00d2ff; }
+        .dot.inactive { background: #ff6b6b; }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* ===== LOADING ===== */
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== STUDENT PROFILE CARD ===== */
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
+            margin-bottom: 25px;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 8px 25px rgba(233, 69, 96, 0.3);
+        }
+
+        .profile-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px 25px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .info-item i {
+            width: 22px;
+            color: #e94560;
+            font-size: 16px;
+        }
+
+        .info-item .label {
+            color: #888;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .info-item .value {
+            color: #1a1a2e;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* ===== GRID LAYOUT ===== */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            margin-bottom: 25px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f5f7fa;
+        }
+
+        .card-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h3 i {
+            color: #e94560;
+        }
+
+        .card-header .badge-count {
+            background: #e94560;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* ===== CLASSES LIST ===== */
+        .class-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            border: 1px solid #f0f0f0;
+            background: #fafbfc;
+        }
+
+        .class-item:hover {
+            background: #f0f4ff;
+            border-color: #e94560;
+            transform: translateX(-5px);
+        }
+
+        .class-item .class-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .class-item .class-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a1a2e;
+        }
+
+        .class-item .class-subject {
+            background: #e94560;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .class-item .class-teacher {
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .class-item .class-price {
+            font-weight: 700;
+            color: #00b894;
+            font-size: 15px;
+        }
+
+        /* ===== SCHEDULE TABLE ===== */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .schedule-table th {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            text-align: center;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .schedule-table td {
+            padding: 10px 15px;
+            text-align: center;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .schedule-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        .schedule-time {
+            font-weight: 600;
+            color: #e94560;
+        }
+
+        .schedule-day {
+            font-weight: 500;
+        }
+
+        /* ===== PAYMENTS ===== */
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s;
+        }
+
+        .payment-item:hover {
+            background: #fafbfc;
+        }
+
+        .payment-item .payment-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .payment-item .payment-amount {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .payment-item .payment-amount.paid {
+            color: #00b894;
+        }
+
+        .payment-item .payment-amount.pending {
+            color: #fdcb6e;
+        }
+
+        .payment-item .payment-amount.late {
+            color: #e17055;
+        }
+
+        .payment-status {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .payment-status.paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .payment-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .payment-status.late {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .payment-status.cancelled {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        /* ===== ABSENCES ===== */
+        .absence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            background: #fff5f5;
+            border-right: 3px solid #e17055;
+        }
+
+        .absence-item .absence-date {
+            font-weight: 500;
+        }
+
+        .absence-item .absence-class {
+            color: #555;
+        }
+
+        .absence-item .absence-status {
+            color: #e17055;
+            font-weight: 600;
+        }
+
+        /* ===== STATS MINI ===== */
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-mini {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-mini .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        .stat-mini .label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .stat-mini .number.green { color: #00b894; }
+        .stat-mini .number.red { color: #e17055; }
+        .stat-mini .number.blue { color: #0984e3; }
+        .stat-mini .number.gold { color: #fdcb6e; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888;
+        }
+
+        .empty-state i {
+            font-size: 50px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        /* ===== ERROR ===== */
+        .error-container {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .error-container i {
+            font-size: 70px;
+            color: #e17055;
+            margin-bottom: 20px;
+        }
+
+        .error-container h2 {
+            font-size: 28px;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+        }
+
+        .error-container p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .profile-avatar {
+                margin: 0 auto;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .class-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .payment-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .schedule-table {
+                font-size: 12px;
+            }
+
+            .schedule-table th,
+            .schedule-table td {
+                padding: 8px 10px;
+            }
+
+            .stats-mini {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .card { padding: 15px; }
+            .profile-card { padding: 20px; }
+            .profile-info { grid-template-columns: 1fr; }
+            .stats-mini { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-up {
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== BACK TO TOP ===== */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: #e94560;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+            transition: all 0.3s;
+            border: none;
+            font-size: 20px;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(233, 69, 96, 0.5);
+        }
+
+        /* Print styles */
+        @media print {
+            .btn-back,
+            .back-to-top {
+                display: none !important;
+            }
+            .header {
+                background: #1a1a2e !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .card,
+            .profile-card {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-container">
+            <div class="spinner"></div>
+            <p style="color:#888; font-size:18px;">جاري تحميل بيانات الطالب...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="error-container" style="display:none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <h2>عذراً!</h2>
+            <p id="errorMessage">حدث خطأ أثناء تحميل البيانات</p>
+            <br>
+            <button onclick="location.reload()" style="background:#e94560; color:white; border:none; padding:12px 30px; border-radius:10px; cursor:pointer; font-size:16px;">
+                <i class="fas fa-redo"></i> إعادة المحاولة
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" style="display:none;">
+
+            <!-- Header -->
+            <div class="header fade-in">
+                <div class="header-brand">
+                    <i class="fas fa-graduation-cap"></i>
+                    <h1>منصة <span>الطالب</span></h1>
+                </div>
+                <div class="header-status">
+                    <div class="status-badge">
+                        <span class="dot" id="statusDot"></span>
+                        <span id="statusText">نشط</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Student Profile -->
+            <div class="profile-card fade-in" id="profileCard">
+                <div class="profile-grid">
+                    <div class="profile-avatar" id="studentAvatar">أ</div>
+                    <div class="profile-info" id="profileInfo">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="stats-mini" id="quickStats">
+                <!-- Filled by JavaScript -->
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+
+                <!-- Left Column -->
+                <div>
+
+                    <!-- Classes -->
+                    <div class="card slide-up" id="classesCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-book"></i> الحصص المسجل فيها</h3>
+                            <span class="badge-count" id="classesCount">0</span>
+                        </div>
+                        <div id="classesList">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Schedule -->
+                    <div class="card slide-up" id="scheduleCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> جدول الدراسة</h3>
+                        </div>
+                        <div id="scheduleContent">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column -->
+                <div>
+
+                    <!-- Payments -->
+                    <div class="card slide-up" id="paymentsCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-money-bill-wave"></i> المدفوعات</h3>
+                            <span class="badge-count" id="paymentsCount">0</span>
+                        </div>
+                        <div id="paymentsList">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Absences -->
+                    <div class="card slide-up" id="absencesCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-user-slash"></i> الغيابات</h3>
+                            <span class="badge-count" id="absencesCount">0</span>
+                        </div>
+                        <div id="absencesList">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Back to Top Button -->
+        <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+    </div>
+
+    <script>
+        // =============================================
+        // CONFIGURATION
+        // =============================================
+        const STUDENT_ID = window.location.pathname.split('/').pop();
+        const API_BASE = window.location.origin;
+
+        // =============================================
+        // DOM REFERENCES
+        // =============================================
+        const $ = (id) => document.getElementById(id);
+        const loadingState = $('loadingState');
+        const errorState = $('errorState');
+        const errorMessage = $('errorMessage');
+        const mainContent = $('mainContent');
+        const profileInfo = $('profileInfo');
+        const studentAvatar = $('studentAvatar');
+        const statusDot = $('statusDot');
+        const statusText = $('statusText');
+        const quickStats = $('quickStats');
+        const classesList = $('classesList');
+        const classesCount = $('classesCount');
+        const scheduleContent = $('scheduleContent');
+        const paymentsList = $('paymentsList');
+        const paymentsCount = $('paymentsCount');
+        const absencesList = $('absencesList');
+        const absencesCount = $('absencesCount');
+        const backToTop = $('backToTop');
+
+        // =============================================
+        // UTILITY FUNCTIONS
+        // =============================================
+        function formatDate(dateString) {
+            if (!dateString) return '—';
+            const d = new Date(dateString);
+            return d.toLocaleDateString('en-EG', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatCurrency(amount) {
+            return Number(amount || 0).toLocaleString('en-EG') + ' د.ج';
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'active': 'active',
+                'paid': 'paid',
+                'pending': 'pending',
+                'late': 'late',
+                'cancelled': 'cancelled',
+                'present': 'paid',
+                'absent': 'late',
+                'inactive': 'cancelled'
+            };
+            return map[status] || 'pending';
+        }
+
+        function getStatusText(status) {
+            const map = {
+                'active': 'نشط',
+                'paid': 'مدفوع',
+                'pending': 'معلق',
+                'late': 'متأخر',
+                'cancelled': 'ملغى',
+                'present': 'حاضر',
+                'absent': 'غائب',
+                'inactive': 'غير نشط'
+            };
+            return map[status] || status;
+        }
+
+        function getInitials(name) {
+            if (!name) return 'ط';
+            const parts = name.trim().split(' ');
+            if (parts.length === 1) return parts[0].charAt(0);
+            return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+
+        function getDayName(day) {
+            const map = {
+                'السبت': 'السبت',
+                'الأحد': 'الأحد',
+                'الإثنين': 'الإثنين',
+                'الثلاثاء': 'الثلاثاء',
+                'الأربعاء': 'الأربعاء',
+                'الخميس': 'الخميس',
+                'الجمعة': 'الجمعة'
+            };
+            return map[day] || day;
+        }
+
+        // =============================================
+        // RENDER FUNCTIONS
+        // =============================================
+
+        function renderProfile(student) {
+            if (!student) return;
+
+            // Avatar
+            studentAvatar.textContent = getInitials(student.name);
+
+            // Status
+            const isActive = student.status === 'active' || student.active === true;
+            statusDot.className = `dot ${isActive ? 'active' : 'inactive'}`;
+            statusText.textContent = isActive ? 'نشط' : 'غير نشط';
+
+            // Profile Info
+            profileInfo.innerHTML = `
+                <div class="info-item">
+                    <i class="fas fa-user"></i>
+                    <span class="label">الاسم الكامل:</span>
+                    <span class="value">${student.name || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-id-card"></i>
+                    <span class="label">رقم الطالب:</span>
+                    <span class="value">${student.studentId || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span class="label">السنة الدراسية:</span>
+                    <span class="value">${student.academicYear || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-user-tie"></i>
+                    <span class="label">اسم ولي الأمر:</span>
+                    <span class="value">${student.parentName || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-phone"></i>
+                    <span class="label">هاتف ولي الأمر:</span>
+                    <span class="value">${student.parentPhone || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-envelope"></i>
+                    <span class="label">البريد الإلكتروني:</span>
+                    <span class="value">${student.parentEmail || '—'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-calendar-check"></i>
+                    <span class="label">تاريخ التسجيل:</span>
+                    <span class="value">${formatDate(student.registrationDate)}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-money-bill"></i>
+                    <span class="label">رسوم التسجيل:</span>
+                    <span class="value">${student.hasPaidRegistration ? '✅ مدفوعة' : '⏳ معلقة'}</span>
+                </div>
+            `;
+        }
+
+        function renderQuickStats(student, classes, payments, absences) {
+            const totalClasses = classes?.length || 0;
+            const totalPayments = payments?.length || 0;
+            const paidPayments = payments?.filter(p => p.status === 'paid').length || 0;
+            const totalAbsences = absences?.length || 0;
+
+            const totalDue = payments?.reduce((sum, p) => {
+                if (p.status === 'pending' || p.status === 'late') return sum + (p.amount || 0);
+                return sum;
+            }, 0) || 0;
+
+            quickStats.innerHTML = `
+                <div class="stat-mini">
+                    <div class="number blue">${totalClasses}</div>
+                    <div class="label">📚 الحصص</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="number green">${paidPayments}</div>
+                    <div class="label">✅ مدفوعات</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="number ${totalAbsences > 0 ? 'red' : 'green'}">${totalAbsences}</div>
+                    <div class="label">📋 غيابات</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="number gold">${formatCurrency(totalDue)}</div>
+                    <div class="label">💰 المتبقي</div>
+                </div>
+            `;
+        }
+
+        function renderClasses(classes) {
+            if (!classes || classes.length === 0) {
+                classesList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-book-open"></i>
+                        <p>الطالب غير مسجل في أي حصة حالياً</p>
+                    </div>
+                `;
+                classesCount.textContent = '0';
+                return;
+            }
+
+            classesCount.textContent = classes.length;
+
+            classesList.innerHTML = classes.map(cls => `
+                <div class="class-item">
+                    <div class="class-info">
+                        <span class="class-name">${cls.name || 'غير محدد'}</span>
+                        <span class="class-subject">${cls.subject || 'مواد'}</span>
+                        <span class="class-teacher"><i class="fas fa-chalkboard-teacher"></i> ${cls.teacher?.name || 'غير محدد'}</span>
+                    </div>
+                    <div>
+                        <span class="class-price">${formatCurrency(cls.price)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSchedule(classes) {
+            if (!classes || classes.length === 0) {
+                scheduleContent.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>لا يوجد جدول دراسي</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Collect all schedule entries
+            const scheduleEntries = [];
+            classes.forEach(cls => {
+                if (cls.schedule && cls.schedule.length > 0) {
+                    cls.schedule.forEach(s => {
+                        scheduleEntries.push({
+                            day: s.day,
+                            time: s.time,
+                            className: cls.name,
+                            subject: cls.subject,
+                            classroom: s.classroom?.name || 'غير محدد'
+                        });
+                    });
+                }
+            });
+
+            if (scheduleEntries.length === 0) {
+                scheduleContent.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>لا يوجد جدول دراسي محدد</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by day order
+            const dayOrder = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+            scheduleEntries.sort((a, b) => {
+                const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+                if (dayDiff !== 0) return dayDiff;
+                return (a.time || '00:00').localeCompare(b.time || '00:00');
+            });
+
+            scheduleContent.innerHTML = `
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>اليوم</th>
+                            <th>الوقت</th>
+                            <th>الحصة</th>
+                            <th>المادة</th>
+                            <th>القاعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scheduleEntries.map(entry => `
+                            <tr>
+                                <td class="schedule-day">${getDayName(entry.day)}</td>
+                                <td class="schedule-time">${entry.time || '—'}</td>
+                                <td>${entry.className || '—'}</td>
+                                <td>${entry.subject || '—'}</td>
+                                <td>${entry.classroom || '—'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderPayments(payments) {
+            if (!payments || payments.length === 0) {
+                paymentsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-credit-card"></i>
+                        <p>لا توجد مدفوعات مسجلة</p>
+                    </div>
+                `;
+                paymentsCount.textContent = '0';
+                return;
+            }
+
+            paymentsCount.textContent = payments.length;
+
+            paymentsList.innerHTML = payments.map(p => `
+                <div class="payment-item">
+                    <div class="payment-info">
+                        <span class="payment-amount ${getStatusClass(p.status)}">
+                            ${formatCurrency(p.amount)}
+                        </span>
+                        <span>${p.monthCode || p.month || '—'}</span>
+                        <span class="payment-status ${getStatusClass(p.status)}">
+                            ${getStatusText(p.status)}
+                        </span>
+                        ${p.class ? `<span style="color:#888;font-size:13px;">${p.class.name || ''}</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;color:#888;">
+                        ${p.paymentDate ? formatDate(p.paymentDate) : 'غير مدفوع'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAbsences(absences) {
+            if (!absences || absences.length === 0) {
+                absencesList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle" style="color:#00b894;"></i>
+                        <p>لا توجد غيابات مسجلة 🎉</p>
+                    </div>
+                `;
+                absencesCount.textContent = '0';
+                return;
+            }
+
+            absencesCount.textContent = absences.length;
+
+            absencesList.innerHTML = absences.slice(0, 20).map(a => `
+                <div class="absence-item">
+                    <div>
+                        <span class="absence-date">${formatDate(a.date)}</span>
+                        <span class="absence-class" style="margin-right:15px;">
+                            ${a.className || a.class?.name || 'حصة'}
+                        </span>
+                    </div>
+                    <span class="absence-status">
+                        ${a.status === 'absent' ? '❌ غائب' : a.status === 'late' ? '⏰ متأخر' : '✅ حاضر'}
+                    </span>
+                </div>
+            `).join('');
+
+            if (absences.length > 20) {
+                absencesList.innerHTML += `
+                    <div style="text-align:center;color:#888;font-size:13px;padding:10px;">
+                        ... وعرض ${absences.length - 20} غياب إضافي
+                    </div>
+                `;
+            }
+        }
+
+        // =============================================
+        // FETCH DATA - FIXED: Added schoolId parameter
+        // =============================================
+        async function fetchStudentData() {
+            try {
+                // First, get the student to find their schoolId
+                const studentRes = await fetch(`${API_BASE}/api/students/${STUDENT_ID}`);
+                if (!studentRes.ok) {
+                    if (studentRes.status === 404) {
+                        throw new Error('الطالب غير موجود');
+                    }
+                    throw new Error('فشل في جلب بيانات الطالب');
+                }
+                const student = await studentRes.json();
+
+                // Get schoolId from student data
+                const schoolId = student.schoolId || student.schoolId;
+
+                // Fetch student classes with schoolId
+                const classesRes = await fetch(`${API_BASE}/api/students/${STUDENT_ID}/classes?schoolId=${schoolId}`);
+                let classes = [];
+                if (classesRes.ok) {
+                    const classesData = await classesRes.json();
+                    classes = classesData.data || classesData || [];
+                }
+
+                // Fetch student payments with schoolId
+                const paymentsRes = await fetch(`${API_BASE}/api/payments/student/${STUDENT_ID}?schoolId=${schoolId}&limit=100`);
+                let payments = [];
+                if (paymentsRes.ok) {
+                    const paymentsData = await paymentsRes.json();
+                    payments = paymentsData.payments || paymentsData || [];
+                }
+
+                // Fetch student absences with schoolId
+                const absencesRes = await fetch(`${API_BASE}/api/students/${STUDENT_ID}/absences?schoolId=${schoolId}&limit=50`);
+                let absences = [];
+                if (absencesRes.ok) {
+                    const absencesData = await absencesRes.json();
+                    absences = absencesData.allAbsences || absencesData || [];
+                }
+
+                return { student, classes, payments, absences };
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        // =============================================
+        // INIT
+        // =============================================
+        async function init() {
+            try {
+                const data = await fetchStudentData();
+
+                if (!data.student) {
+                    throw new Error('لم يتم العثور على بيانات الطالب');
+                }
+
+                // Render all sections
+                renderProfile(data.student);
+                renderQuickStats(data.student, data.classes, data.payments, data.absences);
+                renderClasses(data.classes);
+                renderSchedule(data.classes);
+                renderPayments(data.payments);
+                renderAbsences(data.absences);
+
+                // Show content
+                loadingState.style.display = 'none';
+                mainContent.style.display = 'block';
+
+                // Back to top button
+                window.addEventListener('scroll', () => {
+                    backToTop.classList.toggle('visible', window.scrollY > 300);
+                });
+
+            } catch (err) {
+                console.error('Error:', err);
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+                errorMessage.textContent = err.message || 'حدث خطأ غير متوقع';
+            }
+        }
+
+        // =============================================
+        // START
+        // =============================================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+</body>
+</html>
