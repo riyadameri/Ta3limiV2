@@ -1,0 +1,3364 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"
+  >
+
+  <title>منصة الطالب | الرواد</title>
+
+  <style>
+    /* =========================================================
+       ROOT
+    ========================================================= */
+
+    :root {
+      --primary: #315bea;
+      --primary-dark: #2345c7;
+      --primary-light: #eef2ff;
+
+      --secondary: #7357e8;
+      --secondary-light: #f1edff;
+
+      --success: #18a874;
+      --success-light: #e8f8f1;
+
+      --warning: #f59e0b;
+      --warning-light: #fff7e5;
+
+      --danger: #ef5350;
+      --danger-light: #fff0f0;
+
+      --text: #172033;
+      --text-secondary: #647089;
+      --text-muted: #8d98ab;
+
+      --bg: #f5f7fc;
+      --card: rgba(255, 255, 255, 0.92);
+      --border: #e9edf5;
+
+      --radius-sm: 12px;
+      --radius-md: 18px;
+      --radius-lg: 24px;
+      --radius-xl: 30px;
+
+      --shadow-sm: 0 4px 16px rgba(31, 45, 80, 0.05);
+      --shadow-md: 0 10px 30px rgba(31, 45, 80, 0.08);
+      --shadow-lg: 0 18px 50px rgba(31, 45, 80, 0.12);
+
+      --transition: 0.25s ease;
+    }
+
+
+    /* =========================================================
+       RESET
+    ========================================================= */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family:
+        "Tajawal",
+        "Segoe UI",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
+
+      background:
+        radial-gradient(
+          circle at 10% 0%,
+          rgba(49, 91, 234, 0.12),
+          transparent 30%
+        ),
+        radial-gradient(
+          circle at 100% 20%,
+          rgba(115, 87, 232, 0.10),
+          transparent 28%
+        ),
+        linear-gradient(145deg, #f7f9fd 0%, #eef2fa 100%);
+
+      color: var(--text);
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    button,
+    input {
+      font-family: inherit;
+    }
+
+    button {
+      border: none;
+      outline: none;
+    }
+
+
+    /* =========================================================
+       APP CONTAINER
+    ========================================================= */
+
+    .app-shell {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .platform {
+      position: relative;
+      width: 100%;
+      max-width: 620px;
+      min-height: 100vh;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.88),
+          rgba(248, 250, 255, 0.96)
+        );
+
+      overflow: hidden;
+    }
+
+
+    /* =========================================================
+       DECORATIVE BACKGROUND
+    ========================================================= */
+
+    .background-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(3px);
+      opacity: 0.65;
+    }
+
+    .orb-one {
+      width: 220px;
+      height: 220px;
+      top: -120px;
+      right: -100px;
+      background: rgba(49, 91, 234, 0.12);
+    }
+
+    .orb-two {
+      width: 180px;
+      height: 180px;
+      top: 430px;
+      left: -100px;
+      background: rgba(115, 87, 232, 0.09);
+    }
+
+
+    /* =========================================================
+       MAIN CONTENT
+    ========================================================= */
+
+    .content {
+      position: relative;
+      z-index: 2;
+      padding: 18px 16px 110px;
+    }
+
+
+    /* =========================================================
+       TOP HEADER
+    ========================================================= */
+
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      color: white;
+      font-size: 22px;
+
+      border-radius: 17px;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--primary),
+          var(--secondary)
+        );
+
+      box-shadow:
+        0 9px 22px rgba(49, 91, 234, 0.24);
+    }
+
+    .brand-text {
+      min-width: 0;
+    }
+
+    .brand-text h1 {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .brand-text p {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .notification-btn {
+      width: 43px;
+      height: 43px;
+      flex-shrink: 0;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: white;
+      color: var(--text-secondary);
+
+      border: 1px solid var(--border);
+      border-radius: 15px;
+
+      font-size: 17px;
+      cursor: pointer;
+
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .notification-btn:active {
+      transform: scale(0.94);
+    }
+
+
+    /* =========================================================
+       WELCOME CARD
+    ========================================================= */
+
+    .welcome-card {
+      position: relative;
+      overflow: hidden;
+
+      padding: 20px;
+      margin-bottom: 18px;
+
+      border-radius: 25px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #315bea 0%,
+          #4d61e9 45%,
+          #7357e8 100%
+        );
+
+      color: white;
+
+      box-shadow:
+        0 18px 40px rgba(49, 91, 234, 0.22);
+    }
+
+    .welcome-card::before {
+      content: "";
+      position: absolute;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+
+      top: -100px;
+      left: -70px;
+
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .welcome-card::after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+
+      bottom: -80px;
+      right: -40px;
+
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .welcome-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .welcome-label {
+      font-size: 11px;
+      opacity: 0.78;
+      margin-bottom: 5px;
+    }
+
+    .welcome-name {
+      font-size: 23px;
+      font-weight: 800;
+      margin-bottom: 13px;
+    }
+
+    .student-info-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .student-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      padding: 6px 10px;
+
+      border-radius: 30px;
+
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+
+    /* =========================================================
+       QUICK STATS
+    ========================================================= */
+
+    .stats-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin: 0 2px 11px;
+    }
+
+    .stats-title h2 {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .stats-title span {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+
+      margin-bottom: 23px;
+    }
+
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+
+      min-height: 115px;
+
+      padding: 15px;
+
+      background: var(--card);
+
+      border: 1px solid rgba(226, 231, 241, 0.9);
+      border-radius: 21px;
+
+      box-shadow: var(--shadow-sm);
+
+      transition: var(--transition);
+    }
+
+    .stat-card:active {
+      transform: scale(0.985);
+    }
+
+    .stat-card::after {
+      content: "";
+      position: absolute;
+
+      width: 70px;
+      height: 70px;
+
+      left: -25px;
+      bottom: -30px;
+
+      border-radius: 50%;
+
+      background: rgba(49, 91, 234, 0.045);
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 8px;
+    }
+
+    .stat-icon {
+      width: 34px;
+      height: 34px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 11px;
+
+      background: var(--primary-light);
+      color: var(--primary);
+
+      font-size: 15px;
+    }
+
+    .stat-card:nth-child(2) .stat-icon {
+      color: var(--secondary);
+      background: var(--secondary-light);
+    }
+
+    .stat-card:nth-child(3) .stat-icon {
+      color: var(--warning);
+      background: var(--warning-light);
+    }
+
+    .stat-card:nth-child(4) .stat-icon {
+      color: var(--success);
+      background: var(--success-light);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 850;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .stat-sub {
+      margin-top: 4px;
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+
+    /* =========================================================
+       SECTION HEADER
+    ========================================================= */
+
+    .section {
+      margin-bottom: 22px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 11px;
+      padding: 0 2px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .section-title-icon {
+      width: 32px;
+      height: 32px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 10px;
+
+      background: var(--primary-light);
+      color: var(--primary);
+
+      font-size: 14px;
+    }
+
+    .section-action {
+      font-size: 10px;
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+
+    /* =========================================================
+       PAYMENTS
+    ========================================================= */
+
+    .payments-card {
+      overflow: hidden;
+
+      background: white;
+
+      border: 1px solid var(--border);
+      border-radius: 22px;
+
+      box-shadow: var(--shadow-sm);
+    }
+
+    .payment-item {
+      padding: 14px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      border-bottom: 1px solid #f0f2f7;
+    }
+
+    .payment-item:last-child {
+      border-bottom: none;
+    }
+
+    .payment-main {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .payment-icon {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 13px;
+
+      background: #f5f7ff;
+      color: var(--primary);
+
+      font-size: 15px;
+    }
+
+    .payment-info {
+      min-width: 0;
+    }
+
+    .payment-month {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .payment-class {
+      margin-top: 4px;
+
+      color: var(--text-muted);
+      font-size: 10px;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .payment-side {
+      flex-shrink: 0;
+      text-align: left;
+    }
+
+    .payment-amount {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+      margin-bottom: 5px;
+    }
+
+
+    /* =========================================================
+       BADGES
+    ========================================================= */
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      padding: 5px 9px;
+
+      border-radius: 30px;
+
+      font-size: 9px;
+      font-weight: 800;
+
+      white-space: nowrap;
+    }
+
+    .badge-paid {
+      color: #087a51;
+      background: var(--success-light);
+    }
+
+    .badge-pending {
+      color: #b36a00;
+      background: var(--warning-light);
+    }
+
+    .badge-late {
+      color: #bd3633;
+      background: var(--danger-light);
+    }
+
+    .badge-active {
+      color: #3154c5;
+      background: var(--primary-light);
+    }
+
+
+    /* =========================================================
+       LESSONS
+    ========================================================= */
+
+    .lessons-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lesson-card {
+      position: relative;
+      overflow: hidden;
+
+      padding: 15px;
+
+      background: white;
+
+      border: 1px solid var(--border);
+      border-radius: 21px;
+
+      box-shadow: var(--shadow-sm);
+
+      transition: var(--transition);
+    }
+
+    .lesson-card:active {
+      transform: scale(0.985);
+    }
+
+    .lesson-card::before {
+      content: "";
+
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+
+      width: 4px;
+
+      background:
+        linear-gradient(
+          180deg,
+          var(--primary),
+          var(--secondary)
+        );
+    }
+
+    .lesson-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+
+      gap: 10px;
+    }
+
+    .lesson-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .lesson-subject {
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    .lesson-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+
+      margin-top: 12px;
+    }
+
+    .lesson-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+
+      padding: 6px 8px;
+
+      color: var(--text-secondary);
+      background: #f7f8fc;
+
+      border-radius: 9px;
+
+      font-size: 9px;
+      font-weight: 600;
+    }
+
+    .lesson-meta-item .icon {
+      color: var(--primary);
+    }
+
+
+    /* =========================================================
+       PROFILE
+    ========================================================= */
+
+    .profile-card {
+      padding: 18px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #ffffff,
+          #f8faff
+        );
+
+      border: 1px solid var(--border);
+      border-radius: 23px;
+
+      box-shadow: var(--shadow-sm);
+    }
+
+    .profile-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      margin-bottom: 15px;
+    }
+
+    .profile-title-icon {
+      width: 40px;
+      height: 40px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 13px;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--primary-light),
+          var(--secondary-light)
+        );
+
+      color: var(--primary);
+      font-size: 17px;
+    }
+
+    .profile-title h3 {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .profile-title p {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .profile-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      min-height: 44px;
+
+      border-bottom: 1px dashed #e8ebf2;
+      gap: 15px;
+    }
+
+    .profile-row:last-child {
+      border-bottom: none;
+    }
+
+    .profile-label {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .profile-value {
+      max-width: 62%;
+
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+
+      text-align: left;
+
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+
+    /* =========================================================
+       CHECK IN
+    ========================================================= */
+
+    .checkin-box {
+      margin-top: 16px;
+      padding: 14px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #eef3ff,
+          #f5f0ff
+        );
+
+      border: 1px solid #e5e9ff;
+      border-radius: 19px;
+    }
+
+    .checkin-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .checkin-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      font-size: 12px;
+      font-weight: 800;
+      color: #283e84;
+    }
+
+    .fingerprint {
+      width: 34px;
+      height: 34px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 11px;
+
+      color: var(--primary);
+      background: white;
+
+      font-size: 16px;
+
+      box-shadow: 0 4px 12px rgba(49, 91, 234, 0.08);
+    }
+
+    .btn-checkin {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+
+      min-width: 90px;
+      min-height: 38px;
+
+      padding: 8px 15px;
+
+      color: white;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--primary),
+          var(--secondary)
+        );
+
+      border-radius: 12px;
+
+      font-size: 11px;
+      font-weight: 800;
+
+      cursor: pointer;
+
+      box-shadow:
+        0 8px 18px rgba(49, 91, 234, 0.20);
+
+      transition: var(--transition);
+    }
+
+    .btn-checkin:active {
+      transform: scale(0.95);
+    }
+
+    .btn-checkin:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .checkin-status {
+      display: block;
+
+      margin-top: 10px;
+
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+
+    /* =========================================================
+       CARD SCAN
+    ========================================================= */
+
+    .scan-area {
+      margin-top: 12px;
+    }
+
+    .scan-label {
+      display: block;
+
+      margin-bottom: 7px;
+
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .scan-row {
+      display: flex;
+      gap: 7px;
+    }
+
+    .card-scan-input {
+      min-width: 0;
+      flex: 1;
+
+      height: 42px;
+
+      padding: 0 13px;
+
+      color: var(--text);
+
+      background: white;
+
+      border: 1px solid #dfe4ee;
+      border-radius: 13px;
+
+      outline: none;
+
+      direction: ltr;
+
+      font-family: monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+
+      transition: var(--transition);
+    }
+
+    .card-scan-input::placeholder {
+      color: #aeb6c5;
+    }
+
+    .card-scan-input:focus {
+      border-color: var(--primary);
+
+      box-shadow:
+        0 0 0 3px rgba(49, 91, 234, 0.08);
+    }
+
+    .scan-btn {
+      flex-shrink: 0;
+
+      height: 42px;
+
+      padding: 0 15px;
+
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+
+      color: white;
+      background: #202c45;
+
+      border-radius: 13px;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      cursor: pointer;
+
+      transition: var(--transition);
+    }
+
+    .scan-btn:active {
+      transform: scale(0.95);
+    }
+
+    .scan-hint {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      margin-top: 7px;
+
+      color: var(--text-muted);
+      font-size: 9px;
+    }
+
+
+    /* =========================================================
+       ATTENDANCE PROGRESS
+    ========================================================= */
+
+    .attendance-card {
+      margin-top: 12px;
+      padding: 14px;
+
+      background: white;
+
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+
+    .attendance-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 9px;
+    }
+
+    .attendance-head span:first-child {
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .attendance-percent {
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .progress {
+      height: 7px;
+
+      overflow: hidden;
+
+      background: #edf1f6;
+
+      border-radius: 20px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+
+      border-radius: 20px;
+
+      background:
+        linear-gradient(
+          90deg,
+          #18a874,
+          #40c994
+        );
+
+      transition: width 0.7s ease;
+    }
+
+
+    /* =========================================================
+       EMPTY / LOADING / ERROR
+    ========================================================= */
+
+    .loading {
+      min-height: 90px;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      gap: 9px;
+
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .loading-icon {
+      width: 28px;
+      height: 28px;
+
+      border: 3px solid #e8ecf4;
+      border-top-color: var(--primary);
+
+      border-radius: 50%;
+
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .empty-state {
+      padding: 24px 15px;
+
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .empty-icon {
+      width: 42px;
+      height: 42px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      margin: 0 auto 9px;
+
+      border-radius: 14px;
+
+      color: #9ba6b9;
+      background: #f4f6fa;
+
+      font-size: 17px;
+    }
+
+    .error-box {
+      margin-top: 10px;
+      padding: 13px;
+
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      color: #a63838;
+      background: var(--danger-light);
+
+      border: 1px solid #ffd8d8;
+      border-radius: 14px;
+
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+
+    .footer {
+      margin-top: 22px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      color: var(--text-muted);
+      font-size: 9px;
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .footer-item strong {
+      color: var(--text-secondary);
+    }
+
+
+    /* =========================================================
+       BOTTOM NAVIGATION
+    ========================================================= */
+
+    .bottom-nav {
+      position: fixed;
+
+      z-index: 100;
+
+      bottom: 12px;
+      right: 50%;
+
+      transform: translateX(50%);
+
+      width: calc(100% - 24px);
+      max-width: 580px;
+
+      height: 64px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+
+      padding: 6px;
+
+      background:
+        rgba(255, 255, 255, 0.91);
+
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+
+      border: 1px solid rgba(225, 230, 240, 0.9);
+      border-radius: 21px;
+
+      box-shadow:
+        0 15px 40px rgba(31, 45, 80, 0.14);
+    }
+
+    .nav-item {
+      position: relative;
+
+      width: 25%;
+      height: 52px;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      gap: 3px;
+
+      color: #929bad;
+
+      font-size: 9px;
+      font-weight: 700;
+
+      border-radius: 16px;
+
+      cursor: pointer;
+
+      transition: var(--transition);
+    }
+
+    .nav-item-icon {
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .nav-item.active::after {
+      content: "";
+
+      position: absolute;
+
+      width: 5px;
+      height: 5px;
+
+      bottom: 5px;
+
+      border-radius: 50%;
+
+      background: var(--primary);
+    }
+
+
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+
+    @media (min-width: 600px) {
+
+      body {
+        padding: 30px 0;
+      }
+
+      .app-shell {
+        align-items: flex-start;
+      }
+
+      .platform {
+        min-height: auto;
+
+        border-radius: 34px;
+
+        box-shadow: var(--shadow-lg);
+      }
+
+      .content {
+        padding: 25px 25px 110px;
+      }
+
+      .bottom-nav {
+        bottom: 22px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .stat-card {
+        min-height: 130px;
+      }
+    }
+
+
+    /* =========================================================
+       SMALL PHONES
+    ========================================================= */
+
+    @media (max-width: 360px) {
+
+      .content {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .brand-icon {
+        width: 43px;
+        height: 43px;
+        font-size: 19px;
+      }
+
+      .brand-text h1 {
+        font-size: 17px;
+      }
+
+      .welcome-card {
+        padding: 17px;
+      }
+
+      .welcome-name {
+        font-size: 20px;
+      }
+
+      .stat-card {
+        padding: 13px;
+        min-height: 108px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+      }
+
+      .lesson-meta {
+        gap: 5px;
+      }
+
+      .lesson-meta-item {
+        font-size: 8px;
+        padding: 5px 6px;
+      }
+
+      .profile-card {
+        padding: 15px;
+      }
+
+      .bottom-nav {
+        width: calc(100% - 16px);
+        bottom: 8px;
+      }
+    }
+
+
+    /* =========================================================
+       SAFE AREA FOR MODERN PHONES
+    ========================================================= */
+
+    @supports (padding: max(0px)) {
+
+      .content {
+        padding-bottom:
+          max(110px, calc(110px + env(safe-area-inset-bottom)));
+      }
+
+      .bottom-nav {
+        bottom:
+          max(10px, calc(10px + env(safe-area-inset-bottom)));
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+  <div class="platform" id="app">
+
+    <!-- DECORATIVE BACKGROUND -->
+    <div class="background-orb orb-one"></div>
+    <div class="background-orb orb-two"></div>
+
+
+    <main class="content">
+
+      <!-- =====================================================
+           HEADER
+      ====================================================== -->
+
+      <header class="top-header">
+
+        <div class="brand-area">
+
+          <div class="brand-icon">
+            🎓
+          </div>
+
+          <div class="brand-text">
+            <h1>الرواد</h1>
+            <p>منصة الطالب الذكية</p>
+          </div>
+
+        </div>
+
+        <button
+          class="notification-btn"
+          type="button"
+          aria-label="الإشعارات"
+        >
+          🔔
+        </button>
+
+      </header>
+
+
+      <!-- =====================================================
+           WELCOME
+      ====================================================== -->
+
+      <section class="welcome-card">
+
+        <div class="welcome-content">
+
+          <div class="welcome-label">
+            أهلاً بك من جديد 👋
+          </div>
+
+          <div
+            class="welcome-name"
+            id="studentNameDisplay"
+          >
+            ...
+          </div>
+
+          <div class="student-info-row">
+
+            <span class="student-chip">
+              👨‍🎓 طالب
+            </span>
+
+            <span class="student-chip">
+              🆔
+              <span id="studentIdDisplay">...</span>
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================================
+           STATS
+      ====================================================== -->
+
+      <div class="stats-title">
+
+        <h2>
+          ملخص حسابك
+        </h2>
+
+        <span>
+          آخر تحديث
+        </span>
+
+      </div>
+
+
+      <section class="stats-grid">
+
+        <!-- Payments -->
+        <div class="stat-card">
+
+          <div class="stat-top">
+
+            <div class="stat-label">
+              الدفعات
+            </div>
+
+            <div class="stat-icon">
+              💳
+            </div>
+
+          </div>
+
+          <div
+            class="stat-value"
+            id="totalPayments"
+          >
+            0
+          </div>
+
+          <div
+            class="stat-sub"
+            id="paymentsSub"
+          >
+            مدفوعة / معلقة
+          </div>
+
+        </div>
+
+
+        <!-- Lessons -->
+        <div class="stat-card">
+
+          <div class="stat-top">
+
+            <div class="stat-label">
+              الحصص
+            </div>
+
+            <div class="stat-icon">
+              📚
+            </div>
+
+          </div>
+
+          <div
+            class="stat-value"
+            id="totalLessons"
+          >
+            0
+          </div>
+
+          <div
+            class="stat-sub"
+            id="lessonsSub"
+          >
+            هذا الأسبوع
+          </div>
+
+        </div>
+
+
+        <!-- Remaining -->
+        <div class="stat-card">
+
+          <div class="stat-top">
+
+            <div class="stat-label">
+              المتبقي
+            </div>
+
+            <div class="stat-icon">
+              💰
+            </div>
+
+          </div>
+
+          <div
+            class="stat-value"
+            id="remainingAmount"
+          >
+            0
+          </div>
+
+          <div class="stat-sub">
+            د.ج
+          </div>
+
+        </div>
+
+
+        <!-- Attendance -->
+        <div class="stat-card">
+
+          <div class="stat-top">
+
+            <div class="stat-label">
+              الحضور
+            </div>
+
+            <div class="stat-icon">
+              ✓
+            </div>
+
+          </div>
+
+          <div
+            class="stat-value"
+            id="attendanceRate"
+          >
+            0%
+          </div>
+
+          <div
+            class="stat-sub"
+            id="attendanceSub"
+          >
+            آخر 30 يوم
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================================
+           PROFILE
+      ====================================================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <div class="section-title">
+
+            <div class="section-title-icon">
+              👤
+            </div>
+
+            الملف الشخصي
+
+          </div>
+
+          <span class="section-action">
+            بيانات الطالب
+          </span>
+
+        </div>
+
+
+        <div class="profile-card">
+
+          <div class="profile-title">
+
+            <div class="profile-title-icon">
+              🪪
+            </div>
+
+            <div>
+              <h3>
+                معلومات الحساب
+              </h3>
+
+              <p>
+                بياناتك المسجلة في المنصة
+              </p>
+            </div>
+
+          </div>
+
+
+          <div class="profile-row">
+
+            <span class="profile-label">
+              الاسم
+            </span>
+
+            <span
+              class="profile-value"
+              id="profileName"
+            >
+              ...
+            </span>
+
+          </div>
+
+
+          <div class="profile-row">
+
+            <span class="profile-label">
+              المستوى
+            </span>
+
+            <span
+              class="profile-value"
+              id="profileLevel"
+            >
+              ...
+            </span>
+
+          </div>
+
+
+          <div class="profile-row">
+
+            <span class="profile-label">
+              ولي الأمر
+            </span>
+
+            <span
+              class="profile-value"
+              id="profileParent"
+            >
+              ...
+            </span>
+
+          </div>
+
+
+          <div class="profile-row">
+
+            <span class="profile-label">
+              الهاتف
+            </span>
+
+            <span
+              class="profile-value"
+              id="profilePhone"
+            >
+              ...
+            </span>
+
+          </div>
+
+
+          <div class="profile-row">
+
+            <span class="profile-label">
+              البريد
+            </span>
+
+            <span
+              class="profile-value"
+              id="profileEmail"
+            >
+              ...
+            </span>
+
+          </div>
+
+
+          <!-- Attendance -->
+          <div class="attendance-card">
+
+            <div class="attendance-head">
+
+              <span>
+                نسبة الحضور
+              </span>
+
+              <span
+                class="attendance-percent"
+                id="attendancePercent"
+              >
+                0%
+              </span>
+
+            </div>
+
+            <div class="progress">
+
+              <div
+                class="progress-bar"
+                id="attendanceProgress"
+              ></div>
+
+            </div>
+
+          </div>
+
+
+          <!-- CHECK IN -->
+
+          <div class="checkin-box">
+
+            <div class="checkin-top">
+
+              <div class="checkin-title">
+
+                <div class="fingerprint">
+                  🫆
+                </div>
+
+                <span>
+                  تسجيل الحضور
+                </span>
+
+              </div>
+
+              <button
+                class="btn-checkin"
+                id="checkinBtn"
+                type="button"
+              >
+                ✓ تسجيل
+              </button>
+
+            </div>
+
+            <span
+              class="checkin-status"
+              id="checkinStatus"
+            ></span>
+
+
+            <!-- CARD SCAN -->
+
+            <div class="scan-area">
+
+              <label
+                class="scan-label"
+                for="cardUidInput"
+              >
+                أو استخدم رقم بطاقة الطالب
+              </label>
+
+              <div class="scan-row">
+
+                <input
+                  class="card-scan-input"
+                  type="text"
+                  id="cardUidInput"
+                  placeholder="رقم البطاقة"
+                  dir="ltr"
+                  autocomplete="off"
+                >
+
+                <button
+                  class="scan-btn"
+                  id="scanCardBtn"
+                  type="button"
+                >
+                  🪪 مسح
+                </button>
+
+              </div>
+
+              <div class="scan-hint">
+                ℹ️ أدخل رقم البطاقة أو استخدم القارئ
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================================
+           PAYMENTS
+      ====================================================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <div class="section-title">
+
+            <div class="section-title-icon">
+              🧾
+            </div>
+
+            سجل الدفعات
+
+          </div>
+
+          <span class="section-action">
+            السجل المالي
+          </span>
+
+        </div>
+
+
+        <div
+          class="payments-card"
+          id="paymentsWrapper"
+        >
+
+          <div class="loading">
+
+            <div class="loading-icon"></div>
+
+            جاري تحميل الدفعات...
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================================
+           LESSONS
+      ====================================================== -->
+
+      <section class="section">
+
+        <div class="section-header">
+
+          <div class="section-title">
+
+            <div class="section-title-icon">
+              🕒
+            </div>
+
+            الحصص القادمة
+
+          </div>
+
+          <span class="section-action">
+            جدولك الدراسي
+          </span>
+
+        </div>
+
+
+        <div
+          class="lessons-list"
+          id="lessonsContainer"
+        >
+
+          <div class="loading">
+
+            <div class="loading-icon"></div>
+
+            جاري تحميل الحصص...
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================================
+           FOOTER
+      ====================================================== -->
+
+      <footer class="footer">
+
+        <div class="footer-item">
+          🔄
+          آخر تحديث:
+          <strong id="lastUpdate">
+            اليوم
+          </strong>
+        </div>
+
+        <div class="footer-item">
+          🛡️
+          <strong>
+            الرواد
+          </strong>
+          v2.0
+        </div>
+
+      </footer>
+
+    </main>
+
+
+    <!-- =====================================================
+         BOTTOM NAVIGATION
+    ====================================================== -->
+
+    <nav class="bottom-nav">
+
+      <div
+        class="nav-item active"
+        data-target="app"
+      >
+
+        <div class="nav-item-icon">
+          🏠
+        </div>
+
+        الرئيسية
+
+      </div>
+
+
+      <div
+        class="nav-item"
+        data-target="lessonsContainer"
+      >
+
+        <div class="nav-item-icon">
+          📚
+        </div>
+
+        الحصص
+
+      </div>
+
+
+      <div
+        class="nav-item"
+        data-target="paymentsWrapper"
+      >
+
+        <div class="nav-item-icon">
+          💳
+        </div>
+
+        الدفعات
+
+      </div>
+
+
+      <div
+        class="nav-item"
+        data-target="profileName"
+      >
+
+        <div class="nav-item-icon">
+          👤
+        </div>
+
+        حسابي
+
+      </div>
+
+    </nav>
+
+  </div>
+
+</div>
+
+
+<script>
+  /* ============================================================
+     1. استخراج معرف الطالب من الرابط
+  ============================================================ */
+
+  function getStudentIdFromPath() {
+
+    const path = window.location.pathname;
+    const parts = path.split('/');
+
+    for (let i = 0; i < parts.length; i++) {
+
+      if (
+        parts[i] === 'studentsPlatform' &&
+        i + 1 < parts.length
+      ) {
+
+        return parts[i + 1];
+
+      }
+
+    }
+
+    console.warn(
+      '⚠️ لم يتم العثور على معرف الطالب في الرابط، سيتم استخدام معرف افتراضي'
+    );
+
+    return '6a830ccd4edfef5becddacc0';
+  }
+
+
+  const STUDENT_ID = getStudentIdFromPath();
+
+
+  /* ============================================================
+     2. عناصر DOM
+  ============================================================ */
+
+  const paymentsWrapper =
+    document.getElementById('paymentsWrapper');
+
+  const lessonsContainer =
+    document.getElementById('lessonsContainer');
+
+  const totalPaymentsEl =
+    document.getElementById('totalPayments');
+
+  const paymentsSub =
+    document.getElementById('paymentsSub');
+
+  const totalLessonsEl =
+    document.getElementById('totalLessons');
+
+  const lessonsSub =
+    document.getElementById('lessonsSub');
+
+  const remainingAmountEl =
+    document.getElementById('remainingAmount');
+
+  const attendanceRateEl =
+    document.getElementById('attendanceRate');
+
+  const attendanceSub =
+    document.getElementById('attendanceSub');
+
+  const attendancePercent =
+    document.getElementById('attendancePercent');
+
+  const attendanceProgress =
+    document.getElementById('attendanceProgress');
+
+  const studentNameDisplay =
+    document.getElementById('studentNameDisplay');
+
+  const studentIdDisplay =
+    document.getElementById('studentIdDisplay');
+
+  const profileName =
+    document.getElementById('profileName');
+
+  const profileLevel =
+    document.getElementById('profileLevel');
+
+  const profileParent =
+    document.getElementById('profileParent');
+
+  const profilePhone =
+    document.getElementById('profilePhone');
+
+  const profileEmail =
+    document.getElementById('profileEmail');
+
+  const checkinBtn =
+    document.getElementById('checkinBtn');
+
+  const checkinStatus =
+    document.getElementById('checkinStatus');
+
+  const lastUpdate =
+    document.getElementById('lastUpdate');
+
+  const cardUidInput =
+    document.getElementById('cardUidInput');
+
+  const scanCardBtn =
+    document.getElementById('scanCardBtn');
+
+
+  /* ============================================================
+     3. Helpers
+  ============================================================ */
+
+  function escapeHtml(value) {
+
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+
+  function formatAmount(amount) {
+
+    const value = Number(amount) || 0;
+
+    return value.toLocaleString('ar-DZ');
+  }
+
+
+  function updateAttendanceUI(rate) {
+
+    let numericRate = Number(rate) || 0;
+
+    numericRate = Math.max(
+      0,
+      Math.min(100, numericRate)
+    );
+
+    const formattedRate =
+      `${Math.round(numericRate)}%`;
+
+    attendanceRateEl.textContent =
+      formattedRate;
+
+    attendancePercent.textContent =
+      formattedRate;
+
+    attendanceProgress.style.width =
+      `${numericRate}%`;
+  }
+
+
+  /* ============================================================
+     4. Render Payments
+  ============================================================ */
+
+  function renderPayments(payments) {
+
+    if (
+      !payments ||
+      payments.length === 0
+    ) {
+
+      paymentsWrapper.innerHTML = `
+        <div class="empty-state">
+
+          <div class="empty-icon">
+            🧾
+          </div>
+
+          لا توجد دفعات مسجلة حالياً
+
+        </div>
+      `;
+
+      return;
+    }
+
+
+    const statusMap = {
+
+      paid: {
+        label: 'مدفوع',
+        cls: 'badge-paid',
+        icon: '✓'
+      },
+
+      pending: {
+        label: 'معلق',
+        cls: 'badge-pending',
+        icon: '◷'
+      },
+
+      late: {
+        label: 'متأخر',
+        cls: 'badge-late',
+        icon: '!'
+      },
+
+      cancelled: {
+        label: 'ملغي',
+        cls: 'badge-late',
+        icon: '×'
+      }
+
+    };
+
+
+    let html = '';
+
+
+    payments.forEach((p) => {
+
+      const status =
+        statusMap[p.status] || {
+          label: p.status || 'غير معروف',
+          cls: 'badge-pending',
+          icon: '•'
+        };
+
+
+      const amount =
+        formatAmount(p.amount);
+
+
+      const className =
+        p.class?.name ||
+        p.className ||
+        '—';
+
+
+      const month =
+        p.month ||
+        p.monthCode ||
+        'غير محدد';
+
+
+      html += `
+        <div class="payment-item">
+
+          <div class="payment-main">
+
+            <div class="payment-icon">
+              💳
+            </div>
+
+            <div class="payment-info">
+
+              <div class="payment-month">
+                ${escapeHtml(month)}
+              </div>
+
+              <div class="payment-class">
+                ${escapeHtml(className)}
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div class="payment-side">
+
+            <div class="payment-amount">
+              ${amount} د.ج
+            </div>
+
+            <span class="badge ${status.cls}">
+              ${status.icon}
+              ${status.label}
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+    });
+
+
+    paymentsWrapper.innerHTML = html;
+  }
+
+
+  /* ============================================================
+     5. Render Lessons
+  ============================================================ */
+
+  function renderLessons(lessons) {
+
+    if (
+      !lessons ||
+      lessons.length === 0
+    ) {
+
+      lessonsContainer.innerHTML = `
+        <div class="empty-state">
+
+          <div class="empty-icon">
+            📚
+          </div>
+
+          لا توجد حصص قادمة حالياً
+
+        </div>
+      `;
+
+      return;
+    }
+
+
+    let html = '';
+
+
+    lessons.forEach((l) => {
+
+      const name =
+        l.name ||
+        l.className ||
+        'حصة';
+
+
+      const subject =
+        l.subject ||
+        '—';
+
+
+      const teacher =
+        l.teacher?.name ||
+        l.teacherName ||
+        '—';
+
+
+      const schedule =
+        l.schedule &&
+        l.schedule.length > 0
+          ? l.schedule[0]
+          : null;
+
+
+      const time =
+        schedule?.time ||
+        l.time ||
+        '—';
+
+
+      const day =
+        schedule?.day ||
+        l.day ||
+        '—';
+
+
+      const classroom =
+        schedule?.classroom?.name ||
+        l.classroom ||
+        '—';
+
+
+      html += `
+        <div class="lesson-card">
+
+          <div class="lesson-top">
+
+            <div>
+
+              <div class="lesson-name">
+                ${escapeHtml(name)}
+              </div>
+
+              <div class="lesson-subject">
+                ${escapeHtml(subject)}
+              </div>
+
+            </div>
+
+            <span class="badge badge-active">
+              ✓ قادمة
+            </span>
+
+          </div>
+
+
+          <div class="lesson-meta">
+
+            <span class="lesson-meta-item">
+
+              <span class="icon">
+                👨‍🏫
+              </span>
+
+              ${escapeHtml(teacher)}
+
+            </span>
+
+
+            <span class="lesson-meta-item">
+
+              <span class="icon">
+                🕒
+              </span>
+
+              ${escapeHtml(day)}
+              ${escapeHtml(time)}
+
+            </span>
+
+
+            <span class="lesson-meta-item">
+
+              <span class="icon">
+                🚪
+              </span>
+
+              ${escapeHtml(classroom)}
+
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+    });
+
+
+    lessonsContainer.innerHTML = html;
+  }
+
+
+  /* ============================================================
+     6. Update Statistics
+  ============================================================ */
+
+  function updateStats(
+    payments,
+    lessons
+  ) {
+
+    const total =
+      payments?.length || 0;
+
+
+    const paidCount =
+      payments
+        ? payments.filter(
+            p => p.status === 'paid'
+          ).length
+        : 0;
+
+
+    const pendingCount =
+      payments
+        ? payments.filter(
+            p =>
+              p.status === 'pending' ||
+              p.status === 'late'
+          ).length
+        : 0;
+
+
+    const totalAmount =
+      payments
+        ? payments.reduce(
+            (sum, p) =>
+              sum +
+              (Number(p.amount) || 0),
+            0
+          )
+        : 0;
+
+
+    const paidAmount =
+      payments
+        ? payments
+            .filter(
+              p => p.status === 'paid'
+            )
+            .reduce(
+              (sum, p) =>
+                sum +
+                (Number(p.amount) || 0),
+              0
+            )
+        : 0;
+
+
+    const remaining =
+      Math.max(
+        0,
+        totalAmount - paidAmount
+      );
+
+
+    totalPaymentsEl.textContent =
+      total;
+
+
+    paymentsSub.textContent =
+      `${paidCount} مدفوعة / ${pendingCount} معلقة`;
+
+
+    totalLessonsEl.textContent =
+      lessons?.length || 0;
+
+
+    lessonsSub.textContent =
+      lessons?.length
+        ? `${lessons.length} هذا الأسبوع`
+        : 'لا توجد حصص';
+
+
+    remainingAmountEl.textContent =
+      formatAmount(remaining);
+  }
+
+
+  /* ============================================================
+     7. Update Profile
+  ============================================================ */
+
+  function updateProfile(student) {
+
+    if (!student) {
+      return;
+    }
+
+
+    const name =
+      student.name ||
+      'غير معروف';
+
+
+    studentNameDisplay.textContent =
+      name;
+
+
+    studentIdDisplay.textContent =
+      student.studentId ||
+      student._id ||
+      '—';
+
+
+    profileName.textContent =
+      name;
+
+
+    profileLevel.textContent =
+      student.academicYear ||
+      student.level ||
+      '—';
+
+
+    profileParent.textContent =
+      student.parentName ||
+      '—';
+
+
+    profilePhone.textContent =
+      student.parentPhone ||
+      student.phone ||
+      '—';
+
+
+    profileEmail.textContent =
+      student.parentEmail ||
+      student.email ||
+      '—';
+  }
+
+
+  /* ============================================================
+     8. Loading
+  ============================================================ */
+
+  function setLoading(loading) {
+
+    if (!loading) {
+      return;
+    }
+
+
+    paymentsWrapper.innerHTML = `
+      <div class="loading">
+
+        <div class="loading-icon"></div>
+
+        جاري تحميل الدفعات...
+
+      </div>
+    `;
+
+
+    lessonsContainer.innerHTML = `
+      <div class="loading">
+
+        <div class="loading-icon"></div>
+
+        جاري تحميل الحصص...
+
+      </div>
+    `;
+  }
+
+
+  /* ============================================================
+     9. Error
+  ============================================================ */
+
+  function showError(message) {
+
+    const errorHtml = `
+      <div class="error-box">
+
+        <span>
+          ⚠️
+        </span>
+
+        <span>
+          ${escapeHtml(message)}
+        </span>
+
+      </div>
+    `;
+
+
+    paymentsWrapper.innerHTML =
+      errorHtml;
+
+
+    lessonsContainer.innerHTML =
+      errorHtml;
+  }
+
+
+  /* ============================================================
+     10. Fetch Student Data
+  ============================================================ */
+
+  async function fetchStudentData(
+    studentId
+  ) {
+
+    setLoading(true);
+
+
+    try {
+
+      /* -----------------------------
+         Student
+      ----------------------------- */
+
+      const studentRes =
+        await fetch(
+          `/api/students/${studentId}`
+        );
+
+
+      let student = null;
+
+
+      if (studentRes.ok) {
+
+        student =
+          await studentRes.json();
+
+      } else {
+
+        console.warn(
+          '⚠️ تعذر جلب بيانات الطالب'
+        );
+
+      }
+
+
+      /* -----------------------------
+         Lessons
+      ----------------------------- */
+
+      let lessons = [];
+
+
+      const classesRes =
+        await fetch(
+          `/api/students/${studentId}/classes`
+        );
+
+
+      if (classesRes.ok) {
+
+        const data =
+          await classesRes.json();
+
+
+        lessons =
+          data.data ||
+          data.classes ||
+          data ||
+          [];
+
+      } else {
+
+        console.warn(
+          '⚠️ تعذر جلب الحصص'
+        );
+
+      }
+
+
+      /* -----------------------------
+         Payments
+      ----------------------------- */
+
+      let payments = [];
+
+
+      const paymentsRes =
+        await fetch(
+          `/api/payments/student/${studentId}`
+        );
+
+
+      if (paymentsRes.ok) {
+
+        const data =
+          await paymentsRes.json();
+
+
+        payments =
+          data.payments ||
+          data ||
+          [];
+
+      } else {
+
+        console.warn(
+          '⚠️ تعذر جلب الدفعات'
+        );
+
+      }
+
+
+      /* -----------------------------
+         Update Profile
+      ----------------------------- */
+
+      if (student) {
+
+        updateProfile(student);
+
+
+        if (
+          student.attendanceRate !==
+          undefined
+        ) {
+
+          updateAttendanceUI(
+            student.attendanceRate
+          );
+
+        } else {
+
+          const total =
+            payments.length;
+
+
+          const paid =
+            payments.filter(
+              p =>
+                p.status === 'paid'
+            ).length;
+
+
+          const rate =
+            total > 0
+              ? Math.round(
+                  (paid / total) * 100
+                )
+              : 0;
+
+
+          updateAttendanceUI(rate);
+        }
+
+      } else {
+
+        profileName.textContent =
+          'لم يتم العثور على الطالب';
+
+
+        updateAttendanceUI(0);
+      }
+
+
+      /* -----------------------------
+         Render
+      ----------------------------- */
+
+      renderPayments(
+        payments
+      );
+
+
+      renderLessons(
+        lessons
+      );
+
+
+      updateStats(
+        payments,
+        lessons
+      );
+
+
+      /* -----------------------------
+         Last Update
+      ----------------------------- */
+
+      lastUpdate.textContent =
+        new Date().toLocaleString(
+          'ar-DZ',
+          {
+            hour: '2-digit',
+            minute: '2-digit'
+          }
+        );
+
+
+      attendanceSub.textContent =
+        'آخر 30 يوم';
+
+
+      /* -----------------------------
+         Check-in
+      ----------------------------- */
+
+      checkinBtn.disabled = false;
+
+      checkinStatus.textContent =
+        '✓ جاهز لتسجيل الحضور';
+
+      checkinStatus.style.color =
+        '#18a874';
+
+
+    } catch (err) {
+
+      console.error(
+        '❌ خطأ في جلب البيانات:',
+        err
+      );
+
+
+      showError(
+        'حدث خطأ أثناء تحميل البيانات'
+      );
+
+
+      renderPayments([]);
+
+      renderLessons([]);
+
+      updateStats([], []);
+
+      updateAttendanceUI(0);
+    }
+  }
+
+
+  /* ============================================================
+     11. Check-in
+  ============================================================ */
+
+  async function checkinStudent(
+    cardUid = null
+  ) {
+
+    checkinBtn.disabled = true;
+
+
+    checkinStatus.textContent =
+      '⏳ جاري تسجيل الحضور...';
+
+
+    checkinStatus.style.color =
+      '#f59e0b';
+
+
+    try {
+
+      const body =
+        cardUid
+          ? { cardUid }
+          : { studentId: STUDENT_ID };
+
+
+      const res =
+        await fetch(
+          '/api/attendance/card-scan',
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify(body)
+          }
+        );
+
+
+      if (res.ok) {
+
+        const result =
+          await res.json();
+
+
+        if (result.success) {
+
+          checkinStatus.textContent =
+            '✓ تم تسجيل حضورك بنجاح';
+
+
+          checkinStatus.style.color =
+            '#18a874';
+
+
+          checkinBtn.innerHTML =
+            '✓ تم التسجيل';
+
+
+          setTimeout(() => {
+
+            checkinBtn.innerHTML =
+              '✓ تسجيل';
+
+          }, 3000);
+
+
+        } else {
+
+          checkinStatus.textContent =
+            `❌ ${
+              result.error ||
+              result.message ||
+              'فشل التسجيل'
+            }`;
+
+
+          checkinStatus.style.color =
+            '#ef5350';
+        }
+
+
+      } else {
+
+        let errData = {};
+
+
+        try {
+
+          errData =
+            await res.json();
+
+        } catch (_) {
+
+          errData = {};
+
+        }
+
+
+        checkinStatus.textContent =
+          `❌ ${
+            errData.error ||
+            errData.message ||
+            'حدث خطأ أثناء التسجيل'
+          }`;
+
+
+        checkinStatus.style.color =
+          '#ef5350';
+      }
+
+
+    } catch (err) {
+
+      console.error(
+        '❌ خطأ في تسجيل الحضور:',
+        err
+      );
+
+
+      checkinStatus.textContent =
+        '❌ خطأ في الاتصال بالخادم';
+
+
+      checkinStatus.style.color =
+        '#ef5350';
+
+
+    } finally {
+
+      checkinBtn.disabled = false;
+
+    }
+  }
+
+
+  /* ============================================================
+     12. Check-in Button
+  ============================================================ */
+
+  checkinBtn.addEventListener(
+    'click',
+    () => {
+
+      checkinStudent();
+
+    }
+  );
+
+
+  /* ============================================================
+     13. Card Scan
+  ============================================================ */
+
+  scanCardBtn.addEventListener(
+    'click',
+    () => {
+
+      const uid =
+        cardUidInput.value.trim();
+
+
+      if (!uid) {
+
+        checkinStatus.textContent =
+          '⚠️ أدخل رقم البطاقة أولاً';
+
+
+        checkinStatus.style.color =
+          '#f59e0b';
+
+
+        cardUidInput.focus();
+
+        return;
+      }
+
+
+      checkinStudent(uid);
+
+
+      cardUidInput.value = '';
+
+    }
+  );
+
+
+  /* ============================================================
+     14. Enter Key
+  ============================================================ */
+
+  cardUidInput.addEventListener(
+    'keypress',
+    (event) => {
+
+      if (event.key === 'Enter') {
+
+        scanCardBtn.click();
+
+      }
+
+    }
+  );
+
+
+  /* ============================================================
+     15. Bottom Navigation
+  ============================================================ */
+
+  const navItems =
+    document.querySelectorAll(
+      '.nav-item'
+    );
+
+
+  navItems.forEach(
+    (item) => {
+
+      item.addEventListener(
+        'click',
+        () => {
+
+          navItems.forEach(
+            nav =>
+              nav.classList.remove(
+                'active'
+              )
+          );
+
+
+          item.classList.add(
+            'active'
+          );
+
+
+          const targetId =
+            item.dataset.target;
+
+
+          if (
+            targetId &&
+            targetId !== 'app'
+          ) {
+
+            const target =
+              document.getElementById(
+                targetId
+              );
+
+
+            if (target) {
+
+              target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+              });
+
+            }
+
+          } else {
+
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  /* ============================================================
+     16. Detect Scroll Section
+  ============================================================ */
+
+  const sections = [
+
+    {
+      id: 'app',
+      nav: 0
+    },
+
+    {
+      id: 'lessonsContainer',
+      nav: 1
+    },
+
+    {
+      id: 'paymentsWrapper',
+      nav: 2
+    },
+
+    {
+      id: 'profileName',
+      nav: 3
+    }
+
+  ];
+
+
+  window.addEventListener(
+    'scroll',
+    () => {
+
+      const scrollPosition =
+        window.scrollY + 180;
+
+
+      let activeIndex = 0;
+
+
+      sections.forEach(
+        (section) => {
+
+          const element =
+            document.getElementById(
+              section.id
+            );
+
+
+          if (!element) {
+            return;
+          }
+
+
+          const top =
+            element.getBoundingClientRect()
+              .top +
+            window.scrollY;
+
+
+          if (
+            scrollPosition >= top
+          ) {
+
+            activeIndex =
+              section.nav;
+
+          }
+
+        }
+      );
+
+
+      navItems.forEach(
+        (item, index) => {
+
+          item.classList.toggle(
+            'active',
+            index === activeIndex
+          );
+
+        }
+      );
+
+    },
+    {
+      passive: true
+    }
+  );
+
+
+  /* ============================================================
+     17. Initial Load
+  ============================================================ */
+
+  fetchStudentData(
+    STUDENT_ID
+  );
+
+
+  /* ============================================================
+     18. Auto Refresh
+  ============================================================ */
+
+  setInterval(
+    () => {
+
+      fetchStudentData(
+        STUDENT_ID
+      );
+
+    },
+    60000
+  );
+
+</script>
+
+</body>
+</html>

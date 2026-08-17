@@ -13269,6 +13269,84 @@ app.get('/api/classes/:id/details', async (req, res) => {
 // ==============================================
 // 2. جلب مدفوعات الحصة مع تصفية حسب الشهر
 // ==============================================
+
+// ==============================================
+// STUDENT PLATFORM PAGE - Professional Student Dashboard
+// ==============================================
+
+// Serve the student platform HTML page
+app.get('/studentsPlatform/:studentId', (req, res) => {
+    const studentId = req.params.studentId;
+    
+    // Validate student ID format
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+        return res.status(400).send(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>خطأ - معرف غير صالح</title></head>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; direction: rtl;">
+                <h1 style="color: #e94560;">❌ معرف غير صالح</h1>
+                <p>معرف الطالب غير صحيح. يرجى التحقق من الرابط.</p>
+                <a href="/" style="color: #e94560; text-decoration: none;">العودة إلى الصفحة الرئيسية</a>
+            </body>
+            </html>
+        `);
+    }
+    
+    // Serve the HTML file
+    const htmlPath = path.join(__dirname, 'public', 'studentsPlatform.html');
+    
+    // Check if file exists
+    if (fs.existsSync(htmlPath)) {
+        res.sendFile(htmlPath);
+    } else {
+        // If the HTML file doesn't exist, generate a simple page with the student ID
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>منصة الطالب - Redox</title>
+                <script>
+                    // The HTML will load the student data via API
+                    const STUDENT_ID = '${studentId}';
+                    const API_BASE = window.location.origin;
+                    
+                    // Auto-redirect to the main page with the ID
+                    window.location.href = '/studentsPlatform.html?id=' + STUDENT_ID;
+                </script>
+            </head>
+            <body>
+                <p>جاري التحميل...</p>
+            </body>
+            </html>
+        `);
+    }
+});
+
+// Alternative: Also support query parameter format
+app.get('/studentsPlatform', (req, res) => {
+    const studentId = req.query.id;
+    if (studentId) {
+        return res.redirect(`/studentsPlatform/${studentId}`);
+    }
+    
+    // If no ID provided, show a selection page or error
+    res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>منصة الطالب</title></head>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; direction: rtl;">
+            <h1 style="color: #e94560;">📚 منصة الطالب</h1>
+            <p>يرجى تحديد معرف الطالب في الرابط.</p>
+            <p style="color: #888; font-size: 14px;">مثال: /studentsPlatform/6a830ccd4edfef5becddacc0</p>
+        </body>
+        </html>
+    `);
+});
+
+
 app.get('/api/classes/:id/payments', async (req, res) => {
   try {
     const classId = req.params.id;
@@ -20311,6 +20389,9 @@ const token = jwt.sign(
 // ==============================================
 // ==============================================
 // ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة ورسوم التسجيل
+
+
+
 // ==============================================
 app.post('/api/attendance/card-scan-enhanced', async (req, res) => {
   try {
