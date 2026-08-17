@@ -20297,6 +20297,887 @@ const token = jwt.sign(
 // ==============================================
 // نقطة نهاية تسجيل حضور الطالب في الحصة الحية
 // ==============================================
+// ==============================================
+// ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة ورسوم التسجيل
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة ورسوم التسجيل
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة ورسوم التسجيل
+// ==============================================
+// ==============================================
+// ✅ نقطة نهاية محسنة لمسح البطاقة - مع التحقق من الدفعات المتأخرة ورسوم التسجيل
+// ==============================================
+app.post('/api/attendance/card-scan-enhanced', async (req, res) => {
+  try {
+    const { cardUid, sendSMS = false, checkPayments = true, checkRegistration = true } = req.body;
+    
+    console.log('🔍 [محسّن] معالجة البطاقة:', cardUid);
+    console.log('📋 التحقق من الدفعات:', checkPayments);
+    console.log('📋 التحقق من رسوم التسجيل:', checkRegistration);
+    
+    if (!cardUid) {
+      return res.status(400).json({
+        success: false,
+        error: 'رقم البطاقة مطلوب'
+      });
+    }
+
+    // 1. البحث عن البطاقة والطالب
+    const card = await Card.findOne({ uid: cardUid })
+      .populate({
+        path: 'student',
+        populate: [
+          { path: 'classes', select: 'name subject' },
+          { path: 'schoolId', select: 'name schoolKey' }
+        ]
+      });
+    
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        error: 'البطاقة غير مسجلة في النظام'
+      });
+    }
+
+    const student = card.student;
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    console.log(`✅ الطالب: ${student.name} (${student.studentId})`);
+    console.log(`🔍 hasPaidRegistration: ${student.hasPaidRegistration}`);
+
+    // 2. التحقق من الدفعات المتأخرة - 🔥 البحث عن جميع الدفعات غير المدفوعة
+    let overduePayments = [];
+    let registrationStatus = null;
+    let currentClass = null;
+    let attendanceStatus = null;
+    let hasOverdue = false;
+    let hasRegistrationIssue = false;
+    let totalOverdueAmount = 0;
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    console.log(`📅 الشهر الحالي: ${currentMonth}`);
+
+    // البحث عن الحصة الحية والدفعات المتأخرة بالتوازي
+    const [liveClasses, allStudentPayments, registrationFee] = await Promise.all([
+      // البحث عن حصة حية جارية
+      LiveClass.find({
+        status: 'ongoing'
+      }).populate({
+        path: 'class',
+        populate: { path: 'students', model: 'Student' }
+      }).populate('teacher', 'name'),
+      
+      // 🔥 البحث عن جميع دفعات الطالب
+      Payment.find({
+        student: student._id
+      }).populate('class', 'name subject').sort({ monthCode: 1 }),
+      
+      // التحقق من رسوم التسجيل
+      checkRegistration ? SchoolFee.findOne({
+        student: student._id,
+        status: 'paid'
+      }) : null
+    ]);
+
+    console.log(`📊 عدد الدفعات الكلي للطالب: ${allStudentPayments.length}`);
+    
+    // 🔥 تصفية الدفعات المتأخرة (غير المدفوعة)
+    overduePayments = allStudentPayments.filter(p => {
+      // الدفعة غير مدفوعة (الحالة pending أو late)
+      const isUnpaid = p.status === 'pending' || p.status === 'late';
+      
+      // إذا كانت الدفعة غير مدفوعة ولديها شهر محدد
+      if (isUnpaid && p.monthCode) {
+        // إذا كان الشهر أقل من الشهر الحالي (أي متأخر)
+        if (p.monthCode < currentMonth) {
+          return true;
+        }
+        // إذا كان الشهر الحالي ولكن متأخر (أي لم يدفع في الوقت المناسب)
+        if (p.monthCode === currentMonth) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    hasOverdue = overduePayments.length > 0;
+    totalOverdueAmount = overduePayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    console.log(`⚠️ عدد الدفعات المتأخرة: ${overduePayments.length}`);
+    console.log(`⚠️ إجمالي المبلغ المتأخر: ${totalOverdueAmount} د.ج`);
+    console.log(`⚠️ hasOverdue: ${hasOverdue}`);
+    
+    // عرض تفاصيل الدفعات المتأخرة
+    overduePayments.forEach(p => {
+      console.log(`   - ${p.month || p.monthCode}: ${p.amount} د.ج (${p.status})`);
+    });
+
+    // 3. التحقق من رسوم التسجيل
+    if (checkRegistration) {
+      registrationStatus = registrationFee ? 'paid' : 'pending';
+      hasRegistrationIssue = registrationStatus === 'pending';
+      console.log(`📋 حالة رسوم التسجيل: ${registrationStatus}`);
+      console.log(`📋 hasRegistrationIssue: ${hasRegistrationIssue}`);
+    }
+
+    // البحث عن الحصة الحية للطالب
+    for (const liveClass of liveClasses) {
+      const classObj = liveClass.class;
+      if (classObj && classObj.students) {
+        const isEnrolled = classObj.students.some(
+          s => s._id.toString() === student._id.toString()
+        );
+        if (isEnrolled) {
+          currentClass = {
+            _id: classObj._id,
+            name: classObj.name,
+            subject: classObj.subject,
+            teacher: liveClass.teacher
+          };
+          
+          // تسجيل الحضور
+          const now = new Date();
+          const attendanceIndex = liveClass.attendance.findIndex(
+            att => att.student.toString() === student._id.toString()
+          );
+          
+          let status = 'present';
+          if (liveClass.startTime) {
+            const [classHour, classMinute] = liveClass.startTime.split(':').map(Number);
+            const classStartMinutes = classHour * 60 + classMinute;
+            const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+            if (currentTimeMinutes > classStartMinutes + 15) {
+              status = 'late';
+            }
+          }
+          
+          if (attendanceIndex >= 0) {
+            liveClass.attendance[attendanceIndex].status = status;
+            liveClass.attendance[attendanceIndex].joinedAt = now;
+          } else {
+            liveClass.attendance.push({
+              student: student._id,
+              status: status,
+              joinedAt: now,
+              leftAt: null
+            });
+          }
+          
+          await liveClass.save();
+          attendanceStatus = { status, time: now };
+          break;
+        }
+      }
+    }
+
+    // 4. إرسال رسالة SMS (اختياري)
+    let smsSent = false;
+    if (sendSMS && student.parentPhone) {
+      try {
+        smsSent = true;
+      } catch (err) {
+        console.error('❌ فشل إرسال SMS:', err);
+      }
+    }
+
+    // 5. إرجاع الاستجابة مع جميع البيانات
+    const hasIssues = hasOverdue || hasRegistrationIssue;
+
+    console.log(`📊 النتيجة النهائية:`);
+    console.log(`   hasOverdue: ${hasOverdue}`);
+    console.log(`   hasRegistrationIssue: ${hasRegistrationIssue}`);
+    console.log(`   hasIssues: ${hasIssues}`);
+
+    res.json({
+      success: true,
+      message: hasIssues
+        ? `تم تسجيل حضور الطالب ${student.name} مع وجود ${hasOverdue ? overduePayments.length + ' دفعة متأخرة' : ''}${hasOverdue && hasRegistrationIssue ? ' و' : ''}${hasRegistrationIssue ? 'رسوم تسجيل غير مدفوعة' : ''}`
+        : `تم تسجيل حضور الطالب ${student.name} بنجاح`,
+      data: {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          academicYear: student.academicYear,
+          parentName: student.parentName,
+          parentPhone: student.parentPhone,
+          parentEmail: student.parentEmail,
+          active: student.active,
+          status: student.status,
+          hasPaidRegistration: student.hasPaidRegistration || false
+        },
+        class: currentClass,
+        attendance: attendanceStatus,
+        overduePayments: overduePayments.map(p => ({
+          _id: p._id,
+          amount: p.amount,
+          month: p.month || p.monthCode,
+          monthCode: p.monthCode,
+          class: p.class,
+          status: p.status
+        })),
+        registrationStatus: registrationStatus,
+        hasOverdue: hasOverdue,
+        hasRegistrationIssue: hasRegistrationIssue,
+        hasIssues: hasIssues,
+        totalOverdueAmount: totalOverdueAmount,
+        sms: { sent: smsSent },
+        timestamp: new Date()
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في نقطة card-scan-enhanced:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+// ==============================================
+// ✅ نقطة نهاية للتحقق من حالة الطالب (مدفوعات ورسوم تسجيل)
+// ==============================================
+app.get('/api/students/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الطالب غير صالح'
+      });
+    }
+
+    const student = await Student.findOne({
+      _id: id,
+      ...(schoolId && { schoolId: schoolId })
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // التحقق من الدفعات المتأخرة
+    const overduePayments = await Payment.find({
+      student: student._id,
+      status: { $in: ['pending', 'late'] },
+      monthCode: { $lt: new Date().toISOString().slice(0, 7) }
+    }).populate('class', 'name subject').sort({ monthCode: 1 });
+
+    // التحقق من رسوم التسجيل
+    const registrationFee = await SchoolFee.findOne({
+      student: student._id,
+      status: 'paid'
+    });
+
+    const registrationStatus = registrationFee ? 'paid' : 'pending';
+    
+    // الحصول على الحصص النشطة للطالب
+    const activeClasses = await Class.find({
+      _id: { $in: student.classes || [] },
+      ...(schoolId && { schoolId: schoolId })
+    }).populate('teacher', 'name').populate('schedule.classroom', 'name');
+
+    res.json({
+      success: true,
+      data: {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          academicYear: student.academicYear,
+          parentName: student.parentName,
+          parentPhone: student.parentPhone,
+          hasPaidRegistration: student.hasPaidRegistration || false,
+          active: student.active,
+          status: student.status
+        },
+        overduePayments: overduePayments.map(p => ({
+          _id: p._id,
+          amount: p.amount,
+          month: p.month,
+          monthCode: p.monthCode,
+          class: p.class
+        })),
+        registrationStatus: registrationStatus,
+        activeClasses: activeClasses.map(c => ({
+          _id: c._id,
+          name: c.name,
+          subject: c.subject,
+          teacher: c.teacher?.name,
+          price: c.price
+        })),
+        hasIssues: overduePayments.length > 0 || registrationStatus === 'pending'
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب حالة الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ نقطة نهاية لتسجيل دفع رسوم التسجيل (مع التحقق من المدرسة)
+// ==============================================
+app.post('/api/students/:id/pay-registration-enhanced', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, paymentMethod, paymentDate, notes } = req.body;
+    const schoolId = req.query.schoolId || req.body.schoolId || req.user?.schoolId;
+    
+    console.log(`💰 تسجيل دفع رسوم التسجيل للطالب: ${id}`);
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    const student = await Student.findOne({
+      _id: id,
+      schoolId: schoolId
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود أو لا ينتمي للمدرسة'
+      });
+    }
+
+    // التحقق من الدفع المسبق
+    if (student.hasPaidRegistration) {
+      return res.status(400).json({
+        success: false,
+        error: 'رسوم التسجيل مدفوعة مسبقاً لهذا الطالب'
+      });
+    }
+
+    // تحديث حالة الطالب
+    student.hasPaidRegistration = true;
+    student.status = 'active';
+    student.active = true;
+    await student.save();
+
+    // إنشاء سجل رسوم التسجيل
+    const registrationFee = new SchoolFee({
+      schoolId: schoolId,
+      student: student._id,
+      amount: amount || 600,
+      paymentDate: paymentDate || new Date(),
+      paymentMethod: paymentMethod || 'cash',
+      status: 'paid',
+      invoiceNumber: `REG-${Date.now().toString().slice(-8)}`,
+      recordedBy: req.user?.id || null,
+      notes: notes || 'دفع رسوم التسجيل'
+    });
+    await registrationFee.save();
+
+    // تسجيل المعاملة المالية
+    const transaction = new FinancialTransaction({
+      schoolId: schoolId,
+      type: 'income',
+      amount: amount || 600,
+      description: `رسوم تسجيل الطالب ${student.name}`,
+      category: 'registration',
+      date: registrationFee.paymentDate,
+      recordedBy: req.user?.id || null,
+      reference: registrationFee._id,
+      student: student._id
+    });
+    await transaction.save();
+
+    console.log(`✅ تم تسجيل دفع رسوم التسجيل للطالب ${student.name}`);
+
+    res.json({
+      success: true,
+      message: 'تم تسجيل دفع رسوم التسجيل بنجاح',
+      data: {
+        student: {
+          _id: student._id,
+          name: student.name,
+          studentId: student.studentId,
+          hasPaidRegistration: student.hasPaidRegistration
+        },
+        receiptNumber: registrationFee.invoiceNumber,
+        transactionId: transaction._id,
+        amount: registrationFee.amount,
+        paymentDate: registrationFee.paymentDate
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تسجيل دفع رسوم التسجيل:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ نقطة نهاية للحصول على إحصائيات الدفعات المتأخرة للمدرسة
+// ==============================================
+app.get('/api/accounting/overdue-summary', async (req, res) => {
+  try {
+    const { schoolId, month } = req.query;
+    
+    if (!schoolId) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد المدرسة (schoolId)'
+      });
+    }
+
+    // بناء فلتر الدفعات المتأخرة
+    const filter = {
+      schoolId: schoolId,
+      status: { $in: ['pending', 'late'] }
+    };
+
+    if (month) {
+      filter.monthCode = { $lt: month };
+    } else {
+      filter.monthCode = { $lt: new Date().toISOString().slice(0, 7) };
+    }
+
+    // جلب الدفعات المتأخرة
+    const overduePayments = await Payment.find(filter)
+      .populate('student', 'name studentId parentPhone')
+      .populate('class', 'name subject')
+      .sort({ monthCode: 1 });
+
+    // تجميع حسب الطالب
+    const studentMap = {};
+    overduePayments.forEach(p => {
+      const studentId = p.student?._id?.toString() || 'unknown';
+      if (!studentMap[studentId]) {
+        studentMap[studentId] = {
+          student: p.student,
+          totalAmount: 0,
+          count: 0,
+          payments: []
+        };
+      }
+      studentMap[studentId].totalAmount += p.amount;
+      studentMap[studentId].count++;
+      studentMap[studentId].payments.push({
+        _id: p._id,
+        amount: p.amount,
+        month: p.month,
+        monthCode: p.monthCode,
+        class: p.class,
+        status: p.status
+      });
+    });
+
+    // تحويل إلى مصفوفة وترتيب حسب المبلغ
+    const studentsOverdue = Object.values(studentMap)
+      .filter(item => item.student)
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+
+    // إحصائيات عامة
+    const summary = {
+      totalStudents: studentsOverdue.length,
+      totalAmount: studentsOverdue.reduce((sum, s) => sum + s.totalAmount, 0),
+      totalPayments: overduePayments.length,
+      averagePerStudent: studentsOverdue.length > 0 
+        ? Math.round(studentsOverdue.reduce((sum, s) => sum + s.totalAmount, 0) / studentsOverdue.length)
+        : 0,
+      mostOverdueStudent: studentsOverdue[0]?.student || null,
+      mostOverdueAmount: studentsOverdue[0]?.totalAmount || 0
+    };
+
+    // التحقق من رسوم التسجيل غير المدفوعة
+    const pendingRegistration = await SchoolFee.find({
+      schoolId: schoolId,
+      status: 'pending'
+    }).populate('student', 'name studentId parentPhone');
+
+    const registrationSummary = {
+      count: pendingRegistration.length,
+      students: pendingRegistration.map(f => ({
+        student: f.student,
+        amount: f.amount,
+        createdAt: f.createdAt
+      }))
+    };
+
+    res.json({
+      success: true,
+      summary: summary,
+      studentsOverdue: studentsOverdue,
+      registrationPending: registrationSummary,
+      month: month || new Date().toISOString().slice(0, 7),
+      totalIssues: studentsOverdue.length + pendingRegistration.length
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب إحصائيات الدفعات المتأخرة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ تحديث حالة الدفعة للطالب (مع دعم واتساب)
+// ==============================================
+app.put('/api/payments/:id/update-status', async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    const { 
+      status, 
+      paymentMethod, 
+      paymentDate, 
+      notes, 
+      schoolId,
+      sendWhatsApp = false 
+    } = req.body;
+    
+    console.log(`📝 تحديث حالة الدفعة: ${paymentId}`);
+    console.log(`📊 الحالة الجديدة: ${status}`);
+    console.log(`📱 إرسال واتساب: ${sendWhatsApp}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الدفعة غير صالح'
+      });
+    }
+    
+    // جلب الدفعة مع البيانات المرتبطة
+    const payment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId parentPhone parentName schoolId')
+      .populate('class', 'name subject price');
+    
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'الدفعة غير موجودة'
+      });
+    }
+    
+    // التحقق من صلاحية المدرسة
+    if (schoolId && payment.schoolId?.toString() !== schoolId.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'غير مصرح بالوصول لهذه الدفعة'
+      });
+    }
+    
+    // حفظ الحالة القديمة
+    const oldStatus = payment.status;
+    
+    // تحديث بيانات الدفعة
+    payment.status = status;
+    
+    if (status === 'paid') {
+      payment.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
+      payment.paymentMethod = paymentMethod || payment.paymentMethod || 'cash';
+      payment.invoiceNumber = payment.invoiceNumber || `INV-${Date.now().toString().slice(-8)}`;
+    } else if (status === 'pending' || status === 'late') {
+      // إلغاء تاريخ الدفع إذا كانت الحالة معلقة أو متأخرة
+      if (oldStatus === 'paid') {
+        payment.paymentDate = null;
+        payment.invoiceNumber = null;
+      }
+    }
+    
+    if (notes) {
+      payment.notes = payment.notes 
+        ? `${payment.notes} | ${notes}` 
+        : notes;
+    }
+    
+    await payment.save();
+    console.log(`✅ تم تحديث حالة الدفعة من ${oldStatus} إلى ${status}`);
+    
+    // ==============================================
+    // تحديث العمولة المرتبطة (إذا وجدت)
+    // ==============================================
+    let commissionUpdated = false;
+    
+    if (payment.commissionId) {
+      const commission = await TeacherCommission.findById(payment.commissionId);
+      
+      if (commission) {
+        const studentIndex = commission.students.findIndex(
+          s => s.student.toString() === payment.student._id.toString()
+        );
+        
+        if (studentIndex !== -1) {
+          if (status === 'paid') {
+            commission.students[studentIndex].status = 'paid';
+            commission.students[studentIndex].paymentDate = payment.paymentDate;
+            commission.students[studentIndex].paymentMethod = payment.paymentMethod;
+            commission.students[studentIndex].receiptNumber = payment.invoiceNumber;
+            
+            const studentShare = commission.students[studentIndex].teacherShare || 0;
+            commission.totalPaid += studentShare;
+            commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+            
+            if (commission.remainingAmount <= 0) {
+              commission.status = 'paid';
+            } else if (commission.totalPaid > 0) {
+              commission.status = 'partial';
+            }
+            
+            commissionUpdated = true;
+          } else if (status === 'cancelled' || status === 'pending') {
+            // إذا تم إلغاء الدفعة، نقوم بتحديث العمولة
+            commission.students[studentIndex].status = 'pending';
+            commission.students[studentIndex].paymentDate = null;
+            commission.students[studentIndex].paymentMethod = null;
+            commission.students[studentIndex].receiptNumber = null;
+            
+            const studentShare = commission.students[studentIndex].teacherShare || 0;
+            commission.totalPaid = Math.max(0, commission.totalPaid - studentShare);
+            commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+            
+            if (commission.remainingAmount <= 0) {
+              commission.status = 'paid';
+            } else if (commission.totalPaid > 0) {
+              commission.status = 'partial';
+            } else {
+              commission.status = 'pending';
+            }
+            
+            commissionUpdated = true;
+          }
+          
+          if (commissionUpdated) {
+            await commission.save();
+            console.log(`✅ تم تحديث العمولة المرتبطة: ${commission._id}`);
+          }
+        }
+      }
+    }
+    
+    // ==============================================
+    // تحديث المعاملة المالية (إذا كانت مدفوعة)
+    // ==============================================
+    if (status === 'paid' && oldStatus !== 'paid') {
+      // إنشاء معاملة مالية جديدة
+      const transaction = new FinancialTransaction({
+        schoolId: payment.schoolId,
+        type: 'income',
+        amount: payment.amount,
+        description: `دفعة من الطالب ${payment.student?.name || 'غير معروف'} - ${payment.month || 'شهر غير محدد'}`,
+        category: 'tuition',
+        recordedBy: req.user?.id || null,
+        reference: payment._id,
+        student: payment.student?._id,
+        date: payment.paymentDate || new Date()
+      });
+      await transaction.save();
+      console.log(`✅ تم إنشاء معاملة مالية جديدة: ${transaction._id}`);
+      
+    } else if (status !== 'paid' && oldStatus === 'paid') {
+      // إذا تم تغيير الحالة من مدفوع إلى غير مدفوع، حذف المعاملة المالية
+      await FinancialTransaction.deleteMany({
+        reference: payment._id,
+        type: 'income'
+      });
+      console.log(`🗑️ تم حذف المعاملة المالية المرتبطة`);
+    }
+    
+    // ==============================================
+    // إرسال رسالة واتساب (إذا كان مطلوباً)
+    // ==============================================
+    let whatsappSent = false;
+    let whatsappError = null;
+    
+    if (sendWhatsApp && payment.student) {
+      try {
+        const student = payment.student;
+        const parentPhone = student.parentPhone;
+        
+        if (parentPhone) {
+          // تنسيق رقم الهاتف
+          let cleanPhone = parentPhone.trim();
+          if (!cleanPhone.startsWith('+')) {
+            if (cleanPhone.startsWith('0')) {
+              cleanPhone = '+213' + cleanPhone.substring(1);
+            } else {
+              cleanPhone = '+213' + cleanPhone;
+            }
+          }
+          
+          // إنشاء نص الرسالة حسب الحالة
+          let message = '';
+          const studentName = student.name;
+          const className = payment.class?.name || 'الحصة';
+          const amount = payment.amount.toLocaleString();
+          const month = payment.month || 'الشهر الحالي';
+          
+          switch (status) {
+            case 'paid':
+              message = 
+                `📢 إشعار دفع\n` +
+                `عزيزي ولي أمر الطالب ${studentName}\n` +
+                `تم تسجيل دفع مبلغ ${amount} د.ج عن شهر ${month} لحصة ${className}\n` +
+                `📅 تاريخ الدفع: ${new Date(payment.paymentDate || new Date()).toLocaleDateString('ar-EG')}\n` +
+                `💳 طريقة الدفع: ${paymentMethod || 'نقداً'}\n` +
+                `شكراً لثقتكم بنا 🌟`;
+              break;
+              
+            case 'late':
+              message = 
+                `⚠️ تنبيه دفع متأخر\n` +
+                `عزيزي ولي أمر الطالب ${studentName}\n` +
+                `نود التنبيه بأن دفعة شهر ${month} لحصة ${className} بقيمة ${amount} د.ج متأخرة\n` +
+                `يرجى التوجه لإدارة المدرسة لتسوية الدفعة في أقرب وقت\n` +
+                `شكراً لتعاونكم 🙏`;
+              break;
+              
+            case 'pending':
+              message = 
+                `📋 إشعار دفع معلق\n` +
+                `عزيزي ولي أمر الطالب ${studentName}\n` +
+                `دفعة شهر ${month} لحصة ${className} بقيمة ${amount} د.ج ما زالت معلقة\n` +
+                `يرجى التوجه لإدارة المدرسة لإتمام عملية الدفع\n` +
+                `شكراً لتعاونكم 🙏`;
+              break;
+              
+            case 'cancelled':
+              message = 
+                `📋 إشعار إلغاء دفع\n` +
+                `عزيزي ولي أمر الطالب ${studentName}\n` +
+                `تم إلغاء دفعة شهر ${month} لحصة ${className} بقيمة ${amount} د.ج\n` +
+                `للاستفسار، يرجى التواصل مع إدارة المدرسة 📞`;
+              break;
+              
+            default:
+              message = 
+                `📋 تحديث حالة الدفع\n` +
+                `عزيزي ولي أمر الطالب ${studentName}\n` +
+                `تم تحديث حالة دفعة شهر ${month} لحصة ${className} إلى ${status}\n` +
+                `للاستفسار، يرجى التواصل مع إدارة المدرسة 📞`;
+          }
+          
+          // إرسال الرسالة عبر واتساب
+          const whatsappResult = await sendWhatsAppMessage(cleanPhone, message);
+          
+          if (whatsappResult.success) {
+            whatsappSent = true;
+            console.log(`✅ تم إرسال رسالة واتساب إلى ${cleanPhone}`);
+            
+            // حفظ سجل الرسالة
+            const messageRecord = new Message({
+              sender: req.user?.id || null,
+              recipients: [{
+                student: student._id,
+                parentPhone: cleanPhone
+              }],
+              class: payment.class?._id,
+              content: message,
+              messageType: 'individual',
+              status: 'sent'
+            });
+            await messageRecord.save({ validateBeforeSave: false });
+            
+          } else {
+            whatsappError = whatsappResult.error;
+            console.error(`❌ فشل إرسال واتساب: ${whatsappError}`);
+          }
+        } else {
+          whatsappError = 'رقم الهاتف غير متوفر';
+          console.warn('⚠️ رقم هاتف ولي الأمر غير متوفر');
+        }
+      } catch (err) {
+        whatsappError = err.message;
+        console.error('❌ خطأ في إرسال واتساب:', err);
+      }
+    }
+    
+    // ==============================================
+    // إرجاع الاستجابة
+    // ==============================================
+    const updatedPayment = await Payment.findById(paymentId)
+      .populate('student', 'name studentId parentPhone')
+      .populate('class', 'name subject')
+      .populate('recordedBy', 'username fullName');
+    
+    res.json({
+      success: true,
+      message: `تم تحديث حالة الدفعة إلى ${status} بنجاح`,
+      data: {
+        payment: updatedPayment,
+        oldStatus: oldStatus,
+        newStatus: status,
+        commissionUpdated: commissionUpdated,
+        whatsapp: {
+          sent: whatsappSent,
+          error: whatsappError
+        }
+      }
+    });
+    
+  } catch (err) {
+    console.error('❌ خطأ في تحديث حالة الدفعة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// دالة مساعدة لإرسال رسائل واتساب
+// ==============================================
+async function sendWhatsAppMessage(phone, message) {
+  try {
+    // استخدام خدمة واتساب الموجودة لديك
+    // هنا يمكنك استخدام Twilio, Meta API, أو أي خدمة أخرى
+    
+    // مثال باستخدام خدمة وهمية (استبدلها بخدمتك الفعلية)
+    const response = await axios.post(
+      `${process.env.WHATSAPP_API_URL}/send`,
+      {
+        phone: phone,
+        message: message,
+        apiKey: process.env.WHATSAPP_API_KEY
+      }
+    );
+    
+    if (response.data?.success) {
+      return { success: true };
+    } else {
+      return { success: false, error: response.data?.error || 'فشل إرسال الرسالة' };
+    }
+    
+  } catch (err) {
+    console.error('❌ خطأ في sendWhatsAppMessage:', err);
+    return { 
+      success: false, 
+      error: err.message || 'خطأ في الاتصال بخدمة واتساب' 
+    };
+  }
+}
+
+
 app.post('/api/attendance/card-scan', async (req, res) => {
   try {
     const { cardUid, sendSMS = true } = req.body;
