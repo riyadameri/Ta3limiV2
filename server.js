@@ -3643,7 +3643,6 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
     
     console.log(`📊 جلب تفاصيل العمولة: ${id}`);
     
-    // التحقق من صحة المعرف
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -3651,7 +3650,6 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
       });
     }
 
-    // جلب العمولة مع البيانات المترابطة
     const commission = await TeacherCommission.findById(id)
       .populate('teacher', 'name phone email salaryPercentage')
       .populate('class', 'name subject price paymentSystem')
@@ -3688,7 +3686,8 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
       status: { $in: ['scheduled', 'ongoing', 'completed'] }
     }).sort({ date: 1 });
 
-    console.log(`📚 عدد الحصص الحية: ${liveClasses.length}`);
+    console.log(`📚 عدد الحصص الحية في الشهر: ${liveClasses.length}`);
+    const totalSessions = liveClasses.length;
 
     // بناء بيانات الطلاب مع الحضور والمدفوعات
     const studentsDetails = await Promise.all(
@@ -3716,24 +3715,27 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
         
         // حساب الحضور لكل يوم
         const attendanceByDate = {};
+        let presentCount = 0;
+        let absentCount = 0;
+        let lateCount = 0;
+        
         liveClasses.forEach(lc => {
           const dateStr = lc.date.toISOString().split('T')[0];
           const attendanceRecord = lc.attendance.find(
             att => att.student && att.student.toString() === student._id.toString()
           );
           
+          const status = attendanceRecord?.status || 'absent';
           attendanceByDate[dateStr] = {
-            status: attendanceRecord?.status || 'absent',
+            status: status,
             joinedAt: attendanceRecord?.joinedAt,
             startTime: lc.startTime
           };
+          
+          if (status === 'present') presentCount++;
+          else if (status === 'late') lateCount++;
+          else if (status === 'absent') absentCount++;
         });
-
-        // حساب إحصائيات الحضور
-        const presentCount = Object.values(attendanceByDate).filter(a => a.status === 'present').length;
-        const absentCount = Object.values(attendanceByDate).filter(a => a.status === 'absent').length;
-        const lateCount = Object.values(attendanceByDate).filter(a => a.status === 'late').length;
-        const totalClasses = liveClasses.length;
 
         return {
           _id: student._id,
@@ -3745,6 +3747,10 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
           status: studentData.status || 'pending',
           paymentDate: studentData.paymentDate,
           isActive: studentData.isActive !== false,
+          // ✅ عرض الحضور كعدد الحصص الحاضرة / الإجمالية
+          attendanceDisplay: `${presentCount}/${totalSessions}`,
+          attendanceCount: presentCount,
+          totalSessions: totalSessions,
           payment: {
             totalAmount,
             totalPaid,
@@ -3758,8 +3764,8 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
               present: presentCount,
               absent: absentCount,
               late: lateCount,
-              total: totalClasses,
-              attendanceRate: totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 0
+              total: totalSessions,
+              attendanceRate: totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
             }
           },
           canEditPayment: true,
@@ -3816,7 +3822,9 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
       totalLate: validStudents.reduce((sum, s) => sum + s.attendance.summary.late, 0),
       averageAttendance: validStudents.length > 0 
         ? Math.round(validStudents.reduce((sum, s) => sum + s.attendance.summary.attendanceRate, 0) / validStudents.length)
-        : 0
+        : 0,
+      // ✅ إضافة إحصائيات عدد الحصص
+      totalSessions: totalSessions
     };
 
     // إرجاع الاستجابة
@@ -3843,7 +3851,7 @@ app.get('/api/accounting/teacher-commissions/:id/details', async (req, res) => {
           month: month
         },
         summary,
-        upcomingDays: upcomingDays.slice(0, 15), // فقط 15 يوم قادم
+        upcomingDays: upcomingDays.slice(0, 15),
         liveClasses: liveClasses.map(lc => ({
           _id: lc._id,
           date: lc.date,
@@ -5590,8 +5598,23 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
 
     const teacherSharePercentage = 70;
 
+    // حساب عدد الحصص في الشهر
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0);
+    endDate.setHours(23, 59, 59, 999);
+
     for (const classObj of classes) {
       try {
+        // جلب الحصص الحية لهذه الحصة في الشهر
+        const liveClasses = await LiveClass.find({
+          class: classObj._id,
+          date: { $gte: startDate, $lte: endDate },
+          status: { $in: ['scheduled', 'ongoing', 'completed'] }
+        });
+        
+        const totalSessions = liveClasses.length;
+
         // التحقق من وجود عمولة سابقة
         const existingCommission = await TeacherCommission.findOne({
           schoolId: schoolId,
@@ -5601,11 +5624,48 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
         });
 
         if (existingCommission) {
+          // ✅ تحديث العمولة الموجودة بحساب الحضور
+          const studentsWithAttendance = classObj.students.map(student => {
+            // حساب عدد الحضور لهذا الطالب
+            let presentCount = 0;
+            
+            liveClasses.forEach(lc => {
+              const attendanceRecord = lc.attendance.find(
+                att => att.student && att.student.toString() === student._id.toString()
+              );
+              if (attendanceRecord && (attendanceRecord.status === 'present' || attendanceRecord.status === 'late')) {
+                presentCount++;
+              }
+            });
+            
+            const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
+            
+            return {
+              student: student._id,
+              studentName: student.name,
+              attendancesCount: presentCount,
+              totalSessions: totalSessions,
+              attendanceDisplay: `${presentCount}/${totalSessions}`,
+              teacherShare: teacherShare,
+              status: 'pending',
+              isActive: true
+            };
+          });
+          
+          const totalAmount = studentsWithAttendance.reduce((sum, s) => sum + s.teacherShare, 0);
+          
+          // تحديث العمولة الموجودة
+          existingCommission.students = studentsWithAttendance;
+          existingCommission.totalAmount = totalAmount;
+          existingCommission.remainingAmount = totalAmount - existingCommission.totalPaid;
+          existingCommission.updateStatus();
+          await existingCommission.save();
+          
           results.skipped++;
           results.details.push({
             class: classObj.name,
             teacher: classObj.teacher.name,
-            status: 'مسبوقة',
+            status: 'محدثة',
             commissionId: existingCommission._id
           });
           continue;
@@ -5621,9 +5681,34 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
           continue;
         }
 
-        // حساب العمولة
+        // حساب العمولة مع عدد الحضور لكل طالب
         const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
-        const totalAmount = teacherShare * classObj.students.length;
+        
+        const studentsWithAttendance = classObj.students.map(student => {
+          let presentCount = 0;
+          
+          liveClasses.forEach(lc => {
+            const attendanceRecord = lc.attendance.find(
+              att => att.student && att.student.toString() === student._id.toString()
+            );
+            if (attendanceRecord && (attendanceRecord.status === 'present' || attendanceRecord.status === 'late')) {
+              presentCount++;
+            }
+          });
+          
+          return {
+            student: student._id,
+            studentName: student.name,
+            attendancesCount: presentCount,
+            totalSessions: totalSessions,
+            attendanceDisplay: `${presentCount}/${totalSessions}`,
+            teacherShare: teacherShare,
+            status: 'pending',
+            isActive: true
+          };
+        });
+        
+        const totalAmount = studentsWithAttendance.reduce((sum, s) => sum + s.teacherShare, 0);
 
         // إنشاء سجل العمولة
         const commission = new TeacherCommission({
@@ -5637,14 +5722,7 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
           totalPaid: 0,
           remainingAmount: totalAmount,
           recordedBy: req.user?.id || null,
-          students: classObj.students.map(student => ({
-            student: student._id,
-            studentName: student.name,
-            attendancesCount: 0,
-            teacherShare: teacherShare,
-            status: 'pending',
-            isActive: true
-          }))
+          students: studentsWithAttendance
         });
 
         await commission.save();
@@ -5682,7 +5760,8 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
           status: 'تم الإنشاء',
           commissionId: commission._id,
           studentsCount: classObj.students.length,
-          totalAmount: totalAmount
+          totalAmount: totalAmount,
+          totalSessions: totalSessions
         });
 
         console.log(`✅ تم إنشاء عمولة للأستاذ ${classObj.teacher.name}`);
@@ -5697,10 +5776,9 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
       }
     }
 
-    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
     res.json({
       success: true,
-      message: `تم إنشاء ${results.generated} عمولة جديدة، تخطي ${results.skipped}`,
+      message: `تم إنشاء ${results.generated} عمولة جديدة، تحديث ${results.skipped}`,
       data: results,
       month: month,
       schoolId: schoolId
