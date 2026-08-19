@@ -4612,7 +4612,339 @@ app.post('/api/classes/:id/fix', async (req, res) => {
     });
   }
 });
+// ==============================================
+// ✅ إزالة طالب من حصة (مع حذف المدفوعات المعلقة)
+// ==============================================
+app.post('/api/students/:studentId/unenroll-multiple', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { classIds, schoolId } = req.body;
+    
+    console.log(`🗑️ إزالة الطالب ${studentId} من الحصص:`, classIds);
+    console.log(`🏫 schoolId: ${schoolId}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الطالب غير صالح'
+      });
+    }
 
+    // جلب الطالب
+    const student = await Student.findOne({
+      _id: studentId,
+      ...(schoolId && { schoolId: schoolId })
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    const results = {
+      removedFromClasses: 0,
+      paymentsDeleted: 0,
+      failed: 0,
+      details: []
+    };
+
+    // إذا لم يتم تحديد classIds، استخدم جميع حصص الطالب
+    const classIdsToRemove = classIds || student.classes || [];
+
+    if (classIdsToRemove.length === 0) {
+      return res.json({
+        success: true,
+        message: 'الطالب ليس مسجلاً في أي حصة',
+        results: results
+      });
+    }
+
+    // معالجة كل حصة
+    for (const classId of classIdsToRemove) {
+      try {
+        // التحقق من صحة المعرف
+        if (!mongoose.Types.ObjectId.isValid(classId)) {
+          results.failed++;
+          results.details.push({
+            classId,
+            error: 'معرف الحصة غير صالح',
+            status: 'failed'
+          });
+          continue;
+        }
+
+        // التحقق من وجود الحصة
+        const classObj = await Class.findOne({
+          _id: classId,
+          ...(schoolId && { schoolId: schoolId })
+        });
+
+        if (!classObj) {
+          results.failed++;
+          results.details.push({
+            classId,
+            error: 'الحصة غير موجودة',
+            status: 'failed'
+          });
+          continue;
+        }
+
+        // 1. إزالة الطالب من الحصة
+        const updateResult = await Class.updateOne(
+          { _id: classId },
+          { $pull: { students: studentId } }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          results.removedFromClasses++;
+          results.details.push({
+            classId,
+            className: classObj.name,
+            status: 'removed_from_class',
+            studentsCount: classObj.students.length
+          });
+        }
+
+        // 2. حذف جميع المدفوعات المعلقة للطالب في هذه الحصة
+        const paymentResult = await Payment.deleteMany({
+          student: studentId,
+          class: classId,
+          status: { $in: ['pending', 'late'] }
+        });
+
+        results.paymentsDeleted += paymentResult.deletedCount || 0;
+
+        // 3. حذف الدفعات المعلقة في Payment Schema أيضاً (للتأكد)
+        const paymentResult2 = await Payment.deleteMany({
+          student: studentId,
+          class: classId,
+          status: { $in: ['pending', 'late'] }
+        });
+
+        results.paymentsDeleted += paymentResult2.deletedCount || 0;
+
+        // 4. تحديث العمولات المرتبطة (إذا وجدت)
+        const commissions = await TeacherCommission.find({
+          schoolId: schoolId,
+          class: classId,
+          month: { $exists: true }
+        });
+
+        for (const commission of commissions) {
+          // إزالة الطالب من العمولة
+          const studentIndex = commission.students.findIndex(
+            s => s.student.toString() === studentId
+          );
+
+          if (studentIndex !== -1) {
+            // إلغاء حصة الطالب في العمولة
+            commission.students[studentIndex].status = 'cancelled';
+            commission.students[studentIndex].isActive = false;
+            
+            // إعادة حساب المبالغ
+            commission.totalAmount = commission.students
+              .filter(s => s.isActive !== false)
+              .reduce((sum, s) => sum + (s.teacherShare || 0), 0);
+            
+            commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+            
+            if (commission.remainingAmount <= 0) {
+              commission.status = 'paid';
+            } else if (commission.totalPaid > 0) {
+              commission.status = 'partial';
+            }
+            
+            await commission.save();
+          }
+        }
+
+        // 5. تحديث الدفعات المرتبطة بالعمولة (تحديث حالتها إلى cancelled)
+        await Payment.updateMany(
+          {
+            student: studentId,
+            class: classId,
+            commissionId: { $exists: true }
+          },
+          { status: 'cancelled' }
+        );
+
+        results.details.push({
+          classId,
+          className: classObj.name,
+          paymentsDeleted: paymentResult.deletedCount || 0,
+          status: 'completed'
+        });
+
+      } catch (err) {
+        console.error(`❌ خطأ في معالجة الحصة ${classId}:`, err);
+        results.failed++;
+        results.details.push({
+          classId,
+          error: err.message,
+          status: 'failed'
+        });
+      }
+    }
+
+    // 6. إزالة الحصص من قائمة الطالب
+    if (classIdsToRemove.length > 0) {
+      await Student.updateOne(
+        { _id: studentId },
+        { $pull: { classes: { $in: classIdsToRemove } } }
+      );
+    }
+
+    // 7. تسجيل عملية الإزالة في السجل (اختياري)
+    try {
+      const logMessage = new Message({
+        sender: req.user?.id || null,
+        recipients: [{ student: studentId }],
+        content: `تم إزالة الطالب ${student.name} من ${results.removedFromClasses} حصة وحذف ${results.paymentsDeleted} دفعة معلقة`,
+        messageType: 'system',
+        status: 'sent'
+      });
+      await logMessage.save({ validateBeforeSave: false });
+    } catch (logErr) {
+      console.warn('⚠️ فشل في تسجيل سجل الإزالة:', logErr.message);
+    }
+
+    // جلب البيانات المحدثة للطالب
+    const updatedStudent = await Student.findById(studentId)
+      .populate('classes', 'name subject');
+
+    res.json({
+      success: true,
+      message: `تم إزالة الطالب من ${results.removedFromClasses} حصة وحذف ${results.paymentsDeleted} دفعة معلقة`,
+      results: results,
+      student: {
+        _id: updatedStudent._id,
+        name: updatedStudent.name,
+        studentId: updatedStudent.studentId,
+        classes: updatedStudent.classes || []
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إزالة الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية بديلة لإزالة الطالب (DELETE)
+// ==============================================
+app.delete('/api/students/:studentId/unenroll/:classId', async (req, res) => {
+  try {
+    const { studentId, classId } = req.params;
+    const schoolId = req.query.schoolId || req.user?.schoolId;
+    
+    console.log(`🗑️ إزالة الطالب ${studentId} من الحصة ${classId}`);
+    
+    // التحقق من صحة المعرفات
+    if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف غير صالح'
+      });
+    }
+
+    // التحقق من وجود الطالب
+    const student = await Student.findOne({
+      _id: studentId,
+      ...(schoolId && { schoolId: schoolId })
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // التحقق من وجود الحصة
+    const classObj = await Class.findOne({
+      _id: classId,
+      ...(schoolId && { schoolId: schoolId })
+    });
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // إزالة الطالب من الحصة
+    await Class.updateOne(
+      { _id: classId },
+      { $pull: { students: studentId } }
+    );
+
+    // إزالة الحصة من الطالب
+    await Student.updateOne(
+      { _id: studentId },
+      { $pull: { classes: classId } }
+    );
+
+    // حذف المدفوعات المعلقة
+    const deletedPayments = await Payment.deleteMany({
+      student: studentId,
+      class: classId,
+      status: { $in: ['pending', 'late'] }
+    });
+
+    // حذف المدفوعات المرتبطة بالعمولة
+    await Payment.updateMany(
+      {
+        student: studentId,
+        class: classId,
+        commissionId: { $exists: true }
+      },
+      { status: 'cancelled' }
+    );
+
+    // تحديث العمولات
+    const commissions = await TeacherCommission.find({
+      schoolId: schoolId,
+      class: classId
+    });
+
+    for (const commission of commissions) {
+      const studentIndex = commission.students.findIndex(
+        s => s.student.toString() === studentId
+      );
+      if (studentIndex !== -1) {
+        commission.students[studentIndex].status = 'cancelled';
+        commission.students[studentIndex].isActive = false;
+        commission.totalAmount = commission.students
+          .filter(s => s.isActive !== false)
+          .reduce((sum, s) => sum + (s.teacherShare || 0), 0);
+        commission.remainingAmount = commission.totalAmount - commission.totalPaid;
+        await commission.save();
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `تم إزالة الطالب من الحصة ${classObj.name} وحذف ${deletedPayments.deletedCount || 0} دفعة معلقة`,
+      deletedPaymentsCount: deletedPayments.deletedCount || 0
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إزالة الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 // ==============================================
 // 🔧 FIX ALL CLASSES - إصلاح جميع حصص المدرسة
 // ==============================================
