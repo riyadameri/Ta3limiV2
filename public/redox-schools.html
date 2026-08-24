@@ -2,9 +2,10 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏫 إدارة المدارس - Redox Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إدارة المدارس - Redox Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* ============================================
            CSS Variables & Reset
@@ -27,6 +28,9 @@
             --radius: 16px;
             --radius-sm: 10px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --header-height: 70px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         * {
@@ -39,8 +43,13 @@
             font-family: 'Cairo', 'Segoe UI', sans-serif;
             background: var(--bg);
             min-height: 100vh;
-            padding: 20px;
+            min-height: 100dvh;
+            padding: 15px;
+            padding-top: calc(15px + var(--safe-top));
+            padding-bottom: calc(15px + var(--safe-bottom));
             color: var(--dark);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
@@ -52,8 +61,8 @@
            Scrollbar
            ============================================ */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
         ::-webkit-scrollbar-track {
             background: var(--light-gray);
@@ -73,17 +82,18 @@
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border-radius: var(--radius);
-            padding: 25px 35px;
+            padding: 18px 24px;
             color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 24px;
             box-shadow: 0 10px 40px rgba(108, 99, 255, 0.25);
             position: relative;
             overflow: hidden;
+            min-height: var(--header-height);
         }
 
         .header::before {
@@ -91,8 +101,8 @@
             position: absolute;
             top: -50%;
             right: -20%;
-            width: 300px;
-            height: 300px;
+            width: 250px;
+            height: 250px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 50%;
             pointer-events: none;
@@ -103,35 +113,37 @@
             position: absolute;
             bottom: -60%;
             left: -10%;
-            width: 400px;
-            height: 400px;
+            width: 300px;
+            height: 300px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 50%;
             pointer-events: none;
         }
 
         .header h1 {
-            font-size: 28px;
+            font-size: 22px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             z-index: 1;
             font-weight: 800;
         }
 
-        .header h1 span {
-            font-size: 34px;
+        .header h1 i {
+            font-size: 26px;
         }
 
         .header h1 small {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 400;
             opacity: 0.8;
+            display: block;
+            margin-top: 2px;
         }
 
         .header-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
             z-index: 1;
         }
@@ -140,7 +152,7 @@
            Buttons
            ============================================ */
         .btn {
-            padding: 10px 24px;
+            padding: 10px 20px;
             border: none;
             border-radius: var(--radius-sm);
             font-size: 14px;
@@ -149,9 +161,16 @@
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
             font-family: 'Cairo', sans-serif;
             text-decoration: none;
+            touch-action: manipulation;
+            min-height: 44px;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
         }
 
         .btn-primary {
@@ -211,11 +230,13 @@
         .btn-sm {
             padding: 6px 14px;
             font-size: 12px;
+            min-height: 34px;
         }
 
         .btn-xs {
             padding: 4px 10px;
             font-size: 11px;
+            min-height: 28px;
         }
 
         .btn-info {
@@ -238,20 +259,25 @@
             transform: translateY(-2px);
         }
 
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
         /* ============================================
            Stats Cards
            ============================================ */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
         }
 
         .stat-card {
             background: var(--white);
             border-radius: var(--radius);
-            padding: 22px 25px;
+            padding: 18px 20px;
             box-shadow: var(--shadow);
             transition: var(--transition);
             position: relative;
@@ -259,37 +285,37 @@
             border: 1px solid rgba(0, 0, 0, 0.04);
         }
 
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-hover);
+        .stat-card:active {
+            transform: scale(0.98);
         }
 
         .stat-card .stat-icon {
-            font-size: 28px;
-            margin-bottom: 8px;
+            font-size: 24px;
+            margin-bottom: 6px;
             display: inline-block;
+            color: var(--primary);
         }
 
         .stat-card .stat-number {
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 800;
             color: var(--dark);
             line-height: 1.2;
         }
 
         .stat-card .stat-label {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--gray);
-            margin-top: 4px;
+            margin-top: 2px;
             font-weight: 400;
         }
 
         .stat-card .stat-trend {
-            font-size: 12px;
+            font-size: 11px;
             padding: 2px 10px;
             border-radius: 20px;
             display: inline-block;
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
         .stat-card .stat-trend.up {
@@ -304,10 +330,10 @@
 
         .stat-card .stat-badge {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            font-size: 11px;
-            padding: 3px 12px;
+            top: 12px;
+            left: 12px;
+            font-size: 10px;
+            padding: 2px 10px;
             border-radius: 20px;
             font-weight: 600;
         }
@@ -339,8 +365,8 @@
         .card {
             background: var(--white);
             border-radius: var(--radius);
-            padding: 25px 30px;
-            margin-bottom: 25px;
+            padding: 20px 22px;
+            margin-bottom: 20px;
             box-shadow: var(--shadow);
             border: 1px solid rgba(0, 0, 0, 0.04);
             transition: var(--transition);
@@ -354,25 +380,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             flex-wrap: wrap;
             gap: 10px;
         }
 
         .card-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--dark);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .card-title .badge {
             background: var(--primary);
             color: white;
-            font-size: 12px;
-            padding: 2px 12px;
+            font-size: 11px;
+            padding: 2px 10px;
             border-radius: 20px;
             font-weight: 600;
         }
@@ -382,8 +408,8 @@
            ============================================ */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
         }
 
         .form-group {
@@ -394,8 +420,8 @@
         .form-group label {
             font-weight: 600;
             color: var(--dark);
-            font-size: 14px;
-            margin-bottom: 6px;
+            font-size: 13px;
+            margin-bottom: 4px;
         }
 
         .form-group label .required {
@@ -404,15 +430,15 @@
         }
 
         .form-group .hint {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--gray);
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
-            padding: 11px 16px;
+            padding: 10px 14px;
             border: 2px solid var(--light-gray);
             border-radius: var(--radius-sm);
             font-size: 14px;
@@ -420,6 +446,8 @@
             background: var(--bg);
             font-family: 'Cairo', sans-serif;
             color: var(--dark);
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         .form-group input:focus,
@@ -433,7 +461,7 @@
 
         .form-group textarea {
             resize: vertical;
-            min-height: 70px;
+            min-height: 60px;
         }
 
         .form-group input:disabled,
@@ -445,8 +473,8 @@
 
         .form-actions {
             display: flex;
-            gap: 12px;
-            margin-top: 20px;
+            gap: 10px;
+            margin-top: 16px;
             flex-wrap: wrap;
         }
 
@@ -457,12 +485,14 @@
             overflow-x: auto;
             border-radius: var(--radius-sm);
             border: 1px solid rgba(0, 0, 0, 0.04);
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
+            min-width: 700px;
         }
 
         thead {
@@ -470,19 +500,19 @@
         }
 
         th {
-            padding: 14px 18px;
+            padding: 12px 14px;
             text-align: right;
             font-weight: 700;
             color: var(--gray);
             border-bottom: 2px solid var(--light-gray);
             white-space: nowrap;
-            font-size: 13px;
+            font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         td {
-            padding: 14px 18px;
+            padding: 12px 14px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             vertical-align: middle;
         }
@@ -501,20 +531,21 @@
         .school-key {
             font-family: 'Courier New', monospace;
             background: #EEF2FF;
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--primary);
             font-weight: 600;
             letter-spacing: 0.5px;
             display: inline-block;
             border: 1px solid rgba(108, 99, 255, 0.15);
+            word-break: break-all;
         }
 
         .status-badge {
-            padding: 4px 14px;
+            padding: 3px 12px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             display: inline-block;
         }
@@ -544,14 +575,12 @@
             color: #383D41;
         }
 
-        /* ============================================
-           Plan Badges
-           ============================================ */
         .plan-badge {
-            padding: 3px 12px;
+            padding: 2px 10px;
             border-radius: 12px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
+            display: inline-block;
         }
 
         .plan-trial { background: #E2E3E5; color: #383D41; }
@@ -560,9 +589,6 @@
         .plan-premium { background: #FDEBD0; color: #935E38; }
         .plan-enterprise { background: #F8D7DA; color: #721C24; }
 
-        /* ============================================
-           Subscription Status
-           ============================================ */
         .subscription-info {
             display: flex;
             flex-direction: column;
@@ -570,7 +596,7 @@
         }
 
         .subscription-info .days {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--gray);
         }
 
@@ -584,45 +610,41 @@
             font-weight: 600;
         }
 
-        /* ============================================
-           Actions
-           ============================================ */
         .actions-cell {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             flex-wrap: wrap;
         }
 
         .actions-cell .btn {
-            padding: 5px 12px;
-            font-size: 12px;
+            padding: 4px 10px;
+            font-size: 11px;
+            min-height: 30px;
         }
 
-        /* ============================================
-           No Data
-           ============================================ */
         .no-data {
             text-align: center;
-            padding: 50px 20px;
+            padding: 40px 20px;
             color: var(--gray);
         }
 
         .no-data .icon {
-            font-size: 56px;
+            font-size: 48px;
             display: block;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             opacity: 0.5;
+            color: var(--gray);
         }
 
         .no-data h3 {
-            font-size: 20px;
+            font-size: 18px;
             color: var(--dark);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .no-data p {
-            font-size: 15px;
-            max-width: 400px;
+            font-size: 14px;
+            max-width: 350px;
             margin: 0 auto;
         }
 
@@ -636,12 +658,14 @@
             left: 0;
             width: 100%;
             height: 100%;
+            height: 100dvh;
             background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 15px;
             backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             animation: fadeIn 0.3s ease;
         }
 
@@ -657,12 +681,14 @@
         .modal {
             background: var(--white);
             border-radius: var(--radius);
-            max-width: 850px;
+            max-width: 900px;
             width: 100%;
             max-height: 92vh;
+            max-height: 92dvh;
             overflow-y: auto;
-            padding: 35px;
+            padding: 24px;
             animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-overflow-scrolling: touch;
         }
 
         @keyframes slideUp {
@@ -680,34 +706,47 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 2px solid var(--light-gray);
+            gap: 10px;
         }
 
         .modal-header h2 {
-            font-size: 24px;
+            font-size: 20px;
             color: var(--dark);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             font-weight: 700;
+        }
+
+        .modal-header h2 i {
+            color: var(--primary);
         }
 
         .modal-close {
             background: none;
             border: none;
-            font-size: 28px;
+            font-size: 24px;
             cursor: pointer;
             color: var(--gray);
             transition: var(--transition);
             padding: 0 8px;
             line-height: 1;
+            min-height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:active {
+            transform: scale(0.9);
         }
 
         .modal-close:hover {
             color: var(--danger);
-            transform: rotate(90deg);
         }
 
         .modal-body {
@@ -716,11 +755,142 @@
 
         .modal-footer {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             justify-content: flex-end;
-            margin-top: 25px;
-            padding-top: 20px;
+            margin-top: 20px;
+            padding-top: 16px;
             border-top: 2px solid var(--light-gray);
+            flex-wrap: wrap;
+        }
+
+        /* ============================================
+           Admin Management inside Modal
+           ============================================ */
+        .admin-section {
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .admin-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .admin-section-title i {
+            color: var(--primary);
+        }
+
+        .admin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--white);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .admin-item .admin-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .admin-item .admin-info .name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .admin-item .admin-info .username {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .admin-item .admin-info .role {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .role-super_admin { background: #F8D7DA; color: #721C24; }
+        .role-admin { background: #D6EAF8; color: #1A5276; }
+        .role-manager { background: #D4EDDA; color: #155724; }
+        .role-accountant { background: #FFF3CD; color: #856404; }
+
+        .admin-item .admin-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .admin-item .admin-actions .btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            min-height: 28px;
+        }
+
+        .admin-item .admin-status {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .admin-status.active {
+            background: #D4EDDA;
+            color: #155724;
+        }
+
+        .admin-status.inactive {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        /* ============================================
+           Add Admin Form (inline)
+           ============================================ */
+        .add-admin-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+            padding: 14px;
+            background: var(--white);
+            border-radius: var(--radius-sm);
+            border: 2px dashed var(--light-gray);
+        }
+
+        .add-admin-form .form-group {
+            margin-bottom: 0;
+        }
+
+        .add-admin-form .form-group input,
+        .add-admin-form .form-group select {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .add-admin-form .btn {
+            min-height: 40px;
+            align-self: flex-end;
         }
 
         /* ============================================
@@ -734,12 +904,12 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            max-width: 420px;
-            width: 100%;
+            max-width: 400px;
+            width: calc(100% - 40px);
         }
 
         .toast {
-            padding: 16px 22px;
+            padding: 14px 18px;
             border-radius: var(--radius-sm);
             color: white;
             font-weight: 500;
@@ -747,8 +917,9 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             font-family: 'Cairo', sans-serif;
+            font-size: 14px;
         }
 
         .toast-success { background: var(--success); }
@@ -772,8 +943,8 @@
            ============================================ */
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-top: 3px solid white;
             border-radius: 50%;
@@ -803,21 +974,25 @@
             background: var(--bg);
             padding: 4px;
             border-radius: var(--radius-sm);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             flex-wrap: wrap;
         }
 
         .tab-btn {
-            padding: 10px 22px;
+            padding: 8px 16px;
             border: none;
             background: transparent;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             color: var(--gray);
             font-family: 'Cairo', sans-serif;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .tab-btn.active {
@@ -826,9 +1001,8 @@
             box-shadow: 0 4px 15px rgba(108, 99, 255, 0.15);
         }
 
-        .tab-btn:hover:not(.active) {
-            color: var(--dark);
-            background: rgba(255, 255, 255, 0.5);
+        .tab-btn:active {
+            transform: scale(0.96);
         }
 
         .tab-content {
@@ -846,43 +1020,186 @@
         @media (max-width: 992px) {
             .modal {
                 max-width: 95%;
-                padding: 25px;
+                padding: 20px;
             }
         }
 
         @media (max-width: 768px) {
-            body { padding: 15px; }
+            body { padding: 10px; }
+            
             .header {
                 flex-direction: column;
                 text-align: center;
-                padding: 20px 25px;
+                padding: 16px 20px;
+                border-radius: var(--radius-sm);
             }
-            .header h1 { font-size: 22px; justify-content: center; }
-            .header h1 small { display: block; margin-top: 4px; }
-            .header-actions { justify-content: center; width: 100%; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-            .stat-card { padding: 18px; }
-            .stat-card .stat-number { font-size: 24px; }
-            .form-grid { grid-template-columns: 1fr; }
-            .card { padding: 18px; }
-            .modal { padding: 20px; margin: 10px; }
+            
+            .header h1 { 
+                font-size: 18px; 
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .header h1 small { 
+                display: block; 
+                margin-top: 2px;
+                font-size: 11px;
+            }
+            
+            .header-actions { 
+                justify-content: center; 
+                width: 100%;
+            }
+            
+            .header-actions .btn {
+                flex: 1;
+                min-width: 80px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .stat-card { 
+                padding: 14px 16px; 
+            }
+            
+            .stat-card .stat-number { 
+                font-size: 20px; 
+            }
+            
+            .stat-card .stat-icon { 
+                font-size: 20px; 
+            }
+            
+            .form-grid { 
+                grid-template-columns: 1fr; 
+            }
+            
+            .card { 
+                padding: 16px; 
+            }
+            
+            .modal { 
+                padding: 16px; 
+                margin: 5px;
+                max-height: 95vh;
+                max-height: 95dvh;
+            }
+            
+            .modal-header h2 { 
+                font-size: 17px; 
+            }
+            
             .toast-container {
-                left: 15px;
-                right: 15px;
-                max-width: calc(100% - 30px);
+                left: 10px;
+                right: 10px;
+                max-width: calc(100% - 20px);
+                top: 10px;
             }
-            .tabs { flex-direction: column; }
-            .tab-btn { text-align: center; }
-            .actions-cell { flex-direction: column; }
-            .actions-cell .btn { width: 100%; justify-content: center; }
-            table { font-size: 13px; }
-            th, td { padding: 10px 12px; }
+            
+            .tabs { 
+                flex-direction: column; 
+            }
+            
+            .tab-btn { 
+                text-align: center; 
+                justify-content: center;
+            }
+            
+            .actions-cell { 
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .actions-cell .btn { 
+                flex: 1;
+                min-width: 40px;
+                justify-content: center;
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+            
+            table { 
+                font-size: 12px; 
+                min-width: 600px;
+            }
+            
+            th, td { 
+                padding: 8px 10px; 
+            }
+            
+            .school-key {
+                font-size: 10px;
+                padding: 2px 8px;
+            }
+            
+            .admin-item {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px;
+            }
+            
+            .admin-item .admin-actions {
+                justify-content: flex-start;
+                margin-top: 6px;
+            }
+            
+            .add-admin-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .add-admin-form .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
-            .stats-grid { grid-template-columns: 1fr; }
-            .header h1 { font-size: 20px; }
-            .modal { padding: 15px; }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            
+            .stat-card { 
+                padding: 12px 14px; 
+            }
+            
+            .stat-card .stat-number { 
+                font-size: 18px; 
+            }
+            
+            .header h1 { 
+                font-size: 16px; 
+            }
+            
+            .modal { 
+                padding: 14px; 
+            }
+            
+            .modal-header h2 { 
+                font-size: 15px; 
+            }
+            
+            .btn { 
+                font-size: 12px; 
+                padding: 8px 14px;
+                min-height: 38px;
+            }
+            
+            .btn-sm { 
+                font-size: 10px; 
+                padding: 4px 8px;
+                min-height: 28px;
+            }
+            
+            .btn-xs { 
+                font-size: 9px; 
+                padding: 2px 6px;
+                min-height: 24px;
+            }
         }
 
         /* ============================================
@@ -894,9 +1211,11 @@
         .mb-10 { margin-bottom: 10px; }
         .gap-10 { gap: 10px; }
         .flex-wrap { flex-wrap: wrap; }
-        .flex-center { display: flex; align-items: center; gap: 8px; }
+        .flex-center { display: flex; align-items: center; gap: 6px; }
         .w-100 { width: 100%; }
         .hidden { display: none !important; }
+        .text-sm { font-size: 12px; }
+        .text-xs { font-size: 11px; }
     </style>
 </head>
 <body>
@@ -907,15 +1226,16 @@
         ========================================== -->
         <header class="header">
             <h1>
-                <span>🏫</span> إدارة المدارس
+                <i class="fas fa-school"></i>
+                إدارة المدارس
                 <small>نظام Redox لإدارة المدارس</small>
             </h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="refreshData()">
-                    🔄 تحديث
+                    <i class="fas fa-sync-alt"></i> تحديث
                 </button>
                 <button class="btn btn-outline" onclick="openCreateModal()">
-                    ➕ مدرسة جديدة
+                    <i class="fas fa-plus-circle"></i> مدرسة جديدة
                 </button>
             </div>
         </header>
@@ -925,30 +1245,30 @@
         ========================================== -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card color-1">
-                <div class="stat-icon">🏫</div>
+                <div class="stat-icon"><i class="fas fa-school"></i></div>
                 <div class="stat-number" id="totalSchools">0</div>
                 <div class="stat-label">إجمالي المدارس</div>
             </div>
             <div class="stat-card color-2">
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="stat-number" id="activeSchools">0</div>
                 <div class="stat-label">مدارس نشطة</div>
-                <span class="stat-trend up">▲ نشطة</span>
+                <span class="stat-trend up"><i class="fas fa-arrow-up"></i> نشطة</span>
             </div>
             <div class="stat-card color-4">
-                <div class="stat-icon">⏰</div>
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
                 <div class="stat-number" id="expiringSoon">0</div>
                 <div class="stat-label">تنتهي قريباً</div>
-                <span class="stat-trend down">▼ 30 يوم</span>
+                <span class="stat-trend down"><i class="fas fa-arrow-down"></i> 30 يوم</span>
             </div>
             <div class="stat-card color-3">
-                <div class="stat-icon">💰</div>
+                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                 <div class="stat-number" id="totalRevenue">0</div>
                 <div class="stat-label">إجمالي الإيرادات</div>
                 <span class="stat-badge success">اشتراكات</span>
             </div>
             <div class="stat-card color-5">
-                <div class="stat-icon">👤</div>
+                <div class="stat-icon"><i class="fas fa-users-cog"></i></div>
                 <div class="stat-number" id="totalAdmins">0</div>
                 <div class="stat-label">إجمالي المدراء</div>
             </div>
@@ -958,13 +1278,13 @@
         FILTERS
         ========================================== -->
         <div class="card">
-            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
                 <div class="form-group">
-                    <label>🔍 بحث</label>
+                    <label><i class="fas fa-search"></i> بحث</label>
                     <input type="text" id="searchInput" placeholder="اسم أو بريد أو مفتاح..." oninput="applyFilters()">
                 </div>
                 <div class="form-group">
-                    <label>📊 الحالة</label>
+                    <label><i class="fas fa-filter"></i> الحالة</label>
                     <select id="statusFilter" onchange="applyFilters()">
                         <option value="">الكل</option>
                         <option value="active">نشطة</option>
@@ -974,7 +1294,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>📋 الخطة</label>
+                    <label><i class="fas fa-tag"></i> الخطة</label>
                     <select id="planFilter" onchange="applyFilters()">
                         <option value="">الكل</option>
                         <option value="trial">تجريبي</option>
@@ -985,9 +1305,13 @@
                     </select>
                 </div>
                 <div class="form-group" style="justify-content: flex-end;">
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary btn-sm" onclick="applyFilters()">🔍 بحث</button>
-                        <button class="btn btn-outline btn-sm" style="color:var(--primary);border-color:var(--primary);" onclick="resetFilters()">🔄 إعادة تعيين</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
+                        <button class="btn btn-primary btn-sm" onclick="applyFilters()" style="flex:1;">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="resetFilters()" style="flex:1;">
+                            <i class="fas fa-undo"></i> إعادة
+                        </button>
                     </div>
                 </div>
             </div>
@@ -999,11 +1323,14 @@
         <div class="card">
             <div class="card-header">
                 <div class="card-title">
-                    📋 قائمة المدارس
+                    <i class="fas fa-list-ul"></i>
+                    قائمة المدارس
                     <span class="badge" id="schoolsCount">0</span>
                 </div>
                 <div>
-                    <button class="btn btn-success btn-sm" onclick="exportData()">📥 تصدير</button>
+                    <button class="btn btn-success btn-sm" onclick="exportData()">
+                        <i class="fas fa-file-export"></i> تصدير
+                    </button>
                 </div>
             </div>
             <div class="table-wrapper">
@@ -1011,21 +1338,21 @@
                     <thead>
                         <tr>
                             <th style="width:40px;">#</th>
-                            <th>🏫 المدرسة</th>
-                            <th>📧 البريد</th>
-                            <th>📱 الهاتف</th>
-                            <th>🔑 المفتاح</th>
-                            <th>📋 الخطة</th>
-                            <th>📅 الاشتراك</th>
-                            <th>📊 الحالة</th>
-                            <th style="min-width:180px;">⚙️ الإجراءات</th>
+                            <th><i class="fas fa-school"></i> المدرسة</th>
+                            <th><i class="fas fa-envelope"></i> البريد</th>
+                            <th><i class="fas fa-phone"></i> الهاتف</th>
+                            <th><i class="fas fa-key"></i> المفتاح</th>
+                            <th><i class="fas fa-tag"></i> الخطة</th>
+                            <th><i class="fas fa-calendar-alt"></i> الاشتراك</th>
+                            <th><i class="fas fa-circle"></i> الحالة</th>
+                            <th style="min-width:160px;"><i class="fas fa-cogs"></i> الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="schoolsTableBody">
                         <tr>
                             <td colspan="9">
                                 <div class="no-data">
-                                    <span class="icon">📭</span>
+                                    <span class="icon"><i class="fas fa-inbox"></i></span>
                                     <h3>لا توجد مدارس</h3>
                                     <p>قم بإضافة مدرسة جديدة باستخدام الزر أعلاه</p>
                                 </div>
@@ -1043,16 +1370,18 @@
     <div class="modal-overlay" id="createModal">
         <div class="modal">
             <div class="modal-header">
-                <h2>🏫 <span id="modalTitle">إضافة مدرسة جديدة</span></h2>
-                <button class="modal-close" onclick="closeModal('createModal')">✕</button>
+                <h2><i class="fas fa-school"></i> <span id="modalTitle">إضافة مدرسة جديدة</span></h2>
+                <button class="modal-close" onclick="closeModal('createModal')"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <form id="schoolForm" onsubmit="saveSchool(event)">
                     <input type="hidden" id="schoolId" value="">
 
                     <!-- معلومات المدرسة -->
-                    <div style="margin-bottom:20px;">
-                        <h3 style="color:var(--primary);font-size:16px;margin-bottom:12px;">📋 معلومات المدرسة</h3>
+                    <div style="margin-bottom:16px;">
+                        <h3 style="color:var(--primary);font-size:15px;margin-bottom:10px;">
+                            <i class="fas fa-info-circle"></i> معلومات المدرسة
+                        </h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>اسم المدرسة <span class="required">*</span></label>
@@ -1069,7 +1398,7 @@
                             <div class="form-group">
                                 <label>المفتاح (Key) <span class="required">*</span></label>
                                 <input type="text" id="schoolKey" placeholder="مثال: SCH-2024-001" required>
-                                <span class="hint">مفتاح فريد للمدرسة يستخدم للمصادقة</span>
+                                <span class="hint"><i class="fas fa-info-circle"></i> مفتاح فريد للمدرسة يستخدم للمصادقة</span>
                             </div>
                             <div class="form-group" style="grid-column: 1 / -1;">
                                 <label>العنوان</label>
@@ -1079,18 +1408,20 @@
                     </div>
 
                     <!-- معلومات المدير (تظهر فقط عند الإضافة) -->
-                    <div id="adminSection" style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
-                        <h3 style="color:var(--primary);font-size:16px;margin-bottom:12px;">👤 حساب المدير <span style="color:var(--danger);font-size:13px;">(مطلوب)</span></h3>
+                    <div id="adminSection" style="margin-bottom:16px;padding-top:16px;border-top:2px solid var(--light-gray);">
+                        <h3 style="color:var(--primary);font-size:15px;margin-bottom:10px;">
+                            <i class="fas fa-user-shield"></i> حساب المدير <span style="color:var(--danger);font-size:12px;">(مطلوب)</span>
+                        </h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>اسم المستخدم <span class="required">*</span></label>
                                 <input type="text" id="adminUsername" placeholder="admin" required>
-                                <span class="hint">يستخدم لتسجيل الدخول</span>
+                                <span class="hint"><i class="fas fa-info-circle"></i> يستخدم لتسجيل الدخول</span>
                             </div>
                             <div class="form-group">
                                 <label>كلمة المرور <span class="required">*</span></label>
                                 <input type="password" id="adminPassword" placeholder="••••••••" required minlength="6">
-                                <span class="hint">6 أحرف على الأقل</span>
+                                <span class="hint"><i class="fas fa-info-circle"></i> 6 أحرف على الأقل</span>
                             </div>
                             <div class="form-group">
                                 <label>الاسم الكامل</label>
@@ -1104,8 +1435,10 @@
                     </div>
 
                     <!-- الاشتراك (يظهر فقط عند الإضافة) -->
-                    <div id="subscriptionSection" style="margin-bottom:20px;padding-top:20px;border-top:2px solid var(--light-gray);">
-                        <h3 style="color:var(--primary);font-size:16px;margin-bottom:12px;">📋 الاشتراك السنوي</h3>
+                    <div id="subscriptionSection" style="margin-bottom:16px;padding-top:16px;border-top:2px solid var(--light-gray);">
+                        <h3 style="color:var(--primary);font-size:15px;margin-bottom:10px;">
+                            <i class="fas fa-calendar-check"></i> الاشتراك السنوي
+                        </h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>الخطة</label>
@@ -1130,15 +1463,17 @@
                             <div class="form-group">
                                 <label>المبلغ (د.ج)</label>
                                 <input type="number" id="subscriptionAmount" value="30000" readonly>
-                                <span class="hint">يتم حسابه تلقائياً</span>
+                                <span class="hint"><i class="fas fa-info-circle"></i> يتم حسابه تلقائياً</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-danger" onclick="closeModal('createModal')">إلغاء</button>
+                        <button type="button" class="btn btn-danger" onclick="closeModal('createModal')">
+                            <i class="fas fa-times"></i> إلغاء
+                        </button>
                         <button type="submit" class="btn btn-success" id="submitBtn">
-                            💾 حفظ
+                            <i class="fas fa-save"></i> حفظ
                         </button>
                     </div>
                 </form>
@@ -1147,18 +1482,18 @@
     </div>
 
     <!-- ==========================================
-    MODAL - عرض تفاصيل المدرسة
+    MODAL - عرض تفاصيل المدرسة مع إدارة المستخدمين
     ========================================== -->
     <div class="modal-overlay" id="detailsModal">
-        <div class="modal" style="max-width:900px;">
+        <div class="modal" style="max-width:950px;">
             <div class="modal-header">
-                <h2>📋 <span id="detailsTitle">تفاصيل المدرسة</span></h2>
-                <button class="modal-close" onclick="closeModal('detailsModal')">✕</button>
+                <h2><i class="fas fa-school"></i> <span id="detailsTitle">تفاصيل المدرسة</span></h2>
+                <button class="modal-close" onclick="closeModal('detailsModal')"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body" id="detailsContent">
                 <div class="text-center" style="padding:40px;">
                     <div class="spinner spinner-dark"></div>
-                    <p style="margin-top:10px;color:var(--gray);">جاري تحميل البيانات...</p>
+                    <p style="margin-top:10px;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i> جاري تحميل البيانات...</p>
                 </div>
             </div>
         </div>
@@ -1179,6 +1514,7 @@
         const API_URL = 'http://localhost:5090';
         let schoolsData = [];
         let isEditing = false;
+        let currentSchoolId = null;
 
         // ============================================
         // Plan Prices
@@ -1208,15 +1544,18 @@
             toast.className = `toast toast-${type}`;
             
             const icons = {
-                success: '✅',
-                error: '❌',
-                warning: '⚠️',
-                info: 'ℹ️'
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
             };
             
             toast.innerHTML = `
-                <span style="font-size:20px;">${icons[type] || 'ℹ️'}</span>
+                <i class="${icons[type] || 'fas fa-info-circle'}" style="font-size:20px;"></i>
                 <span style="flex:1;">${message}</span>
+                <button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:18px;">
+                    <i class="fas fa-times"></i>
+                </button>
             `;
             
             container.appendChild(toast);
@@ -1284,7 +1623,7 @@
                     <tr>
                         <td colspan="9">
                             <div class="no-data">
-                                <span class="icon">📭</span>
+                                <span class="icon"><i class="fas fa-inbox"></i></span>
                                 <h3>لا توجد مدارس</h3>
                                 <p>قم بإضافة مدرسة جديدة باستخدام الزر أعلاه</p>
                             </div>
@@ -1313,10 +1652,10 @@
                 }
 
                 const statusLabels = {
-                    active: '✅ نشطة',
-                    inactive: '❌ غير نشطة',
-                    expired: '⛔ منتهية',
-                    suspended: '⏳ معلقة'
+                    active: 'نشطة',
+                    inactive: 'غير نشطة',
+                    expired: 'منتهية',
+                    suspended: 'معلقة'
                 };
                 const statusClasses = {
                     active: 'status-active',
@@ -1346,11 +1685,17 @@
                     </td>
                     <td>
                         <div class="actions-cell">
-                            <button class="btn btn-info btn-xs" onclick="viewSchool('${school._id}')" title="عرض التفاصيل">👁️</button>
-                            <button class="btn btn-warning btn-xs" onclick="editSchool('${school._id}')" title="تعديل">✏️</button>
-                            <button class="btn btn-success btn-xs" onclick="renewSubscription('${school._id}')" title="تجديد الاشتراك">🔄</button>
+                            <button class="btn btn-info btn-xs" onclick="viewSchool('${school._id}')" title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-warning btn-xs" onclick="editSchool('${school._id}')" title="تعديل">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-success btn-xs" onclick="renewSubscription('${school._id}')" title="تجديد الاشتراك">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
                             <button class="btn ${school.status === 'active' ? 'btn-danger' : 'btn-secondary'} btn-xs" onclick="toggleSchool('${school._id}', '${school.status}')" title="${school.status === 'active' ? 'تعطيل' : 'تفعيل'}">
-                                ${school.status === 'active' ? '🔴' : '🟢'}
+                                <i class="fas ${school.status === 'active' ? 'fa-times-circle' : 'fa-check-circle'}"></i>
                             </button>
                         </div>
                     </td>
@@ -1408,12 +1753,14 @@
         // Modal Controls
         // ============================================
         function openModal(id) {
-            document.getElementById(id).classList.add('active');
+            const modal = document.getElementById(id);
+            modal.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
 
         function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
+            const modal = document.getElementById(id);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
 
@@ -1423,7 +1770,7 @@
         function openCreateModal() {
             isEditing = false;
             document.getElementById('modalTitle').textContent = 'إضافة مدرسة جديدة';
-            document.getElementById('submitBtn').innerHTML = '💾 إنشاء';
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> إنشاء';
             document.getElementById('schoolId').value = '';
             document.getElementById('schoolForm').reset();
             document.getElementById('subscriptionAmount').value = '30000';
@@ -1431,7 +1778,6 @@
             document.getElementById('schoolKey').value = 'SCH-' + Date.now().toString().slice(-6);
             document.getElementById('schoolKey').disabled = false;
             
-            // إظهار أقسام المدير والاشتراك
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('subscriptionSection').style.display = 'block';
             
@@ -1439,7 +1785,7 @@
         }
 
         // ============================================
-        // Edit School - محسّن لتعديل جميع البيانات
+        // Edit School
         // ============================================
         async function editSchool(id) {
             try {
@@ -1453,16 +1799,15 @@
                     isEditing = true;
                     
                     document.getElementById('modalTitle').textContent = '✏️ تعديل المدرسة: ' + school.name;
-                    document.getElementById('submitBtn').innerHTML = '💾 تحديث';
+                    document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> تحديث';
                     document.getElementById('schoolId').value = school._id;
                     document.getElementById('schoolName').value = school.name || '';
                     document.getElementById('schoolEmail').value = school.email || '';
                     document.getElementById('schoolPhone').value = school.phone || '';
                     document.getElementById('schoolAddress').value = school.address || '';
                     document.getElementById('schoolKey').value = school.schoolKey || '';
-                    document.getElementById('schoolKey').disabled = true; // المفتاح غير قابل للتعديل
+                    document.getElementById('schoolKey').disabled = true;
                     
-                    // إخفاء أقسام المدير والاشتراك عند التعديل
                     document.getElementById('adminSection').style.display = 'none';
                     document.getElementById('subscriptionSection').style.display = 'none';
                     
@@ -1477,7 +1822,7 @@
         }
 
         // ============================================
-        // Save School (Create or Update)
+        // Save School
         // ============================================
         async function saveSchool(event) {
             event.preventDefault();
@@ -1486,7 +1831,6 @@
             const schoolId = document.getElementById('schoolId').value;
             const isEdit = !!schoolId;
 
-            // جمع البيانات الأساسية
             const schoolData = {
                 name: document.getElementById('schoolName').value.trim(),
                 email: document.getElementById('schoolEmail').value.trim(),
@@ -1495,27 +1839,17 @@
                 key: document.getElementById('schoolKey').value.trim()
             };
 
-            // التحقق من الحقول المطلوبة
             if (!schoolData.name || !schoolData.email || !schoolData.phone || !schoolData.key) {
                 showToast('❌ يرجى تعبئة جميع الحقول المطلوبة (الاسم، البريد، الهاتف، المفتاح)', 'error');
                 return;
             }
 
-            // التحقق من صحة البريد الإلكتروني
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(schoolData.email)) {
                 showToast('❌ البريد الإلكتروني غير صحيح', 'error');
                 return;
             }
 
-            // التحقق من صحة رقم الهاتف
-            const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-            if (!phoneRegex.test(schoolData.phone)) {
-                showToast('❌ رقم الهاتف غير صحيح (يجب أن يكون 8-20 رقم)', 'error');
-                return;
-            }
-
-            // إذا كانت إضافة جديدة، اجمع بيانات المدير والاشتراك
             if (!isEdit) {
                 const adminData = {
                     adminUsername: document.getElementById('adminUsername').value.trim(),
@@ -1539,7 +1873,6 @@
                 const price = PLAN_PRICES[plan] || 0;
                 const totalAmount = price * (duration / 12);
 
-                // دمج البيانات
                 Object.assign(schoolData, adminData, {
                     plan: plan,
                     subscriptionDuration: duration,
@@ -1557,7 +1890,6 @@
                 if (isEdit) {
                     url = `${API_URL}/api/redox-admin/school/${schoolId}`;
                     method = 'PUT';
-                    // إزالة الحقول غير المطلوبة للتحديث
                     delete schoolData.adminUsername;
                     delete schoolData.adminPassword;
                     delete schoolData.adminFullName;
@@ -1569,8 +1901,6 @@
                     url = `${API_URL}/api/redox-admin/school`;
                     method = 'POST';
                 }
-
-                console.log('📤 إرسال البيانات:', schoolData);
 
                 const response = await fetch(url, {
                     method: method,
@@ -1599,13 +1929,13 @@
                 showToast('❌ فشل في الاتصال بالخادم: ' + err.message, 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = isEdit ? '💾 تحديث' : '💾 إنشاء';
+                submitBtn.innerHTML = isEdit ? '<i class="fas fa-save"></i> تحديث' : '<i class="fas fa-save"></i> إنشاء';
                 submitBtn.classList.remove('btn-loading');
             }
         }
 
         // ============================================
-        // View School - محسّن لعرض جميع البيانات
+        // View School with Admin Management
         // ============================================
         async function viewSchool(id) {
             try {
@@ -1614,16 +1944,117 @@
 
                 if (result.status === 'success') {
                     const school = result.school;
+                    currentSchoolId = school._id;
                     const sub = school.subscription || {};
                     const daysRemaining = sub.daysRemaining || 0;
                     const isActive = sub.isActive || false;
                     const features = sub.features || {};
+                    const admins = school.admins || [];
 
-                    document.getElementById('detailsTitle').textContent = '📋 ' + school.name;
+                    document.getElementById('detailsTitle').textContent = school.name;
+
+                    let adminsHtml = `
+                        <div class="admin-section">
+                            <div class="admin-section-title">
+                                <i class="fas fa-users-cog"></i> 
+                                إدارة المدراء (${admins.length})
+                            </div>
+                            <div id="adminsList">
+                    `;
+
+                    if (admins.length === 0) {
+                        adminsHtml += `
+                            <div class="text-center text-muted" style="padding:20px;">
+                                <i class="fas fa-user-slash" style="font-size:30px;display:block;margin-bottom:10px;"></i>
+                                لا يوجد مدراء مسجلون
+                            </div>
+                        `;
+                    } else {
+                        admins.forEach(admin => {
+                            const roleClass = `role-${admin.role || 'admin'}`;
+                            const roleLabel = admin.role === 'super_admin' ? 'مدير أساسي' :
+                                             admin.role === 'admin' ? 'مدير' :
+                                             admin.role === 'manager' ? 'مسؤول' : 'محاسب';
+                            const statusText = admin.isActive ? 'نشط' : 'غير نشط';
+                            const statusClass = admin.isActive ? 'active' : 'inactive';
+                            
+                            adminsHtml += `
+                                <div class="admin-item" data-admin-id="${admin._id}">
+                                    <div class="admin-info">
+                                        <div class="name">${admin.fullName || 'غير محدد'}</div>
+                                        <div class="username"><i class="fas fa-user"></i> ${admin.username}</div>
+                                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px;">
+                                            <span class="role ${roleClass}">${roleLabel}</span>
+                                            <span class="admin-status ${statusClass}">${statusText}</span>
+                                            ${admin.email ? `<span class="text-xs text-muted"><i class="fas fa-envelope"></i> ${admin.email}</span>` : ''}
+                                            ${admin.phone ? `<span class="text-xs text-muted"><i class="fas fa-phone"></i> ${admin.phone}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="admin-actions">
+                                        ${admin.role !== 'super_admin' ? `
+                                            <button class="btn btn-warning btn-xs" onclick="changeAdminRole('${school._id}','${admin._id}')" title="تغيير الدور">
+                                                <i class="fas fa-user-tag"></i>
+                                            </button>
+                                            <button class="btn btn-${admin.isActive ? 'danger' : 'success'} btn-xs" onclick="toggleAdmin('${school._id}','${admin._id}')" title="${admin.isActive ? 'تعطيل' : 'تفعيل'}">
+                                                <i class="fas ${admin.isActive ? 'fa-pause' : 'fa-play'}"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-xs" onclick="deleteAdmin('${school._id}','${admin._id}')" title="حذف">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        ` : `
+                                            <span class="text-xs text-muted"><i class="fas fa-star" style="color:var(--warning);"></i> أساسي</span>
+                                        `}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    adminsHtml += `
+                            </div>
+                            <!-- إضافة مدير جديد -->
+                            <div class="add-admin-form" id="addAdminForm">
+                                <div class="form-group">
+                                    <label><i class="fas fa-user"></i> اسم المستخدم</label>
+                                    <input type="text" id="newAdminUsername" placeholder="اسم المستخدم">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-lock"></i> كلمة المرور</label>
+                                    <input type="password" id="newAdminPassword" placeholder="••••••••" minlength="6">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-user-circle"></i> الاسم الكامل</label>
+                                    <input type="text" id="newAdminFullName" placeholder="الاسم الكامل">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-envelope"></i> البريد</label>
+                                    <input type="email" id="newAdminEmail" placeholder="admin@example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-phone"></i> الهاتف</label>
+                                    <input type="tel" id="newAdminPhone" placeholder="0555123456">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fas fa-user-tag"></i> الدور</label>
+                                    <select id="newAdminRole">
+                                        <option value="admin">مدير</option>
+                                        <option value="manager">مسؤول</option>
+                                        <option value="accountant">محاسب</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="justify-content:flex-end;">
+                                    <button class="btn btn-success" onclick="addAdmin('${school._id}')">
+                                        <i class="fas fa-user-plus"></i> إضافة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
                     document.getElementById('detailsContent').innerHTML = `
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:10px 0;">
-                            <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);">
-                                <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">📋 معلومات المدرسة</h4>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:5px 0;">
+                            <div style="background:var(--bg);padding:14px;border-radius:var(--radius-sm);">
+                                <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;"><i class="fas fa-info-circle"></i> معلومات المدرسة</h4>
                                 <p><strong>الاسم:</strong> ${school.name}</p>
                                 <p><strong>البريد:</strong> ${school.email || '—'}</p>
                                 <p><strong>الهاتف:</strong> ${school.phone || '—'}</p>
@@ -1632,38 +2063,39 @@
                                 <p><strong>الحالة:</strong> <span class="status-badge ${school.status === 'active' ? 'status-active' : 'status-inactive'}">${school.status === 'active' ? '✅ نشطة' : '❌ غير نشطة'}</span></p>
                                 <p><strong>تاريخ الإنشاء:</strong> ${school.createdAt ? new Date(school.createdAt).toLocaleDateString('ar-EG') : '—'}</p>
                             </div>
-                            <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);">
-                                <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">📅 الاشتراك</h4>
+                            <div style="background:var(--bg);padding:14px;border-radius:var(--radius-sm);">
+                                <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;"><i class="fas fa-calendar-alt"></i> الاشتراك</h4>
                                 <p><strong>الخطة:</strong> <span class="plan-badge plan-${sub.plan}">${sub.planName || '—'}</span></p>
                                 <p><strong>تاريخ البدء:</strong> ${sub.startDate ? new Date(sub.startDate).toLocaleDateString('ar-EG') : '—'}</p>
                                 <p><strong>تاريخ الانتهاء:</strong> ${sub.endDate ? new Date(sub.endDate).toLocaleDateString('ar-EG') : '—'}</p>
                                 <p><strong>الأيام المتبقية:</strong> <span style="color:${daysRemaining <= 7 ? 'var(--danger)' : daysRemaining <= 30 ? 'var(--warning)' : 'var(--success)'};font-weight:700;">${daysRemaining} يوم</span></p>
                                 <p><strong>المبلغ:</strong> ${sub.amount?.toLocaleString() || 0} د.ج</p>
-                                <p><strong>الحالة:</strong> ${isActive ? '✅ نشط' : '❌ منتهي'}</p>
+                                <p><strong>الحالة:</strong> ${isActive ? '<span style="color:var(--success);">✅ نشط</span>' : '<span style="color:var(--danger);">❌ منتهي</span>'}</p>
                             </div>
                         </div>
-                        <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);margin-top:10px;">
-                            <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">⚙️ الميزات المتاحة</h4>
-                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
-                                <div><span style="color:${features.maxStudents ? 'var(--success)' : 'var(--danger)'};">${features.maxStudents ? '✅' : '❌'}</span> الطلاب: ${features.maxStudents || 0}</div>
-                                <div><span style="color:${features.maxTeachers ? 'var(--success)' : 'var(--danger)'};">${features.maxTeachers ? '✅' : '❌'}</span> المعلمين: ${features.maxTeachers || 0}</div>
-                                <div><span style="color:${features.maxClasses ? 'var(--success)' : 'var(--danger)'};">${features.maxClasses ? '✅' : '❌'}</span> الحصص: ${features.maxClasses || 0}</div>
-                                <div><span style="color:${features.hasRFID ? 'var(--success)' : 'var(--danger)'};">${features.hasRFID ? '✅' : '❌'}</span> RFID</div>
-                                <div><span style="color:${features.hasSMS ? 'var(--success)' : 'var(--danger)'};">${features.hasSMS ? '✅' : '❌'}</span> SMS</div>
-                                <div><span style="color:${features.hasReports ? 'var(--success)' : 'var(--danger)'};">${features.hasReports ? '✅' : '❌'}</span> التقارير</div>
-                                <div><span style="color:${features.hasAPI ? 'var(--success)' : 'var(--danger)'};">${features.hasAPI ? '✅' : '❌'}</span> API</div>
+                        <div style="background:var(--bg);padding:14px;border-radius:var(--radius-sm);margin-top:10px;">
+                            <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;"><i class="fas fa-cogs"></i> الميزات المتاحة</h4>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">
+                                <div><i class="fas ${features.maxStudents ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.maxStudents ? 'var(--success)' : 'var(--danger)'};"></i> الطلاب: ${features.maxStudents || 0}</div>
+                                <div><i class="fas ${features.maxTeachers ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.maxTeachers ? 'var(--success)' : 'var(--danger)'};"></i> المعلمين: ${features.maxTeachers || 0}</div>
+                                <div><i class="fas ${features.maxClasses ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.maxClasses ? 'var(--success)' : 'var(--danger)'};"></i> الحصص: ${features.maxClasses || 0}</div>
+                                <div><i class="fas ${features.hasRFID ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.hasRFID ? 'var(--success)' : 'var(--danger)'};"></i> RFID</div>
+                                <div><i class="fas ${features.hasSMS ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.hasSMS ? 'var(--success)' : 'var(--danger)'};"></i> SMS</div>
+                                <div><i class="fas ${features.hasReports ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.hasReports ? 'var(--success)' : 'var(--danger)'};"></i> التقارير</div>
+                                <div><i class="fas ${features.hasAPI ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${features.hasAPI ? 'var(--success)' : 'var(--danger)'};"></i> API</div>
                             </div>
                         </div>
-                        ${school.adminsCount > 0 ? `
-                        <div style="background:var(--bg);padding:16px;border-radius:var(--radius-sm);margin-top:10px;">
-                            <h4 style="color:var(--gray);font-size:13px;margin-bottom:8px;">👤 المدراء (${school.adminsCount})</h4>
-                            <p style="color:var(--gray);font-size:14px;">عدد المدراء المسجلين: ${school.adminsCount}</p>
-                        </div>
-                        ` : ''}
-                        <div style="margin-top:20px;padding-top:15px;border-top:2px solid var(--light-gray);display:flex;gap:10px;flex-wrap:wrap;">
-                            <button class="btn btn-warning btn-sm" onclick="closeModal('detailsModal');editSchool('${school._id}')">✏️ تعديل المدرسة</button>
-                            <button class="btn btn-success btn-sm" onclick="closeModal('detailsModal');renewSubscription('${school._id}')">🔄 تجديد الاشتراك</button>
-                            <button class="btn btn-secondary btn-sm" onclick="closeModal('detailsModal')">🔙 إغلاق</button>
+                        ${adminsHtml}
+                        <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--light-gray);display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn btn-warning btn-sm" onclick="closeModal('detailsModal');editSchool('${school._id}')">
+                                <i class="fas fa-edit"></i> تعديل المدرسة
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="closeModal('detailsModal');renewSubscription('${school._id}')">
+                                <i class="fas fa-sync-alt"></i> تجديد الاشتراك
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="closeModal('detailsModal')">
+                                <i class="fas fa-times"></i> إغلاق
+                            </button>
                         </div>
                     `;
                     
@@ -1673,6 +2105,135 @@
                 }
             } catch (err) {
                 console.error('Error loading school:', err);
+                showToast('❌ فشل في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // ============================================
+        // Add Admin
+        // ============================================
+        async function addAdmin(schoolId) {
+            const username = document.getElementById('newAdminUsername').value.trim();
+            const password = document.getElementById('newAdminPassword').value.trim();
+            const fullName = document.getElementById('newAdminFullName').value.trim();
+            const email = document.getElementById('newAdminEmail').value.trim();
+            const phone = document.getElementById('newAdminPhone').value.trim();
+            const role = document.getElementById('newAdminRole').value;
+
+            if (!username || !password || !fullName) {
+                showToast('❌ اسم المستخدم، كلمة المرور، والاسم الكامل مطلوبة', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/redox-admin/school/${schoolId}/admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, fullName, email, phone, role })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('✅ تم إضافة المدير بنجاح', 'success');
+                    // Refresh the details view
+                    viewSchool(schoolId);
+                } else {
+                    showToast('❌ فشل في إضافة المدير: ' + (result.error || 'خطأ غير معروف'), 'error');
+                }
+            } catch (err) {
+                console.error('Error adding admin:', err);
+                showToast('❌ فشل في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // ============================================
+        // Change Admin Role
+        // ============================================
+        async function changeAdminRole(schoolId, adminId) {
+            const roles = ['admin', 'manager', 'accountant'];
+            const roleNames = { admin: 'مدير', manager: 'مسؤول', accountant: 'محاسب' };
+            
+            let options = roles.map(r => `${r}: ${roleNames[r]}`).join('\n');
+            const selected = prompt(`اختر الدور الجديد:\n${options}`, 'admin');
+            
+            if (!selected || !roles.includes(selected)) {
+                if (selected !== null) showToast('❌ دور غير صالح', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/redox-admin/school/${schoolId}/admin/${adminId}/role`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: selected })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`✅ تم تغيير الدور إلى ${roleNames[selected] || selected}`, 'success');
+                    viewSchool(schoolId);
+                } else {
+                    showToast('❌ فشل في تغيير الدور: ' + (result.error || 'خطأ غير معروف'), 'error');
+                }
+            } catch (err) {
+                console.error('Error changing role:', err);
+                showToast('❌ فشل في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // ============================================
+        // Toggle Admin Status
+        // ============================================
+        async function toggleAdmin(schoolId, adminId) {
+            if (!confirm('هل أنت متأكد من تغيير حالة هذا المدير؟')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/redox-admin/school/${schoolId}/admin/${adminId}/toggle`, {
+                    method: 'PUT'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    viewSchool(schoolId);
+                } else {
+                    showToast('❌ فشل: ' + (result.error || 'خطأ غير معروف'), 'error');
+                }
+            } catch (err) {
+                console.error('Error toggling admin:', err);
+                showToast('❌ فشل في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // ============================================
+        // Delete Admin
+        // ============================================
+        async function deleteAdmin(schoolId, adminId) {
+            if (!confirm('⚠️ هل أنت متأكد من حذف هذا المدير؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/redox-admin/school/${schoolId}/admin/${adminId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('✅ تم حذف المدير بنجاح', 'success');
+                    viewSchool(schoolId);
+                } else {
+                    showToast('❌ فشل في حذف المدير: ' + (result.error || 'خطأ غير معروف'), 'error');
+                }
+            } catch (err) {
+                console.error('Error deleting admin:', err);
                 showToast('❌ فشل في الاتصال بالخادم', 'error');
             }
         }
@@ -1779,7 +2340,7 @@
             const duration = parseInt(document.getElementById('subscriptionDuration').value);
             const price = PLAN_PRICES[plan] || 0;
             const total = price * (duration / 12);
-            document.getElementById('subscriptionAmount').value = total;
+            document.getElementById('subscriptionAmount').value = Math.round(total);
         });
 
         document.getElementById('subscriptionDuration')?.addEventListener('change', function() {
@@ -1787,7 +2348,7 @@
             const duration = parseInt(this.value);
             const price = PLAN_PRICES[plan] || 0;
             const total = price * (duration / 12);
-            document.getElementById('subscriptionAmount').value = total;
+            document.getElementById('subscriptionAmount').value = Math.round(total);
         });
 
         // ============================================
@@ -1796,7 +2357,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadSchools();
             
-            // Close modal on overlay click
             document.querySelectorAll('.modal-overlay').forEach(el => {
                 el.addEventListener('click', function(e) {
                     if (e.target === this) {

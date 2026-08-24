@@ -5792,7 +5792,265 @@ app.post('/api/accounting/teacher-commissions/generate', async (req, res) => {
     });
   }
 });
-  
+  // ==============================================
+// ✅ نقطة نهاية لإضافة مستخدم جديد للمدرسة
+// ==============================================
+app.post('/api/redox-admin/school/:schoolId/admin', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { username, password, fullName, email, phone, role, permissions } = req.body;
+
+    // التحقق من البيانات المطلوبة
+    if (!username || !password || !fullName) {
+      return res.status(400).json({
+        success: false,
+        error: 'البيانات ناقصة: username, password, fullName مطلوبة'
+      });
+    }
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    // التحقق من عدم وجود اسم مستخدم مكرر
+    const existingAdmin = school.admins.find(a => a.username === username);
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        error: 'اسم المستخدم موجود مسبقاً'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // إضافة المدير الجديد
+    school.admins.push({
+      username,
+      password: hashedPassword,
+      fullName,
+      email: email || school.email,
+      phone: phone || school.phone,
+      role: role || 'admin',
+      isActive: true,
+      createdAt: new Date(),
+      permissions: permissions || {
+        canManageStudents: true,
+        canManageTeachers: true,
+        canManageClasses: true,
+        canManagePayments: true,
+        canManageUsers: false,
+        canViewReports: true,
+        canManageSubscription: false
+      }
+    });
+
+    await school.save();
+
+    const newAdmin = school.admins[school.admins.length - 1];
+
+    res.status(201).json({
+      success: true,
+      message: '✅ تم إضافة المدير بنجاح',
+      admin: {
+        _id: newAdmin._id,
+        username: newAdmin.username,
+        fullName: newAdmin.fullName,
+        role: newAdmin.role,
+        email: newAdmin.email,
+        phone: newAdmin.phone,
+        isActive: newAdmin.isActive,
+        permissions: newAdmin.permissions
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في إضافة المدير:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في إضافة المدير: ' + err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث دور مستخدم
+// ==============================================
+app.put('/api/redox-admin/school/:schoolId/admin/:adminId/role', async (req, res) => {
+  try {
+    const { schoolId, adminId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !['admin', 'super_admin', 'manager', 'accountant'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'الدور غير صالح'
+      });
+    }
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const adminIndex = school.admins.findIndex(
+      a => a._id.toString() === adminId
+    );
+
+    if (adminIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدير غير موجود'
+      });
+    }
+
+    // منع تغيير دور super_admin
+    if (school.admins[adminIndex].role === 'super_admin' && role !== 'super_admin') {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن تغيير دور المدير الأساسي'
+      });
+    }
+
+    school.admins[adminIndex].role = role;
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث دور المدير بنجاح',
+      admin: {
+        _id: school.admins[adminIndex]._id,
+        username: school.admins[adminIndex].username,
+        fullName: school.admins[adminIndex].fullName,
+        role: school.admins[adminIndex].role,
+        isActive: school.admins[adminIndex].isActive
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث دور المدير:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في تحديث دور المدير: ' + err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتعطيل/تفعيل مستخدم
+// ==============================================
+app.put('/api/redox-admin/school/:schoolId/admin/:adminId/toggle', async (req, res) => {
+  try {
+    const { schoolId, adminId } = req.params;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const adminIndex = school.admins.findIndex(
+      a => a._id.toString() === adminId
+    );
+
+    if (adminIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدير غير موجود'
+      });
+    }
+
+    // منع تعطيل super_admin
+    if (school.admins[adminIndex].role === 'super_admin') {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن تعطيل المدير الأساسي للمدرسة'
+      });
+    }
+
+    school.admins[adminIndex].isActive = !school.admins[adminIndex].isActive;
+    await school.save();
+
+    res.json({
+      success: true,
+      message: school.admins[adminIndex].isActive ? '✅ تم تفعيل المدير' : '✅ تم تعطيل المدير',
+      admin: {
+        _id: school.admins[adminIndex]._id,
+        username: school.admins[adminIndex].username,
+        fullName: school.admins[adminIndex].fullName,
+        role: school.admins[adminIndex].role,
+        isActive: school.admins[adminIndex].isActive
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تغيير حالة المدير:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في تغيير حالة المدير: ' + err.message
+    });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لحذف مستخدم (تعطيل فقط)
+// ==============================================
+app.delete('/api/redox-admin/school/:schoolId/admin/:adminId', async (req, res) => {
+  try {
+    const { schoolId, adminId } = req.params;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    const adminIndex = school.admins.findIndex(
+      a => a._id.toString() === adminId
+    );
+
+    if (adminIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدير غير موجود'
+      });
+    }
+
+    // منع حذف super_admin
+    if (school.admins[adminIndex].role === 'super_admin') {
+      return res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف المدير الأساسي للمدرسة'
+      });
+    }
+
+    // حذف المدير
+    school.admins.splice(adminIndex, 1);
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم حذف المدير بنجاح'
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في حذف المدير:', err);
+    res.status(500).json({
+      success: false,
+      error: 'فشل في حذف المدير: ' + err.message
+    });
+  }
+});
   // PUT /api/accounting/teacher-commissions/:id/cancel - متوافق مع الواجهة الحالية
 app.put('/api/accounting/teacher-commissions/:id/cancel', async (req, res) => {
   try {
