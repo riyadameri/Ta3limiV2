@@ -3953,7 +3953,415 @@ app.put('/api/accounting/teacher-commissions/:id/cancel-enhanced', async (req, r
     res.status(500).json({ success: false, error: err.message });
   }
 });
+// ==============================================
+// ✅ نقطة نهاية لإيرادات الحصص حسب الشهر المدرسي
+// ==============================================
+app.get('/api/accounting/class-revenue-by-month', async (req, res) => {
+  try {
+    const { schoolId, classId, month } = req.query;
+    
+    if (!schoolId || !classId || !month) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد schoolId و classId و month'
+      });
+    }
 
+    // التحقق من وجود المدرسة والحصة
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const classObj = await Class.findById(classId);
+    if (!classObj) {
+      return res.status(404).json({ success: false, error: 'الحصة غير موجودة' });
+    }
+
+    // جلب جميع دفعات هذه الحصة حسب الشهر المدرسي (monthCode)
+    const payments = await Payment.find({
+      schoolId: schoolId,
+      class: classId,
+      monthCode: month
+    }).populate('student', 'name studentId');
+
+    // حساب الإحصائيات
+    const totalPaid = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+    const totalPending = payments.filter(p => p.status === 'pending' || p.status === 'late').reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    const paidCount = payments.filter(p => p.status === 'paid').length;
+    const pendingCount = payments.filter(p => p.status === 'pending' || p.status === 'late').length;
+
+    // جلب عدد الطلاب في الحصة
+    const studentsInClass = await Student.countDocuments({
+      schoolId: schoolId,
+      classes: classId
+    });
+
+    // حساب نسبة الإنجاز
+    const completionRate = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classObj._id,
+          name: classObj.name,
+          subject: classObj.subject,
+          price: classObj.price
+        },
+        month: month,
+        totalStudents: studentsInClass,
+        payments: {
+          total: payments.length,
+          paid: paidCount,
+          pending: pendingCount
+        },
+        amounts: {
+          total: totalAmount,
+          paid: totalPaid,
+          pending: totalPending
+        },
+        completionRate: completionRate,
+        students: payments.map(p => ({
+          _id: p.student._id,
+          name: p.student.name,
+          studentId: p.student.studentId,
+          amount: p.amount,
+          status: p.status,
+          paymentDate: p.paymentDate
+        }))
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب إيرادات الحصة:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لصافي الربح الشهري (مع شرط دفع عمولات الأساتذة)
+// ==============================================
+app.get('/api/accounting/monthly-net-profit-with-commissions', async (req, res) => {
+  try {
+    const { schoolId, month } = req.query;
+    
+    if (!schoolId || !month) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد schoolId و month'
+      });
+    }
+
+    // 1. جلب جميع مدفوعات الحصص لهذا الشهر (المدفوعة)
+    const classPayments = await Payment.find({
+      schoolId: schoolId,
+      monthCode: month,
+      status: 'paid'
+    });
+
+    const totalClassIncome = classPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    // 2. جلب رسوم التسجيل لهذا الشهر
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const registrationFees = await SchoolFee.find({
+      schoolId: schoolId,
+      paymentDate: { $gte: startDate, $lte: endDate },
+      status: 'paid'
+    });
+
+    const totalRegistrationIncome = registrationFees.reduce((sum, f) => sum + f.amount, 0);
+
+    // 3. جلب عمولات الأساتذة لهذا الشهر
+    const commissions = await TeacherCommission.find({
+      schoolId: schoolId,
+      month: month
+    }).populate('teacher', 'name');
+
+    // التحقق من أن جميع العمولات مدفوعة
+    const allCommissionsPaid = commissions.every(c => c.status === 'paid');
+    const totalCommissions = commissions.reduce((sum, c) => sum + c.totalAmount, 0);
+    const unpaidCommissions = commissions.filter(c => c.status !== 'paid');
+
+    // 4. حساب صافي الربح (فقط إذا كانت جميع العمولات مدفوعة)
+    let netProfit = null;
+    let profitCalculated = false;
+
+    if (allCommissionsPaid && commissions.length > 0) {
+      netProfit = totalClassIncome - totalCommissions;
+      profitCalculated = true;
+    } else if (commissions.length === 0) {
+      // إذا لم توجد عمولات، صافي الربح = إيرادات الحصص
+      netProfit = totalClassIncome;
+      profitCalculated = true;
+    }
+
+    // 5. إحصائيات الدفعات حسب الشهر
+    const paymentsByStatus = await Payment.aggregate([
+      {
+        $match: {
+          schoolId: schoolId,
+          monthCode: month
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    const statusMap = { paid: { count: 0, total: 0 }, pending: { count: 0, total: 0 }, late: { count: 0, total: 0 } };
+    paymentsByStatus.forEach(s => {
+      if (statusMap[s._id]) {
+        statusMap[s._id] = { count: s.count, total: s.total };
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        month: month,
+        income: {
+          classPayments: {
+            total: totalClassIncome,
+            count: classPayments.length
+          },
+          registrationFees: {
+            total: totalRegistrationIncome,
+            count: registrationFees.length
+          },
+          totalIncome: totalClassIncome + totalRegistrationIncome
+        },
+        commissions: {
+          total: totalCommissions,
+          count: commissions.length,
+          allPaid: allCommissionsPaid,
+          unpaid: unpaidCommissions.map(c => ({
+            _id: c._id,
+            teacher: c.teacher?.name || 'غير معروف',
+            amount: c.totalAmount,
+            status: c.status
+          }))
+        },
+        netProfit: profitCalculated ? netProfit : null,
+        profitCalculated: profitCalculated,
+        profitMessage: profitCalculated 
+          ? `صافي الربح للشهر ${month}: ${netProfit?.toLocaleString()} د.ج`
+          : 'لا يمكن حساب صافي الربح حتى يتم دفع جميع عمولات الأساتذة',
+        paymentSummary: statusMap,
+        registrationIncome: totalRegistrationIncome
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في حساب صافي الربح الشهري:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// ✅ نقطة نهاية لتحديث العمولات عند زيادة الطلاب
+// ==============================================
+app.post('/api/accounting/refresh-commissions', async (req, res) => {
+  try {
+    const { schoolId, month, classId } = req.body;
+    
+    if (!schoolId || !month) {
+      return res.status(400).json({
+        success: false,
+        error: 'يجب تحديد schoolId و month'
+      });
+    }
+
+    console.log(`🔄 تحديث العمولات للشهر ${month}`);
+
+    // جلب جميع الحصص (أو حصة محددة)
+    const classQuery = { schoolId: schoolId };
+    if (classId) classQuery._id = classId;
+    
+    const classes = await Class.find(classQuery)
+      .populate('teacher', 'name salaryPercentage')
+      .populate('students', 'name studentId');
+
+    const results = {
+      updated: 0,
+      created: 0,
+      failed: 0,
+      details: []
+    };
+
+    const teacherSharePercentage = 70;
+
+    for (const classObj of classes) {
+      try {
+        // جلب العمولة الموجودة
+        let commission = await TeacherCommission.findOne({
+          schoolId: schoolId,
+          teacher: classObj.teacher?._id,
+          class: classObj._id,
+          month: month
+        });
+
+        // حساب عدد الطلاب الحالي
+        const currentStudents = classObj.students || [];
+        const currentStudentIds = new Set(currentStudents.map(s => s._id.toString()));
+
+        if (commission) {
+          // تحديث العمولة الموجودة
+          const existingStudentIds = new Set(
+            commission.students.filter(s => s.isActive !== false).map(s => s.student.toString())
+          );
+
+          // إضافة الطلاب الجدد
+          let addedCount = 0;
+          for (const student of currentStudents) {
+            if (!existingStudentIds.has(student._id.toString())) {
+              const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
+              commission.students.push({
+                student: student._id,
+                studentName: student.name,
+                attendancesCount: 0,
+                teacherShare: teacherShare,
+                status: 'pending',
+                isActive: true
+              });
+              addedCount++;
+            }
+          }
+
+          // إعادة حساب المبلغ الإجمالي
+          let totalAmount = 0;
+          commission.students.forEach(s => {
+            if (s.isActive !== false) {
+              totalAmount += s.teacherShare || 0;
+            }
+          });
+          
+          commission.totalAmount = totalAmount;
+          commission.remainingAmount = totalAmount - commission.totalPaid;
+          commission.updateStatus();
+          
+          await commission.save();
+          
+          results.updated++;
+          results.details.push({
+            classId: classObj._id,
+            className: classObj.name,
+            status: 'updated',
+            addedStudents: addedCount,
+            totalStudents: currentStudents.length
+          });
+
+          // إنشاء دفعات للطلاب الجدد
+          if (addedCount > 0) {
+            for (const student of currentStudents) {
+              if (!existingStudentIds.has(student._id.toString())) {
+                const existingPayment = await Payment.findOne({
+                  schoolId: schoolId,
+                  student: student._id,
+                  class: classObj._id,
+                  monthCode: month
+                });
+
+                if (!existingPayment) {
+                  const payment = new Payment({
+                    schoolId: schoolId,
+                    student: student._id,
+                    class: classObj._id,
+                    amount: classObj.price || 0,
+                    month: new Date(month).toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+                    monthCode: month,
+                    status: 'pending',
+                    commissionRecorded: true,
+                    commissionId: commission._id
+                  });
+                  await payment.save();
+                }
+              }
+            }
+          }
+
+        } else if (classObj.teacher && currentStudents.length > 0) {
+          // إنشاء عمولة جديدة
+          const teacherShare = (classObj.price || 0) * (teacherSharePercentage / 100);
+          const totalAmount = teacherShare * currentStudents.length;
+
+          commission = new TeacherCommission({
+            schoolId: schoolId,
+            teacher: classObj.teacher._id,
+            class: classObj._id,
+            month: month,
+            totalAmount: totalAmount,
+            percentage: teacherSharePercentage,
+            status: 'pending',
+            totalPaid: 0,
+            remainingAmount: totalAmount,
+            students: currentStudents.map(student => ({
+              student: student._id,
+              studentName: student.name,
+              attendancesCount: 0,
+              teacherShare: teacherShare,
+              status: 'pending',
+              isActive: true
+            }))
+          });
+
+          await commission.save();
+          results.created++;
+          results.details.push({
+            classId: classObj._id,
+            className: classObj.name,
+            status: 'created',
+            totalStudents: currentStudents.length
+          });
+
+          // إنشاء دفعات للطلاب
+          for (const student of currentStudents) {
+            const payment = new Payment({
+              schoolId: schoolId,
+              student: student._id,
+              class: classObj._id,
+              amount: classObj.price || 0,
+              month: new Date(month).toLocaleString('ar-EG', { month: 'long', year: 'numeric' }),
+              monthCode: month,
+              status: 'pending',
+              commissionRecorded: true,
+              commissionId: commission._id
+            });
+            await payment.save();
+          }
+        }
+      } catch (err) {
+        results.failed++;
+        results.details.push({
+          classId: classObj._id,
+          className: classObj.name,
+          error: err.message
+        });
+        console.error(`❌ خطأ في تحديث العمولة للحصة ${classObj.name}:`, err.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `تم تحديث العمولات: ${results.updated} محدثة، ${results.created} جديدة، ${results.failed} فشلت`,
+      results: results,
+      month: month
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث العمولات:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 // ==============================================
 // ✅ GET /api/accounting/transactions-status - Get transactions by status
 // ==============================================
