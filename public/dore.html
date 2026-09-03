@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تسجيل الطلاب بالبطاقات الذكية - أكاديمية الرواد</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>نظام تسجيل الطلاب | Redox</title>
+
+    <!-- Bootstrap CSS & Icons & Animate -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
-        
+
         :root {
             --primary-color: #4361ee;
             --secondary-color: #3f37c9;
@@ -31,14 +29,12 @@
             --gradient-danger: linear-gradient(135deg, #e63946 0%, #9d0208 100%);
             --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             --border-radius: 20px;
+            --redox-navy: #101828;
+            --redox-cyan: #16c7d9;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Tajawal', sans-serif;
             background: var(--gradient-primary);
@@ -46,8 +42,9 @@
             padding: 20px;
             position: relative;
             overflow-x: hidden;
+            color: var(--dark-color);
         }
-        
+
         body::before {
             content: '';
             position: absolute;
@@ -60,19 +57,19 @@
             animation: moveBackground 20s linear infinite;
             pointer-events: none;
         }
-        
+
         @keyframes moveBackground {
             0% { transform: translate(0, 0) rotate(0deg); }
             100% { transform: translate(50px, 50px) rotate(10deg); }
         }
-        
+
         .container-fluid {
             position: relative;
             z-index: 10;
-            max-width: 1400px;
+            max-width: 1200px;
             width: 100%;
         }
-        
+
         .scan-card {
             background: var(--card-bg);
             backdrop-filter: blur(10px);
@@ -82,12 +79,12 @@
             animation: fadeInUp 0.6s ease-out;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .scan-header {
             background: var(--gradient-primary);
             color: white;
@@ -95,8 +92,47 @@
             text-align: center;
             position: relative;
             overflow: hidden;
+            isolation: isolate;
         }
-        
+
+        .scan-header>* { position: relative; z-index: 1; }
+
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 8px 16px 8px 12px;
+            border: 1px solid rgba(255, 255, 255, .3);
+            border-radius: 999px;
+            background: rgba(16, 24, 40, .25);
+            color: #fff;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .brand-mark img {
+            display: block;
+            width: auto;
+            height: 36px;
+            max-width: 150px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .brand-mark-icon {
+            display: inline-grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--redox-cyan), #fff);
+            color: var(--redox-navy);
+            font-size: 1.15rem;
+        }
+
+        .school-slogan { opacity: .9; }
+
         .scan-header::before {
             content: '';
             position: absolute;
@@ -104,15 +140,15 @@
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
             animation: rotate 20s linear infinite;
         }
-        
+
         @keyframes rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        
+
         .school-logo {
             width: 100px;
             height: 100px;
@@ -120,50 +156,51 @@
             border: 4px solid white;
             object-fit: cover;
             margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
-        
+
         .school-name {
             font-size: 1.8rem;
             font-weight: 800;
             margin-bottom: 5px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
-        
+
         .datetime-section {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
             padding: 15px;
             margin-top: 15px;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .current-time {
             font-size: 2.5rem;
             font-weight: 800;
             line-height: 1;
             margin-bottom: 5px;
         }
-        
+
         .scan-area {
             padding: 30px;
-            background: rgba(255,255,255,0.5);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.5);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
         }
-        
+
         .scan-input-wrapper {
             position: relative;
             max-width: 500px;
             margin: 0 auto;
         }
-        
+
         .scan-input {
             width: 100%;
             padding: 20px 25px;
@@ -176,13 +213,13 @@
             font-family: 'Tajawal', sans-serif;
             letter-spacing: 2px;
         }
-        
+
         .scan-input:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 5px rgba(67, 97, 238, 0.2);
             outline: none;
         }
-        
+
         .virtual-student-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
@@ -191,15 +228,13 @@
             position: relative;
             overflow: hidden;
             margin: 20px 0;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s ease;
             animation: fadeInUp 0.5s ease-out;
         }
-        
-        .virtual-student-card:hover {
-            transform: translateY(-5px);
-        }
-        
+
+        .virtual-student-card:hover { transform: translateY(-5px); }
+
         .virtual-student-card::before {
             content: '';
             position: absolute;
@@ -207,21 +242,18 @@
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: rotate 15s linear infinite;
         }
-        
-        /* 🔥 تأثير إخفاء اسم الطالب - تمويه الخصوصية */
+
         .privacy-blur {
             filter: blur(8px);
             transition: filter 0.8s ease;
             user-select: none;
         }
-        
-        .privacy-blur:hover {
-            filter: blur(0px);
-        }
-        
+
+        .privacy-blur:hover { filter: blur(0px); }
+
         .card-chip {
             position: absolute;
             top: 20px;
@@ -234,12 +266,9 @@
             align-items: center;
             justify-content: center;
         }
-        
-        .card-chip i {
-            font-size: 24px;
-            color: #b8860b;
-        }
-        
+
+        .card-chip i { font-size: 24px; color: #b8860b; }
+
         .student-avatar-large {
             width: 100px;
             height: 100px;
@@ -247,27 +276,18 @@
             border: 4px solid white;
             object-fit: cover;
             margin: 0 auto 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            background: rgba(255,255,255,0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.5s ease;
         }
-        
-        .student-avatar-large img {
-            transition: filter 0.8s ease;
-        }
-        
-        .student-avatar-large.blurred img {
-            filter: blur(10px);
-        }
-        
-        .student-avatar-large i {
-            font-size: 50px;
-            color: white;
-        }
-        
+
+        .student-avatar-large img { transition: filter 0.8s ease; }
+        .student-avatar-large.blurred img { filter: blur(10px); }
+        .student-avatar-large i { font-size: 50px; color: white; }
+
         .student-name-card {
             font-size: 1.5rem;
             font-weight: 800;
@@ -275,12 +295,12 @@
             text-align: center;
             transition: all 0.8s ease;
         }
-        
+
         .student-name-card.blurred {
             filter: blur(8px);
-            color: rgba(255,255,255,0.3);
+            color: rgba(255, 255, 255, 0.3);
         }
-        
+
         .student-id-card {
             font-size: 0.9rem;
             opacity: 0.9;
@@ -289,23 +309,23 @@
             letter-spacing: 2px;
             transition: all 0.8s ease;
         }
-        
+
         .student-id-card.blurred {
             filter: blur(6px);
             opacity: 0.4;
         }
-        
+
         .card-number {
             font-size: 1.2rem;
             font-family: monospace;
             letter-spacing: 3px;
             margin: 15px 0;
             text-align: center;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
             padding: 10px;
             border-radius: 10px;
         }
-        
+
         .card-expiry {
             display: flex;
             justify-content: space-between;
@@ -313,7 +333,7 @@
             font-size: 0.8rem;
             opacity: 0.8;
         }
-        
+
         .status-indicator {
             display: inline-flex;
             align-items: center;
@@ -323,10 +343,10 @@
             font-size: 1.1rem;
             margin: 20px 0;
             background: white;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
         }
-        
+
         .status-ready { color: var(--success-color); border: 2px solid var(--success-color); }
         .status-scanning { color: var(--warning-color); border: 2px solid var(--warning-color); animation: pulse 1.5s infinite; }
         .status-success { color: var(--success-color); border: 2px solid var(--success-color); background: rgba(6, 214, 160, 0.1); }
@@ -334,10 +354,10 @@
         .status-warning { color: var(--warning-color); border: 2px solid var(--warning-color); background: rgba(255, 183, 3, 0.1); animation: pulseWarning 1s infinite; }
         .status-overdue { color: var(--danger-color); border: 2px solid var(--danger-color); background: rgba(230, 57, 70, 0.15); animation: pulseOverdue 1s infinite; }
         .status-completed { color: var(--primary-color); border: 2px solid var(--primary-color); background: rgba(67, 97, 238, 0.1); }
-        
+
         @keyframes pulseWarning { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         @keyframes pulseOverdue { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.03); opacity: 0.9; } 100% { transform: scale(1); opacity: 1; } }
-        
+
         .action-buttons {
             display: flex;
             gap: 10px;
@@ -345,7 +365,7 @@
             flex-wrap: wrap;
             margin-top: 20px;
         }
-        
+
         .btn-action {
             padding: 12px 25px;
             border-radius: 50px;
@@ -357,15 +377,13 @@
             gap: 8px;
             font-size: 1rem;
         }
-        
-        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); }
         .btn-primary-custom { background: var(--gradient-primary); color: white; }
         .btn-success-custom { background: var(--gradient-success); color: white; }
         .btn-warning-custom { background: var(--gradient-warning); color: white; }
-        
-        /* ============================================== */
-        /* رسالة التحدير - Overlay Style محسنة */
-        /* ============================================== */
+
+        /* Alert Overlay */
         .alert-overlay {
             position: fixed;
             top: 0;
@@ -380,14 +398,12 @@
             animation: fadeInOverlay 0.3s ease-out;
             backdrop-filter: blur(5px);
         }
-        
-        .alert-overlay.fade-out {
-            animation: fadeOutOverlay 0.5s ease-out forwards;
-        }
-        
+
+        .alert-overlay.fade-out { animation: fadeOutOverlay 0.5s ease-out forwards; }
+
         @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeOutOverlay { from { opacity: 1; } to { opacity: 0; } }
-        
+
         .alert-box {
             background: white;
             border-radius: 30px;
@@ -395,40 +411,38 @@
             max-width: 600px;
             width: 95%;
             text-align: center;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
             animation: bounceIn 0.5s ease-out;
             border: 5px solid var(--danger-color);
             position: relative;
             max-height: 90vh;
             overflow-y: auto;
         }
-        
-        .alert-box.fade-out {
-            animation: bounceOut 0.5s ease-out forwards;
-        }
-        
+
+        .alert-box.fade-out { animation: bounceOut 0.5s ease-out forwards; }
+
         @keyframes bounceOut {
             0% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.05); }
             100% { transform: scale(0.5); opacity: 0; }
         }
-        
+
         .alert-box.registration-warning { border-color: var(--warning-color); }
         .alert-box.overdue-warning { border-color: var(--danger-color); }
-        
+
         @keyframes bounceIn { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
-        
+
         .alert-box .alert-icon { font-size: 80px; margin-bottom: 20px; animation: shakeWarning 0.8s infinite; }
         .alert-box .alert-icon.danger { color: var(--danger-color); }
         .alert-box .alert-icon.warning { color: var(--warning-color); }
-        
+
         @keyframes shakeWarning { 0% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } 100% { transform: rotate(0deg); } }
-        
+
         .alert-box .alert-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 15px; }
         .alert-box .alert-title.danger { color: var(--danger-color); }
         .alert-box .alert-title.warning { color: var(--warning-color); }
         .alert-box .alert-message { font-size: 1.1rem; color: var(--dark-color); margin-bottom: 10px; line-height: 1.6; }
-        
+
         .alert-box .alert-details {
             background: #f8f9fa;
             border-radius: 15px;
@@ -436,7 +450,7 @@
             margin: 15px 0;
             text-align: right;
         }
-        
+
         .alert-box .alert-details .detail-item {
             display: flex;
             justify-content: space-between;
@@ -444,13 +458,13 @@
             border-bottom: 1px solid #eee;
             font-size: 0.95rem;
         }
+
         .alert-box .alert-details .detail-item:last-child { border-bottom: none; }
         .alert-box .alert-details .detail-label { color: var(--gray-color); font-weight: 500; }
         .alert-box .alert-details .detail-value { font-weight: 700; }
         .alert-box .alert-details .detail-value.danger { color: var(--danger-color); }
         .alert-box .alert-details .detail-value.warning { color: var(--warning-color); }
-        
-        /* 🔥 عداد العد التنازلي */
+
         .countdown-timer {
             display: inline-block;
             background: var(--primary-color);
@@ -461,7 +475,7 @@
             margin-top: 10px;
             font-weight: 600;
         }
-        
+
         .alert-box .btn-dismiss-alert {
             color: white;
             border: none;
@@ -473,71 +487,13 @@
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        
+
         .alert-box .btn-dismiss-alert.danger { background: var(--gradient-danger); }
         .alert-box .btn-dismiss-alert.warning { background: var(--gradient-warning); }
         .alert-box .btn-dismiss-alert.success { background: var(--gradient-success); }
-        .alert-box .btn-dismiss-alert:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .alert-box .btn-dismiss-alert:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); }
         .alert-box .btn-dismiss-alert:active { transform: scale(0.95); }
-        
-        /* ============================================== */
-        /* قائمة المسحات الحديثة */
-        /* ============================================== */
-        .recent-scans {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-        }
-        
-        .recent-scans-title {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--dark-color);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .recent-scans-list {
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .recent-scan-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.2s ease;
-        }
-        
-        .recent-scan-item:hover {
-            background: rgba(67, 97, 238, 0.05);
-            border-radius: 8px;
-        }
-        
-        .recent-scan-item .badge-overdue {
-            background: var(--danger-color);
-            color: white;
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 5px;
-        }
-        
-        .recent-scan-item .badge-registration {
-            background: var(--warning-color);
-            color: white;
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 5px;
-        }
-        
-        /* ============================================== */
-        /* رسائل التنبيه الصغيرة (Toast) */
-        /* ============================================== */
+
         .alert-message {
             position: fixed;
             top: 20px;
@@ -549,25 +505,23 @@
             padding: 15px 20px;
             border-radius: 10px;
             background: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             gap: 10px;
             animation: slideDown 0.3s ease-out;
         }
-        
-        .alert-message.fade-out {
-            animation: slideUp 0.3s ease-out forwards;
-        }
-        
+
+        .alert-message.fade-out { animation: slideUp 0.3s ease-out forwards; }
+
         @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
         @keyframes slideUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -20px); } }
-        
+
         .alert-success { border-right: 5px solid var(--success-color); }
         .alert-error { border-right: 5px solid var(--danger-color); }
         .alert-warning { border-right: 5px solid var(--warning-color); }
         .alert-info { border-right: 5px solid var(--primary-color); }
-        
+
         .loading-spinner {
             display: inline-block;
             width: 30px;
@@ -577,20 +531,41 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin { to { transform: rotate(360deg); } }
-        
+
         .footer {
             padding: 15px 30px;
             background: var(--dark-color) !important;
-            color: rgba(255,255,255,0.7) !important;
+            color: rgba(255, 255, 255, 0.7) !important;
             text-align: center;
             font-size: 0.9rem;
         }
-        
-        /* ============================================== */
-        /* تصميم متجاوب */
-        /* ============================================== */
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .info-label { font-size: 0.8rem; color: #6c757d; margin-bottom: 2px; }
+        .info-value { font-size: 1rem; font-weight: 500; }
+
+        .attendance-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .attendance-badge.present { background: #d1fae5; color: #065f46; }
+        .attendance-badge.late { background: #fef3c7; color: #92400e; }
+        .attendance-badge.absent { background: #fee2e2; color: #991b1b; }
+
         @media (max-width: 768px) {
             .school-name { font-size: 1.4rem; }
             .current-time { font-size: 2rem; }
@@ -601,55 +576,14 @@
             .action-buttons .btn-action { padding: 10px 18px; font-size: 0.9rem; }
             .scan-input { font-size: 1rem; padding: 15px 20px; }
         }
-        
+
         @media (max-width: 480px) {
             body { padding: 10px; }
             .scan-header { padding: 15px 20px; }
             .scan-area { padding: 20px; }
-            .recent-scans { padding: 15px 20px; }
             .alert-box { padding: 20px 15px; max-width: 100%; margin: 10px; border-radius: 20px; }
             .alert-box .alert-title { font-size: 1.2rem; }
             .alert-box .alert-icon { font-size: 50px; }
-        }
-        
-        .recent-scans-list::-webkit-scrollbar { width: 4px; }
-        .recent-scans-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .recent-scans-list::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 10px; }
-        .recent-scans-list::-webkit-scrollbar-thumb:hover { background: var(--secondary-color); }
-        
-        .info-item {
-            background: #f8f9fa;
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-        }
-        .info-label { font-size: 0.8rem; color: #6c757d; margin-bottom: 2px; }
-        .info-value { font-size: 1rem; font-weight: 500; }
-        
-        /* 🔥 مؤشر الحضور */
-        .attendance-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .attendance-badge.present {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .attendance-badge.late {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .attendance-badge.absent {
-            background: #fee2e2;
-            color: #991b1b;
         }
     </style>
 </head>
@@ -658,16 +592,15 @@
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <div class="scan-card">
-                    <!-- الهيدر -->
+                    <!-- Header -->
                     <div class="scan-header">
                         <div class="d-flex justify-content-center">
-                            <div class="school-logo d-flex align-items-center justify-content-center bg-white">
-                                <i class="bi bi-mortarboard display-4 text-primary"></i>
-                            </div>
+                            <img src="/Redox.png" alt="شعار Redox" loading="eager" style="width: 100px; height: auto;">
+
                         </div>
-                        <h1 class="school-name">أكاديمية الرواد للتعليم والمعارف</h1>
+            
+                        <h1 class="school-name" id="schoolName">اسم المدرسة</h1>
                         <p class="school-slogan">نظام تسجيل الطلاب بالبطاقات الذكية</p>
-                        
                         <div class="datetime-section">
                             <div class="current-time">
                                 <i class="bi bi-clock"></i>
@@ -679,8 +612,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- منطقة المسح -->
+
+                    <!-- Scan Area -->
                     <div class="scan-area">
                         <div class="text-center mb-4">
                             <div class="status-indicator status-ready" id="scannerStatus">
@@ -688,17 +621,17 @@
                                 <span>جاهز لمسح البطاقة</span>
                             </div>
                         </div>
-                        
+
                         <div class="scan-input-wrapper">
-                            <input type="text" 
-                                   class="scan-input" 
-                                   id="cardInput" 
+                            <input type="text"
+                                   class="scan-input"
+                                   id="cardInput"
                                    placeholder="امسح البطاقة أو أدخل الرقم يدوياً"
                                    autocomplete="off"
                                    autofocus>
                             <i class="bi bi-upc-scan scan-icon" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--primary-color);"></i>
                         </div>
-                        
+
                         <div class="action-buttons">
                             <button class="btn-action btn-primary-custom" onclick="focusScanner()">
                                 <i class="bi bi-upc-scan"></i>
@@ -714,26 +647,13 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <!-- منطقة النتائج -->
+
+                    <!-- Result Area -->
                     <div class="result-area p-4" id="resultArea">
                         <div id="scanResult"></div>
                     </div>
-                    
-                    <!-- قائمة المسحات الحديثة -->
-                    <div class="recent-scans">
-                        <div class="recent-scans-title">
-                            <i class="bi bi-clock-history"></i>
-                            <span>آخر عمليات المسح</span>
-                        </div>
-                        <div class="recent-scans-list" id="recentScansList">
-                            <div class="recent-scan-item text-muted">
-                                <span>لا توجد عمليات مسح حديثة</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- تذييل الصفحة -->
+
+                    <!-- Footer -->
                     <div class="footer">
                         <p class="mb-0">
                             <i class="bi bi-c-circle"></i>
@@ -744,345 +664,185 @@
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ar.js"></script>
-    
+
     <script>
-        // ==============================================
-        // نظام تسجيل الطلاب بالبطاقات - الإصدار المحسن
-        // مع دعم إخفاء البيانات للخصوصية وعد تنازلي
-        // ==============================================
-        
-        let recentScans = [];
+        // ============================================================
+        //  نظام تسجيل الطلاب بالبطاقات - نسخة احترافية (بدون سجل المسحات)
+        // ============================================================
+
         let isScanning = false;
         let audioEnabled = true;
         let audioContext = null;
         let privacyTimer = null;
         let alertTimer = null;
-        
-        // ==============================================
-        // نظام الصوت والإنذار
-        // ==============================================
-        
+
+        // ----- helpers -----
+        function getSchoolName() {
+            try {
+                const raw = localStorage.getItem('school');
+                if (!raw) return '';
+                const parsed = JSON.parse(raw);
+                return typeof parsed === 'string' ? parsed : (parsed?.name || '');
+            } catch { return ''; }
+        }
+
+        // ----- audio -----
         function initAudio() {
             if (!audioContext && audioEnabled) {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                } catch(e) {
-                    console.log('⚠️ Web Audio API غير مدعوم');
-                }
+                try { audioContext = new(window.AudioContext || window.webkitAudioContext)(); } catch (e) { console.warn('Web Audio not supported'); }
             }
             return audioContext;
         }
-        
-        function playBeep(frequency, duration, volume = 0.15) {
+
+        function playBeep(freq, dur, vol = 0.15) {
             if (!audioEnabled) return;
-            
             try {
                 const ctx = initAudio();
                 if (!ctx || ctx.state === 'closed') return;
-                
-                if (ctx.state === 'suspended') {
-                    ctx.resume();
-                }
-                
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                
-                oscillator.type = 'sine';
-                oscillator.frequency.value = frequency;
-                gainNode.gain.value = volume;
-                
-                oscillator.start();
-                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-                oscillator.stop(ctx.currentTime + duration);
-            } catch(e) {
-                console.log('⚠️ خطأ في تشغيل الصوت:', e);
-            }
+                if (ctx.state === 'suspended') ctx.resume();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = vol;
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+                osc.stop(ctx.currentTime + dur);
+            } catch (e) { /* ignore */ }
         }
-        
+
         function playScanSound() { playBeep(800, 0.2); }
-        
-        function playSuccessSound() {
-            playBeep(1046.50, 0.15);
-            setTimeout(() => playBeep(1318.52, 0.15), 150);
-            setTimeout(() => playBeep(1567.98, 0.3), 300);
-        }
-        
-        function playErrorSound() {
-            playBeep(440, 0.3);
-            setTimeout(() => playBeep(349.23, 0.3), 300);
-        }
-        
-        function playWarningSound() {
-            playBeep(880, 0.2, 0.2);
-            setTimeout(() => playBeep(784, 0.2, 0.2), 200);
-            setTimeout(() => playBeep(880, 0.2, 0.2), 400);
-            setTimeout(() => playBeep(784, 0.2, 0.2), 600);
-            setTimeout(() => playBeep(880, 0.3, 0.25), 800);
-        }
-        
-        function playOverdueSound() {
-            for (let i = 0; i < 3; i++) {
-                setTimeout(() => playBeep(600, 0.3, 0.3), i * 400);
-                setTimeout(() => playBeep(450, 0.3, 0.3), i * 400 + 200);
-            }
-        }
-        
-        function playWelcomeSound() {
-            if (!audioEnabled) return;
-            const notes = [523.25, 587.33, 659.25, 783.99];
-            notes.forEach((freq, i) => {
-                setTimeout(() => playBeep(freq, 0.2), i * 150);
-            });
-        }
-        
-        // 🔥 صوت انتهاء المسح
-        function playCompletionSound() {
-            if (!audioEnabled) return;
-            // صوت مميز للإشارة إلى انتهاء عملية المسح
-            playBeep(880, 0.15, 0.2);
-            setTimeout(() => playBeep(1108, 0.15, 0.2), 150);
-            setTimeout(() => playBeep(1318, 0.2, 0.25), 300);
-        }
-        
+        function playSuccessSound() { playBeep(1046, 0.15); setTimeout(() => playBeep(1318, 0.15), 150); setTimeout(() => playBeep(1568, 0.3), 300); }
+        function playErrorSound() { playBeep(440, 0.3); setTimeout(() => playBeep(349, 0.3), 300); }
+        function playWarningSound() { playBeep(880, 0.2, 0.2); setTimeout(() => playBeep(784, 0.2, 0.2), 200); setTimeout(() => playBeep(880, 0.2, 0.2), 400); setTimeout(() => playBeep(784, 0.2, 0.2), 600); setTimeout(() => playBeep(880, 0.3, 0.25), 800); }
+        function playOverdueSound() { for (let i = 0; i < 3; i++) { setTimeout(() => playBeep(600, 0.3, 0.3), i * 400); setTimeout(() => playBeep(450, 0.3, 0.3), i * 400 + 200); } }
+        function playWelcomeSound() { const notes = [523, 587, 659, 784]; notes.forEach((f, i) => setTimeout(() => playBeep(f, 0.2), i * 150)); }
+        function playCompletionSound() { playBeep(880, 0.15, 0.2); setTimeout(() => playBeep(1108, 0.15, 0.2), 150); setTimeout(() => playBeep(1318, 0.2, 0.25), 300); }
+
         document.addEventListener('click', function enableAudio() {
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
+            if (audioContext && audioContext.state === 'suspended') audioContext.resume();
             document.removeEventListener('click', enableAudio);
         }, { once: true });
-        
-        // ==============================================
-        // تحديث الوقت
-        // ==============================================
-        
+
+        // ----- time -----
         function updateDateTime() {
             const now = new Date();
-            document.getElementById('timeDisplay').textContent = now.toLocaleTimeString('ar-EG');
-            document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ar-EG', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            document.getElementById('timeDisplay').textContent = now.toLocaleTimeString();
+            document.getElementById('dateDisplay').textContent = now.toLocaleDateString( { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
-        
-        // ==============================================
-        // تحديث الحالة
-        // ==============================================
-        
+
+        // ----- status -----
         function updateStatus(text, statusClass, icon) {
-            const statusElement = document.getElementById('scannerStatus');
-            statusElement.className = `status-indicator ${statusClass}`;
-            statusElement.innerHTML = `<i class="bi ${icon}"></i><span>${text}</span>`;
+            const el = document.getElementById('scannerStatus');
+            el.className = `status-indicator ${statusClass}`;
+            el.innerHTML = `<i class="bi ${icon}"></i><span>${text}</span>`;
         }
-        
-        // ==============================================
-        // 🔥 إخفاء معلومات الطالب للخصوصية
-        // ==============================================
-        
+
+        // ----- privacy blur -----
         function applyPrivacyBlur() {
-            // تطبيق التمويه على اسم الطالب وصورته
-            const nameElement = document.querySelector('.student-name-card');
-            const idElement = document.querySelector('.student-id-card');
-            const avatarElement = document.querySelector('.student-avatar-large');
-            
-            if (nameElement) nameElement.classList.add('blurred');
-            if (idElement) idElement.classList.add('blurred');
-            if (avatarElement) avatarElement.classList.add('blurred');
-            
-            // إضافة تأثير التمويه على باقي المعلومات
-            const infoValues = document.querySelectorAll('.info-value');
-            infoValues.forEach(el => {
-                if (!el.closest('.payment-status') && !el.closest('.status-badge')) {
-                    el.classList.add('privacy-blur');
-                }
+            const nameEl = document.querySelector('.student-name-card');
+            const idEl = document.querySelector('.student-id-card');
+            const avatarEl = document.querySelector('.student-avatar-large');
+            if (nameEl) nameEl.classList.add('blurred');
+            if (idEl) idEl.classList.add('blurred');
+            if (avatarEl) avatarEl.classList.add('blurred');
+            document.querySelectorAll('.info-value').forEach(el => {
+                if (!el.closest('.payment-status') && !el.closest('.status-badge')) el.classList.add('privacy-blur');
             });
         }
-        
+
         function removePrivacyBlur() {
-            const nameElement = document.querySelector('.student-name-card');
-            const idElement = document.querySelector('.student-id-card');
-            const avatarElement = document.querySelector('.student-avatar-large');
-            
-            if (nameElement) nameElement.classList.remove('blurred');
-            if (idElement) idElement.classList.remove('blurred');
-            if (avatarElement) avatarElement.classList.remove('blurred');
-            
-            const infoValues = document.querySelectorAll('.info-value');
-            infoValues.forEach(el => {
-                el.classList.remove('privacy-blur');
-            });
+            document.querySelectorAll('.student-name-card, .student-id-card').forEach(el => el.classList.remove('blurred'));
+            document.querySelector('.student-avatar-large')?.classList.remove('blurred');
+            document.querySelectorAll('.info-value').forEach(el => el.classList.remove('privacy-blur'));
         }
-        
+
         function startPrivacyTimer() {
-            // إلغاء المؤقت السابق إذا وجد
-            if (privacyTimer) {
-                clearTimeout(privacyTimer);
-                privacyTimer = null;
-            }
-            
-            // 🔥 بدء المؤقت الجديد - 15 ثانية
+            if (privacyTimer) clearTimeout(privacyTimer);
             privacyTimer = setTimeout(() => {
                 applyPrivacyBlur();
-                // تشغيل صوت انتهاء المسح
                 playCompletionSound();
                 updateStatus('تم إخفاء البيانات للخصوصية', 'status-completed', 'bi-shield-check');
                 privacyTimer = null;
-            }, 15000); // 15 ثانية
+            }, 15000);
         }
-        
-        // ==============================================
-        // 🔥 إخفاء رسالة التحدير تلقائياً بعد 10 ثواني
-        // ==============================================
-        
+
+        // ----- alert auto dismiss -----
         function startAlertAutoDismiss() {
-            // إلغاء المؤقت السابق
-            if (alertTimer) {
-                clearTimeout(alertTimer);
-                alertTimer = null;
-            }
-            
-            // إضافة عداد العد التنازلي
-            const alertBox = document.querySelector('.alert-box');
-            if (alertBox) {
-                // إزالة العداد القديم
-                const oldCounter = alertBox.querySelector('.countdown-timer');
-                if (oldCounter) oldCounter.remove();
-                
-                // إضافة عداد جديد
+            if (alertTimer) clearTimeout(alertTimer);
+            const box = document.querySelector('.alert-box');
+            if (box) {
+                const old = box.querySelector('.countdown-timer');
+                if (old) old.remove();
                 const counter = document.createElement('div');
                 counter.className = 'countdown-timer';
                 counter.id = 'countdownTimer';
                 counter.textContent = '⏱️ سيختفي خلال 10 ثواني';
-                alertBox.appendChild(counter);
-                
-                // تحديث العداد كل ثانية
-                let seconds = 10;
+                box.appendChild(counter);
+                let sec = 10;
                 const interval = setInterval(() => {
-                    seconds--;
-                    if (counter) {
-                        counter.textContent = `⏱️ سيختفي خلال ${seconds} ثواني`;
-                    }
-                    if (seconds <= 0) {
-                        clearInterval(interval);
-                    }
+                    sec--;
+                    if (counter) counter.textContent = `⏱️ سيختفي خلال ${sec} ثواني`;
+                    if (sec <= 0) clearInterval(interval);
                 }, 1000);
             }
-            
-            // 🔥 إخفاء التحدير بعد 10 ثواني
-            alertTimer = setTimeout(() => {
-                dismissAlert();
-                alertTimer = null;
-            }, 10000); // 10 ثواني
+            alertTimer = setTimeout(() => { dismissAlert(); alertTimer = null; }, 10000);
         }
-        
-        // ==============================================
-        // عرض رسائل التحدير للدفعات المتأخرة ورسوم التسجيل
-        // ==============================================
-        
+
+        // ----- show payment alert -----
         function showPaymentAlert(student, overduePayments = [], hasRegistrationFee = false) {
-            // إلغاء المؤقت السابق
-            if (alertTimer) {
-                clearTimeout(alertTimer);
-                alertTimer = null;
-            }
-            
+            if (alertTimer) clearTimeout(alertTimer);
             const payments = Array.isArray(overduePayments) ? overduePayments : [];
-            const totalOverdue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            const totalOverdue = payments.reduce((s, p) => s + (p.amount || 0), 0);
             const monthsCount = payments.length;
-            
-            if (payments.length > 0) {
-                playOverdueSound();
-            } else if (hasRegistrationFee) {
-                playWarningSound();
-            }
-            
+
+            if (payments.length) playOverdueSound();
+            else if (hasRegistrationFee) playWarningSound();
+
             const overlay = document.createElement('div');
             overlay.className = 'alert-overlay';
             overlay.id = 'paymentAlertOverlay';
-            
+
             let paymentsList = '';
-            if (payments.length > 0) {
-                payments.slice(0, 10).forEach((p) => {
-                    const className = p.class?.name || 'غير محدد';
-                    const monthDisplay = p.month || p.monthCode || 'شهر غير محدد';
-                    paymentsList += `
-                        <div class="detail-item">
-                            <span class="detail-label">${monthDisplay}</span>
-                            <span class="detail-value danger">${(p.amount || 0).toLocaleString()} د.ج - ${className}</span>
-                        </div>
-                    `;
+            if (payments.length) {
+                payments.slice(0, 10).forEach(p => {
+                    const cls = p.class?.name || 'غير محدد';
+                    const month = p.month || p.monthCode || 'شهر غير محدد';
+                    paymentsList += `<div class="detail-item"><span class="detail-label">${month}</span><span class="detail-value danger">${(p.amount||0).toLocaleString()} د.ج - ${cls}</span></div>`;
                 });
-                
-                if (payments.length > 10) {
-                    paymentsList += `
-                        <div class="detail-item">
-                            <span class="detail-label">و ${payments.length - 10} دفعات أخرى</span>
-                            <span class="detail-value danger">...</span>
-                        </div>
-                    `;
-                }
+                if (payments.length > 10) paymentsList += `<div class="detail-item"><span class="detail-label">و ${payments.length-10} دفعات أخرى</span><span class="detail-value danger">...</span></div>`;
             }
-            
+
             let registrationHtml = '';
-            if (hasRegistrationFee) {
-                registrationHtml = `
-                    <div class="alert alert-warning mt-2" style="border-radius: 10px;">
-                        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
-                        <strong>⚠️ رسوم التسجيل غير مدفوعة</strong>
-                        <br><small>المبلغ: 600 د.ج</small>
-                    </div>
-                `;
-            }
-            
+            if (hasRegistrationFee) registrationHtml = `<div class="alert alert-warning mt-2" style="border-radius:10px;"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>⚠️ رسوم التسجيل غير مدفوعة</strong><br><small>المبلغ: 600 د.ج</small></div>`;
+
             const isOverdue = payments.length > 0;
             const alertType = isOverdue ? 'danger' : 'warning';
-            const alertIcon = isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
-            const titleText = isOverdue ? '⚠️ تنبيه: دفعات متأخرة' : '⚠️ تنبيه: رسوم التسجيل غير مدفوعة';
-            
+            const icon = isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
+            const title = isOverdue ? '⚠️ تنبيه: دفعات متأخرة' : '⚠️ تنبيه: رسوم التسجيل غير مدفوعة';
+
             overlay.innerHTML = `
                 <div class="alert-box ${isOverdue ? 'overdue-warning' : 'registration-warning'}">
-                    <div class="alert-icon ${alertType}">
-                        <i class="bi ${alertIcon}"></i>
-                    </div>
-                    <div class="alert-title ${alertType}">${titleText}</div>
+                    <div class="alert-icon ${alertType}"><i class="bi ${icon}"></i></div>
+                    <div class="alert-title ${alertType}">${title}</div>
                     <div class="alert-message">
                         عزيزي ولي أمر الطالب <strong>${student.name}</strong>،
-                        ${isOverdue ? `
-                            <br>هناك <strong>${monthsCount}</strong> دفعة (شهر) متأخرة
-                            <br>بإجمالي مبلغ <strong>${totalOverdue.toLocaleString()} د.ج</strong>
-                        ` : `
-                            <br>رسوم التسجيل غير مدفوعة
-                            <br>المبلغ المطلوب: <strong>600 د.ج</strong>
-                        `}
+                        ${isOverdue ? `<br>هناك <strong>${monthsCount}</strong> دفعة (شهر) متأخرة<br>بإجمالي مبلغ <strong>${totalOverdue.toLocaleString()} د.ج</strong>` : `<br>رسوم التسجيل غير مدفوعة<br>المبلغ المطلوب: <strong>600 د.ج</strong>`}
                     </div>
                     <div class="alert-details">
-                        <div class="detail-item">
-                            <span class="detail-label">الطالب</span>
-                            <span class="detail-value">${student.name} (${student.studentId || 'غير محدد'})</span>
-                        </div>
+                        <div class="detail-item"><span class="detail-label">الطالب</span><span class="detail-value">${student.name} (${student.studentId||'غير محدد'})</span></div>
                         ${isOverdue ? `
-                            <div class="detail-item">
-                                <span class="detail-label">عدد الدفعات المتأخرة</span>
-                                <span class="detail-value danger">${monthsCount} شهر</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">المبلغ الإجمالي</span>
-                                <span class="detail-value danger">${totalOverdue.toLocaleString()} د.ج</span>
-                            </div>
+                            <div class="detail-item"><span class="detail-label">عدد الدفعات المتأخرة</span><span class="detail-value danger">${monthsCount} شهر</span></div>
+                            <div class="detail-item"><span class="detail-label">المبلغ الإجمالي</span><span class="detail-value danger">${totalOverdue.toLocaleString()} د.ج</span></div>
                             ${paymentsList}
                         ` : `
-                            <div class="detail-item">
-                                <span class="detail-label">رسوم التسجيل</span>
-                                <span class="detail-value warning">600 د.ج (غير مدفوعة)</span>
-                            </div>
+                            <div class="detail-item"><span class="detail-label">رسوم التسجيل</span><span class="detail-value warning">600 د.ج (غير مدفوعة)</span></div>
                         `}
                         ${registrationHtml}
                     </div>
@@ -1095,347 +855,188 @@
                     </button>
                 </div>
             `;
-            
             document.body.appendChild(overlay);
             document.body.style.overflow = 'hidden';
-            
-            // 🔥 بدء العد التنازلي لإخفاء التحدير تلقائياً
             startAlertAutoDismiss();
         }
-        
+
         function dismissAlert() {
             const overlay = document.getElementById('paymentAlertOverlay');
             if (overlay) {
-                // إضافة تأثير الإخفاء
                 overlay.classList.add('fade-out');
-                const alertBox = overlay.querySelector('.alert-box');
-                if (alertBox) {
-                    alertBox.classList.add('fade-out');
-                }
-                
-                setTimeout(() => {
-                    overlay.remove();
-                    document.body.style.overflow = '';
-                    document.getElementById('cardInput').focus();
-                }, 500);
+                const box = overlay.querySelector('.alert-box');
+                if (box) box.classList.add('fade-out');
+                setTimeout(() => { overlay.remove(); document.body.style.overflow = ''; document.getElementById('cardInput').focus(); }, 500);
             }
-            
-            // إلغاء المؤقتات
-            if (alertTimer) {
-                clearTimeout(alertTimer);
-                alertTimer = null;
-            }
+            if (alertTimer) { clearTimeout(alertTimer); alertTimer = null; }
         }
-        
-        // ==============================================
-        // عرض معلومات الطالب مع التحقق من الدفعات
-        // ==============================================
-        
+
+        // ----- display student info -----
         function displayStudentInfo(student, classInfo = null, attendance = null, overduePayments = null, registrationStatus = null, hasIssues = false) {
             const resultDiv = document.getElementById('scanResult');
             const status = attendance?.status || 'present';
             const statusText = status === 'present' ? '✅ حاضر' : status === 'late' ? '⚠️ متأخر' : '❌ غائب';
             const statusClass = status === 'present' ? 'success' : status === 'late' ? 'warning' : 'danger';
-            
+
             const hasOverdue = overduePayments && Array.isArray(overduePayments) && overduePayments.length > 0;
             const hasRegistrationFee = registrationStatus === 'pending' || registrationStatus === false;
             const hasWarning = hasOverdue || hasRegistrationFee;
-            
-            console.log(`📊 displayStudentInfo: hasOverdue=${hasOverdue}, hasRegistrationFee=${hasRegistrationFee}, hasWarning=${hasWarning}`);
-            
-            const totalOverdue = hasOverdue ? overduePayments.reduce((sum, p) => sum + (p.amount || 0), 0) : 0;
+
+            const totalOverdue = hasOverdue ? overduePayments.reduce((s, p) => s + (p.amount || 0), 0) : 0;
             const monthsCount = hasOverdue ? overduePayments.length : 0;
-            
+
             let warningHtml = '';
             if (hasWarning) {
-                let warningItems = [];
-                
+                let items = [];
                 if (hasOverdue) {
-                    let paymentsDetails = '';
-                    overduePayments.slice(0, 10).forEach((p) => {
-                        const className = p.class?.name || 'غير محدد';
-                        const monthDisplay = p.month || p.monthCode || 'شهر غير محدد';
-                        paymentsDetails += `
-                            <div class="d-flex justify-content-between px-2 py-1 border-bottom" style="font-size: 0.85rem;">
-                                <span>${monthDisplay}</span>
-                                <span class="text-danger fw-bold">${(p.amount || 0).toLocaleString()} د.ج - ${className}</span>
-                            </div>
-                        `;
+                    let details = '';
+                    overduePayments.slice(0, 10).forEach(p => {
+                        const cls = p.class?.name || 'غير محدد';
+                        const month = p.month || p.monthCode || 'شهر غير محدد';
+                        details += `<div class="d-flex justify-content-between px-2 py-1 border-bottom" style="font-size:0.85rem;"><span>${month}</span><span class="text-danger fw-bold">${(p.amount||0).toLocaleString()} د.ج - ${cls}</span></div>`;
                     });
-                    
-                    if (overduePayments.length > 10) {
-                        paymentsDetails += `
-                            <div class="d-flex justify-content-between px-2 py-1 text-muted" style="font-size: 0.8rem;">
-                                <span>... و ${overduePayments.length - 10} دفعات أخرى</span>
-                            </div>
-                        `;
-                    }
-                    
-                    warningItems.push(`
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between px-2 py-1 border-bottom fw-bold">
-                                <span>الشهر</span>
-                                <span>المبلغ</span>
-                            </div>
-                            ${paymentsDetails}
-                            <div class="d-flex justify-content-between px-2 py-2 mt-1 fw-bold" style="background: rgba(220, 53, 69, 0.1); border-radius: 8px;">
-                                <span>الإجمالي</span>
-                                <span class="text-danger">${totalOverdue.toLocaleString()} د.ج</span>
-                            </div>
-                        </div>
-                    `);
+                    if (overduePayments.length > 10) details += `<div class="d-flex justify-content-between px-2 py-1 text-muted" style="font-size:0.8rem;"><span>... و ${overduePayments.length-10} دفعات أخرى</span></div>`;
+                    items.push(`<div class="mb-2"><div class="d-flex justify-content-between px-2 py-1 border-bottom fw-bold"><span>الشهر</span><span>المبلغ</span></div>${details}<div class="d-flex justify-content-between px-2 py-2 mt-1 fw-bold" style="background:rgba(220,53,69,0.1);border-radius:8px;"><span>الإجمالي</span><span class="text-danger">${totalOverdue.toLocaleString()} د.ج</span></div></div>`);
                 }
-                
-                if (hasRegistrationFee) {
-                    warningItems.push(`
-                        <div class="d-flex justify-content-between px-2 py-1 border-bottom">
-                            <span><i class="bi bi-exclamation-circle-fill text-warning me-1"></i> رسوم التسجيل</span>
-                            <span class="text-warning fw-bold">600 د.ج (غير مدفوعة)</span>
-                        </div>
-                    `);
-                }
-                
+                if (hasRegistrationFee) items.push(`<div class="d-flex justify-content-between px-2 py-1 border-bottom"><span><i class="bi bi-exclamation-circle-fill text-warning me-1"></i> رسوم التسجيل</span><span class="text-warning fw-bold">600 د.ج (غير مدفوعة)</span></div>`);
+
                 const alertClass = hasOverdue ? 'alert-danger' : 'alert-warning';
                 const borderColor = hasOverdue ? 'var(--danger-color)' : 'var(--warning-color)';
                 const iconClass = hasOverdue ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
                 const titleClass = hasOverdue ? 'text-danger' : 'text-warning';
                 const titleText = hasOverdue ? '⚠️ تنبيه: دفعات متأخرة' : '⚠️ تنبيه: رسوم التسجيل غير مدفوعة';
-                
+
                 warningHtml = `
-                    <div class="alert ${alertClass} animate__animated animate__pulse animate__infinite" style="border-radius: 15px; margin-top: 15px; border-right: 5px solid ${borderColor};">
+                    <div class="alert ${alertClass} animate__animated animate__pulse animate__infinite" style="border-radius:15px;margin-top:15px;border-right:5px solid ${borderColor};">
                         <div class="d-flex align-items-start">
-                            <i class="bi ${iconClass} display-6 me-3" style="color: ${borderColor};"></i>
+                            <i class="bi ${iconClass} display-6 me-3" style="color:${borderColor};"></i>
                             <div class="w-100">
                                 <h6 class="mb-1 ${titleClass} fw-bold">${titleText}</h6>
                                 <small class="${hasOverdue ? 'text-danger' : 'text-warning'}">
                                     ${hasOverdue ? `هناك <strong>${monthsCount}</strong> دفعة متأخرة` : 'رسوم التسجيل (600 د.ج) غير مدفوعة'}
                                     ${hasOverdue ? `<br>إجمالي المبلغ: <strong>${totalOverdue.toLocaleString()} د.ج</strong>` : ''}
                                 </small>
-                                <div class="mt-2" style="font-size: 0.85rem;">
-                                    ${warningItems.join('')}
-                                    <div class="text-center text-muted small mt-2">
-                                        <i class="bi bi-info-circle"></i> يرجى التوجه للإدارة لتسوية المستحقات
-                                    </div>
-                                </div>
+                                <div class="mt-2" style="font-size:0.85rem;">${items.join('')}<div class="text-center text-muted small mt-2"><i class="bi bi-info-circle"></i> يرجى التوجه للإدارة لتسوية المستحقات</div></div>
                             </div>
                         </div>
                     </div>
                 `;
             }
-            
+
             let classHtml = '';
             if (classInfo) {
                 classHtml = `
                     <div class="info-item bg-light p-3 rounded mb-2">
                         <div class="info-label text-muted">الحصة</div>
-                        <div class="info-value fw-bold">${classInfo.name || 'غير محدد'}</div>
+                        <div class="info-value fw-bold">${classInfo.name||'غير محدد'}</div>
                         <div class="info-label text-muted mt-2">المادة</div>
-                        <div class="info-value">${classInfo.subject || 'غير محدد'}</div>
-                        ${classInfo.teacher ? `<div class="info-label text-muted mt-2">الأستاذ</div><div class="info-value">${classInfo.teacher.name || classInfo.teacher}</div>` : ''}
+                        <div class="info-value">${classInfo.subject||'غير محدد'}</div>
+                        ${classInfo.teacher ? `<div class="info-label text-muted mt-2">الأستاذ</div><div class="info-value">${classInfo.teacher.name||classInfo.teacher}</div>` : ''}
                     </div>
                 `;
             }
-            
+
             const paymentStatusText = hasOverdue ? '⚠️ متأخرة' : '✅ مسددة';
             const paymentStatusClass = hasOverdue ? 'text-danger' : 'text-success';
             const registrationStatusText = hasRegistrationFee ? '⚠️ غير مدفوعة' : '✅ مدفوعة';
             const registrationStatusClass = hasRegistrationFee ? 'text-warning' : 'text-success';
-            
+
             resultDiv.innerHTML = `
                 <div class="animate__animated animate__fadeIn">
                     ${displayVirtualStudentCard(student)}
-                    
                     ${warningHtml}
-                    
                     <div class="row mt-3 g-3">
                         <div class="col-md-6">
                             <div class="bg-${statusClass} bg-opacity-10 p-3 rounded text-center">
                                 <i class="bi ${status === 'present' ? 'bi-check-circle-fill' : status === 'late' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} display-6 text-${statusClass}"></i>
                                 <h5 class="mt-2 text-${statusClass}">${statusText}</h5>
-                                ${attendance?.time ? `<small class="text-muted">${new Date(attendance.time).toLocaleTimeString('ar-EG')}</small>` : ''}
+                                ${attendance?.time ? `<small class="text-muted">${new Date(attendance.time).toLocaleTimeString('it-IT')}</small>` : ''}
                             </div>
                         </div>
                         <div class="col-md-6">
                             ${classHtml || '<div class="bg-info bg-opacity-10 p-3 rounded text-center"><i class="bi bi-info-circle display-6"></i><h5 class="mt-2">لا توجد حصص حالياً</h5></div>'}
                         </div>
                     </div>
-                    
                     <div class="row mt-3">
                         <div class="col-12">
                             <div class="bg-light p-3 rounded">
                                 <h6><i class="bi bi-telephone"></i> معلومات الاتصال</h6>
                                 <div class="row">
-                                    <div class="col-6">
-                                        <small class="text-muted">ولي الأمر</small>
-                                        <div class="info-value">${student.parentName || 'غير محدد'}</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">رقم الهاتف</small>
-                                        <div class="info-value">${student.parentPhone || 'غير محدد'}</div>
-                                    </div>
+                                    <div class="col-6"><small class="text-muted">ولي الأمر</small><div class="info-value">${student.parentName||'غير محدد'}</div></div>
+                                    <div class="col-6"><small class="text-muted">رقم الهاتف</small><div class="info-value">${student.parentPhone||'غير محدد'}</div></div>
                                 </div>
                                 <div class="row mt-2">
-                                    <div class="col-12">
-                                        <small class="text-muted">السنة الدراسية</small>
-                                        <div class="info-value">${getAcademicYearName(student.academicYear)}</div>
-                                    </div>
+                                    <div class="col-12"><small class="text-muted">السنة الدراسية</small><div class="info-value">${getAcademicYearName(student.academicYear)}</div></div>
                                 </div>
-                                
                                 <div class="row mt-2">
-                                    <div class="col-6">
-                                        <small class="text-muted">حالة الدفعات</small>
-                                        <div class="${paymentStatusClass} fw-bold">
-                                            ${paymentStatusText}
-                                            ${hasOverdue ? ` (${monthsCount} دفعة)` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">رسوم التسجيل</small>
-                                        <div class="${registrationStatusClass} fw-bold">
-                                            ${registrationStatusText}
-                                        </div>
-                                    </div>
+                                    <div class="col-6"><small class="text-muted">حالة الدفعات</small><div class="${paymentStatusClass} fw-bold">${paymentStatusText}${hasOverdue ? ` (${monthsCount} دفعة)` : ''}</div></div>
+                                    <div class="col-6"><small class="text-muted">رسوم التسجيل</small><div class="${registrationStatusClass} fw-bold">${registrationStatusText}</div></div>
                                 </div>
-                                
-                                ${hasOverdue ? `
-                                    <div class="row mt-2">
-                                        <div class="col-12">
-                                            <div class="alert alert-danger p-2" style="font-size: 0.85rem;">
-                                                <i class="bi bi-exclamation-triangle-fill"></i>
-                                                إجمالي المبلغ المتأخر: <strong>${totalOverdue.toLocaleString()} د.ج</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                ${hasWarning ? `
-                                    <div class="row mt-2">
-                                        <div class="col-12">
-                                            <button class="btn ${hasOverdue ? 'btn-danger' : 'btn-warning'} btn-sm w-100" onclick="showPaymentAlert(student, overduePayments, ${hasRegistrationFee})">
-                                                <i class="bi bi-eye"></i> عرض تفاصيل المستحقات
-                                            </button>
-                                        </div>
-                                    </div>
-                                ` : ''}
+                                ${hasOverdue ? `<div class="row mt-2"><div class="col-12"><div class="alert alert-danger p-2" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle-fill"></i> إجمالي المبلغ المتأخر: <strong>${totalOverdue.toLocaleString()} د.ج</strong></div></div></div>` : ''}
+                                ${hasWarning ? `<div class="row mt-2"><div class="col-12"><button class="btn ${hasOverdue ? 'btn-danger' : 'btn-warning'} btn-sm w-100" onclick="showPaymentAlert(student, overduePayments, ${hasRegistrationFee})"><i class="bi bi-eye"></i> عرض تفاصيل المستحقات</button></div></div>` : ''}
                             </div>
                         </div>
                     </div>
                 </div>
             `;
-            
-            // 🔥 بدء مؤقت الخصوصية (15 ثانية)
             startPrivacyTimer();
-            
-            if (hasWarning) {
-                setTimeout(() => {
-                    showPaymentAlert(student, overduePayments || [], hasRegistrationFee);
-                }, 800);
-            }
+            if (hasWarning) setTimeout(() => showPaymentAlert(student, overduePayments || [], hasRegistrationFee), 800);
         }
-        
-        // ==============================================
-        // عرض بطاقة الطالب الافتراضية
-        // ==============================================
-        
+
+        // ----- virtual card -----
         function displayVirtualStudentCard(student, cardUid = null) {
             const avatarUrl = student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true&length=2`;
-            
-            const expiryDate = new Date();
-            expiryDate.setFullYear(expiryDate.getFullYear() + 2);
-            const expiryStr = `${expiryDate.getMonth()+1}/${expiryDate.getFullYear().toString().slice(-2)}`;
-            
-            const cardNumber = cardUid || student.cardUid || '**** **** **** ' + (student.studentId?.slice(-4) || '0000');
-            const formattedCardNumber = cardNumber.match(/.{1,4}/g)?.join(' ') || cardNumber;
-            
+            const expiry = new Date(); expiry.setFullYear(expiry.getFullYear()+2);
+            const expiryStr = `${expiry.getMonth()+1}/${expiry.getFullYear().toString().slice(-2)}`;
+            const cardNum = cardUid || student.cardUid || '**** **** **** ' + (student.studentId?.slice(-4)||'0000');
+            const formatted = cardNum.match(/.{1,4}/g)?.join(' ') || cardNum;
             return `
                 <div class="virtual-student-card animate__animated animate__fadeInUp" id="studentCard">
-                    <div class="card-chip">
-                        <i class="bi bi-wifi"></i>
-                    </div>
+                    <div class="card-chip"><i class="bi bi-wifi"></i></div>
                     <div class="text-center">
                         <div class="student-avatar-large mx-auto" id="studentAvatar">
-                            <img src="${avatarUrl}" alt="${student.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true'">
+                            <img src="${avatarUrl}" alt="${student.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true'">
                         </div>
                         <h3 class="student-name-card mt-3" id="studentName">${student.name}</h3>
-                        <div class="student-id-card" id="studentId">رقم الطالب: ${student.studentId || 'غير محدد'}</div>
-                        <div class="card-number">
-                            <i class="bi bi-credit-card"></i> ${formattedCardNumber}
-                        </div>
-                        <div class="card-expiry">
-                            <span><i class="bi bi-calendar"></i> صالحة حتى: ${expiryStr}</span>
-                            <span><i class="bi bi-shield-check"></i> بطاقة ذكية</span>
-                        </div>
+                        <div class="student-id-card" id="studentId">رقم الطالب: ${student.studentId||'غير محدد'}</div>
+                        <div class="card-number"><i class="bi bi-credit-card"></i> ${formatted}</div>
+                        <div class="card-expiry"><span><i class="bi bi-calendar"></i> صالحة حتى: ${expiryStr}</span><span><i class="bi bi-shield-check"></i> بطاقة ذكية</span></div>
                     </div>
                 </div>
             `;
         }
-        
-        // ==============================================
-        // معالجة البطاقة - النسخة المحسنة
-        // ==============================================
-        
+
+        // ----- process card -----
         async function processCard(cardUid) {
-            if (isScanning) {
-                console.log('⏳ جاري معالجة بطاقة أخرى...');
-                return;
-            }
-            
+            if (isScanning) return;
             try {
                 isScanning = true;
-                const cleanUid = cardUid.toString().trim();
-                
-                console.log('🔍 معالجة البطاقة:', cleanUid);
-                
-                if (cleanUid.length < 4) {
-                    throw new Error('رقم البطاقة غير مكتمل');
-                }
-                
+                const clean = cardUid.toString().trim();
+                if (clean.length < 4) throw new Error('رقم البطاقة غير مكتمل');
                 updateStatus('جاري التعرف على البطاقة...', 'status-scanning', 'bi-arrow-repeat');
                 playScanSound();
-                
-                document.getElementById('scanResult').innerHTML = `
-                    <div class="text-center py-5">
-                        <div class="loading-spinner"></div>
-                        <h5 class="mt-3">جاري المعالجة...</h5>
-                        <p class="text-muted">يرجى الانتظار</p>
-                    </div>
-                `;
-                
-                const response = await fetch('/api/attendance/card-scan-enhanced', {
+                document.getElementById('scanResult').innerHTML = `<div class="text-center py-5"><div class="loading-spinner"></div><h5 class="mt-3">جاري المعالجة...</h5><p class="text-muted">يرجى الانتظار</p></div>`;
+
+                const res = await fetch('/api/attendance/card-scan-enhanced', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        cardUid: cleanUid, 
-                        sendSMS: false,
-                        checkPayments: true,
-                        checkRegistration: true
-                    })
+                    body: JSON.stringify({ cardUid: clean, sendSMS: false, checkPayments: true, checkRegistration: true })
                 });
-                
-                const data = await response.json();
-                
-                console.log('📥 البيانات المستلمة:', data);
-                
+                const data = await res.json();
+
                 if (data.success) {
                     const student = data.data?.student;
                     const classInfo = data.data?.class;
                     const attendance = data.data?.attendance;
                     const overduePayments = data.data?.overduePayments || [];
                     const registrationStatus = data.data?.registrationStatus;
-                    const hasOverdue = data.data?.hasOverdue || (overduePayments.length > 0);
+                    const hasOverdue = data.data?.hasOverdue || overduePayments.length > 0;
                     const hasRegistrationIssue = data.data?.hasRegistrationIssue || false;
-                    const hasIssues = data.data?.hasIssues || (hasOverdue || hasRegistrationIssue);
+                    const hasIssues = data.data?.hasIssues || hasOverdue || hasRegistrationIssue;
                     const totalOverdueAmount = data.data?.totalOverdueAmount || 0;
-                    
-                    console.log(`📊 النتائج: hasOverdue=${hasOverdue}, hasRegistrationIssue=${hasRegistrationIssue}, hasIssues=${hasIssues}`);
-                    console.log(`📊 عدد الدفعات المتأخرة: ${overduePayments.length}`);
-                    console.log(`📊 إجمالي المبلغ المتأخر: ${totalOverdueAmount}`);
-                    
+
                     if (student) {
-                        // عرض معلومات الطالب مع التحذيرات
                         displayStudentInfo(student, classInfo, attendance, overduePayments, registrationStatus, hasIssues);
-                        
-                        // تحديث الحالة
                         if (hasOverdue) {
                             updateStatus(`⚠️ ${overduePayments.length} دفعة متأخرة (${totalOverdueAmount.toLocaleString()} د.ج)`, 'status-overdue', 'bi-exclamation-triangle');
                             playOverdueSound();
@@ -1446,285 +1047,135 @@
                             updateStatus('✅ تم التسجيل بنجاح', 'status-success', 'bi-check-circle');
                             playSuccessSound();
                         }
-                        
-                        addToRecentScans({
-                            type: hasIssues ? 'warning' : 'success',
-                            student: { name: student.name, studentId: student.studentId },
-                            timestamp: new Date(),
-                            overdueCount: overduePayments.length,
-                            hasRegistrationFee: hasRegistrationIssue,
-                            totalOverdueAmount: totalOverdueAmount
-                        });
-                        
-                        if (hasOverdue) {
-                            showToast('error', `⚠️ الطالب ${student.name} لديه ${overduePayments.length} دفعة متأخرة (${totalOverdueAmount.toLocaleString()} د.ج)`);
-                        } else if (hasRegistrationIssue) {
-                            showToast('warning', `⚠️ الطالب ${student.name} لم يدفع رسوم التسجيل (600 د.ج)`);
-                        } else {
-                            showToast('success', `✅ تم تسجيل حضور الطالب ${student.name} بنجاح`);
-                        }
+                        showToast('success', `✅ تم تسجيل حضور الطالب ${student.name} بنجاح`);
                     } else {
                         showErrorResult('بيانات الطالب غير مكتملة');
                     }
                 } else {
-                    if (data.error && data.error.includes('بطاقة غير مسجلة')) {
-                        handleUnknownCard(cleanUid);
-                    } else {
-                        handleFailedAttendance(data);
-                    }
+                    if (data.error && data.error.includes('بطاقة غير مسجلة')) handleUnknownCard(clean);
+                    else handleFailedAttendance(data);
                 }
-                
-            } catch (error) {
-                console.error('❌ خطأ:', error);
+            } catch (err) {
+                console.error(err);
                 handleUnknownCard(cardUid);
             } finally {
                 isScanning = false;
                 setTimeout(() => {
-                    const currentStatus = document.getElementById('scannerStatus');
-                    if (!currentStatus.classList.contains('status-overdue') && 
-                        !currentStatus.classList.contains('status-warning')) {
+                    const cur = document.getElementById('scannerStatus');
+                    if (!cur.classList.contains('status-overdue') && !cur.classList.contains('status-warning')) {
                         updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
                     }
                 }, 2000);
-                
                 document.getElementById('cardInput').value = '';
                 document.getElementById('cardInput').focus();
             }
         }
-        
-        // ==============================================
-        // عرض رسائل الخطأ والتويت
-        // ==============================================
-        
+
+        // ----- error handlers -----
         function handleUnknownCard(cardUid) {
-            const resultDiv = document.getElementById('scanResult');
-            resultDiv.innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shake" style="background: linear-gradient(135deg, #e63946, #9d0208);">
-                    <div class="text-center">
-                        <i class="bi bi-exclamation-triangle display-1"></i>
-                        <h3 class="mt-3">بطاقة غير معروفة</h3>
-                        <div class="card-number">${cardUid}</div>
-                        <p class="mt-3">هذه البطاقة غير مسجلة في النظام</p>
-                        <button class="btn btn-light mt-3" onclick="clearScanner()">
-                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
-                        </button>
-                    </div>
+            document.getElementById('scanResult').innerHTML = `
+                <div class="virtual-student-card animate__animated animate__shake" style="background:linear-gradient(135deg,#e63946,#9d0208);">
+                    <div class="text-center"><i class="bi bi-exclamation-triangle display-1"></i><h3 class="mt-3">بطاقة غير معروفة</h3><div class="card-number">${cardUid}</div><p class="mt-3">هذه البطاقة غير مسجلة في النظام</p><button class="btn btn-light mt-3" onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i> إعادة المحاولة</button></div>
                 </div>
             `;
             updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle');
             playErrorSound();
         }
-        
+
         function handleFailedAttendance(data) {
-            console.log('⚠️ فشل تسجيل الحضور:', data);
             showErrorResult(data.error || 'حدث خطأ أثناء التسجيل');
             playErrorSound();
             updateStatus('فشل التسجيل', 'status-error', 'bi-exclamation-triangle');
         }
-        
-        function showErrorResult(message) {
-            const resultDiv = document.getElementById('scanResult');
-            resultDiv.innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shake" style="background: linear-gradient(135deg, #e63946, #9d0208);">
-                    <div class="text-center">
-                        <i class="bi bi-x-circle display-1"></i>
-                        <h3 class="mt-3">حدث خطأ</h3>
-                        <p>${message}</p>
-                        <button class="btn btn-light mt-3" onclick="clearScanner()">
-                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
-                        </button>
-                    </div>
+
+        function showErrorResult(msg) {
+            document.getElementById('scanResult').innerHTML = `
+                <div class="virtual-student-card animate__animated animate__shake" style="background:linear-gradient(135deg,#e63946,#9d0208);">
+                    <div class="text-center"><i class="bi bi-x-circle display-1"></i><h3 class="mt-3">حدث خطأ</h3><p>${msg}</p><button class="btn btn-light mt-3" onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i> إعادة المحاولة</button></div>
                 </div>
             `;
         }
-        
-        function showToast(type, message) {
+
+        // ----- toast -----
+        function showToast(type, msg) {
             const toast = document.createElement('div');
-            const typeClass = type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : type === 'error' ? 'alert-error' : 'alert-info';
+            const cls = type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : type === 'error' ? 'alert-error' : 'alert-info';
             const icon = type === 'success' ? 'bi-check-circle-fill' : type === 'warning' ? 'bi-exclamation-triangle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill';
-            
-            toast.className = `alert-message ${typeClass} animate__animated animate__fadeInDown`;
-            toast.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
+            toast.className = `alert-message ${cls} animate__animated animate__fadeInDown`;
+            toast.innerHTML = `<i class="bi ${icon}"></i><span>${msg}</span>`;
             document.body.appendChild(toast);
-            
-            // 🔥 إخفاء الرسالة تلقائياً بعد 4 ثواني
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, 4000);
         }
-        
-        // ==============================================
-        // إضافة للمسحات الحديثة
-        // ==============================================
-        
-        function addToRecentScans(scan) {
-            recentScans.unshift({
-                ...scan,
-                timestamp: scan.timestamp || new Date()
-            });
-            
-            if (recentScans.length > 10) recentScans.pop();
-            localStorage.setItem('studentCardRecentScans', JSON.stringify(recentScans));
-            updateRecentScansList();
-        }
-        
-        function updateRecentScansList() {
-            const listElement = document.getElementById('recentScansList');
-            
-            if (recentScans.length === 0) {
-                listElement.innerHTML = '<div class="recent-scan-item text-muted"><span>لا توجد عمليات مسح حديثة</span></div>';
-                return;
-            }
-            
-            listElement.innerHTML = recentScans.map(scan => {
-                const timeString = new Date(scan.timestamp).toLocaleTimeString('ar-EG');
-                const statusClass = scan.type === 'success' ? 'text-success' : scan.type === 'warning' ? 'text-warning' : 'text-danger';
-                const statusIcon = scan.type === 'success' ? 'bi-check-circle-fill' : scan.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill';
-                
-                let badges = '';
-                if (scan.overdueCount > 0) {
-                    badges += `<span class="badge-overdue">${scan.overdueCount} دفعة</span>`;
-                }
-                if (scan.hasRegistrationFee) {
-                    badges += `<span class="badge-registration">رسوم تسجيل</span>`;
-                }
-                
-                return `
-                    <div class="recent-scan-item animate__animated animate__fadeIn">
-                        <div>
-                            <i class="bi ${statusIcon} ${statusClass}"></i>
-                            <strong>${scan.student?.name || 'طالب'}</strong>
-                            ${badges}
-                            ${scan.student?.studentId ? `<br><small class="text-muted">${scan.student.studentId}</small>` : ''}
-                        </div>
-                        <div class="text-end">
-                            <small class="scan-time text-muted">${timeString}</small>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function loadRecentScans() {
-            const saved = localStorage.getItem('studentCardRecentScans');
-            if (saved) {
-                try {
-                    recentScans = JSON.parse(saved);
-                    updateRecentScansList();
-                } catch(e) {}
-            }
-        }
-        
-        // ==============================================
-        // وظائف مساعدة
-        // ==============================================
-        
+
+        // ----- helpers -----
         function getAcademicYearName(code) {
-            const years = {
-                '1AS': 'الأولى ثانوي', '2AS': 'الثانية ثانوي', '3AS': 'الثالثة ثانوي',
-                '1MS': 'الأولى متوسط', '2MS': 'الثانية متوسط', '3MS': 'الثالثة متوسط', '4MS': 'الرابعة متوسط', '5MS': 'الخامسة متوسط',
-                '1AP': 'الأولى ابتدائي', '2AP': 'الثانية ابتدائي', '3AP': 'الثالثة ابتدائي', '4AP': 'الرابعة ابتدائي', '5AP': 'الخامسة ابتدائي',
-                'NS': 'غير محدد'
-            };
-            return years[code] || code || 'غير محدد';
+            const map = { '1AS':'الأولى ثانوي','2AS':'الثانية ثانوي','3AS':'الثالثة ثانوي','1MS':'الأولى متوسط','2MS':'الثانية متوسط','3MS':'الثالثة متوسط','4MS':'الرابعة متوسط','5MS':'الخامسة متوسط','1AP':'الأولى ابتدائي','2AP':'الثانية ابتدائي','3AP':'الثالثة ابتدائي','4AP':'الرابعة ابتدائي','5AP':'الخامسة ابتدائي','NS':'غير محدد' };
+            return map[code] || code || 'غير محدد';
         }
-        
-        function focusScanner() {
-            document.getElementById('cardInput').focus();
-            showToast('info', 'الماسح الضوئي جاهز');
-        }
-        
+
+        function focusScanner() { document.getElementById('cardInput').focus(); showToast('info', 'الماسح الضوئي جاهز'); }
+        function manualEntry() { document.getElementById('cardInput').focus(); showToast('info', 'أدخل رقم البطاقة ثم اضغط Enter'); }
+
         function clearScanner() {
-            // إلغاء مؤقت الخصوصية
-            if (privacyTimer) {
-                clearTimeout(privacyTimer);
-                privacyTimer = null;
-            }
-            // إلغاء مؤقت التحدير
-            if (alertTimer) {
-                clearTimeout(alertTimer);
-                alertTimer = null;
-            }
-            
+            if (privacyTimer) { clearTimeout(privacyTimer); privacyTimer = null; }
+            if (alertTimer) { clearTimeout(alertTimer); alertTimer = null; }
             document.getElementById('cardInput').value = '';
             document.getElementById('scanResult').innerHTML = '';
             document.getElementById('cardInput').focus();
             updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
-            
-            // إزالة التمويه إذا كان موجوداً
             removePrivacyBlur();
         }
-        
-        function manualEntry() {
-            document.getElementById('cardInput').focus();
-            showToast('info', 'أدخل رقم البطاقة ثم اضغط Enter');
-        }
-        
-        // ==============================================
-        // تهيئة الماسح
-        // ==============================================
-        
+
+        // ----- setup scanner -----
         function setupScanner() {
-            const cardInput = document.getElementById('cardInput');
-            let scanBuffer = '';
-            let scanTimeout = null;
-            
-            cardInput.addEventListener('keypress', function(e) {
+            const input = document.getElementById('cardInput');
+            let buffer = '', timeout = null;
+
+            input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    const value = e.target.value.trim();
-                    if (value.length >= 4) {
-                        processCard(value);
-                    }
+                    const val = e.target.value.trim();
+                    if (val.length >= 4) processCard(val);
                 }
             });
-            
+
             document.addEventListener('keydown', function(e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                
                 if (e.key >= '0' && e.key <= '9') {
                     e.preventDefault();
-                    scanBuffer += e.key;
-                    cardInput.value = scanBuffer;
-                    
-                    if (scanTimeout) clearTimeout(scanTimeout);
-                    scanTimeout = setTimeout(() => {
-                        if (scanBuffer.length >= 4) {
-                            processCard(scanBuffer);
-                        }
-                        scanBuffer = '';
-                        cardInput.value = '';
-                        scanTimeout = null;
+                    buffer += e.key;
+                    input.value = buffer;
+                    if (timeout) clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        if (buffer.length >= 4) processCard(buffer);
+                        buffer = '';
+                        input.value = '';
+                        timeout = null;
                     }, 80);
                 }
             });
-            
+
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    if (document.getElementById('paymentAlertOverlay')) {
-                        dismissAlert();
-                    }
+                    if (document.getElementById('paymentAlertOverlay')) dismissAlert();
                     clearScanner();
                 }
             });
         }
-        
-        // ==============================================
-        // تهيئة التطبيق
-        // ==============================================
-        
+
+        // ----- init -----
         function initApp() {
-            console.log('🚀 تهيئة نظام تسجيل الطلاب (النسخة المحسنة)...');
+            console.log('🚀 نظام تسجيل الطلاب (نسخة احترافية)');
+            const name = getSchoolName().trim();
+            const el = document.getElementById('schoolName');
+            if (name) { el.textContent = name; document.title = `${name} | Redox`; } else el.textContent = 'اسم المدرسة غير محدد';
             updateDateTime();
             setInterval(updateDateTime, 1000);
             setupScanner();
-            loadRecentScans();
-            setTimeout(() => playWelcomeSound(), 500);
-            console.log('✅ النظام جاهز. سيتم إخفاء بيانات الطالب بعد 15 ثانية للخصوصية.');
-            console.log('✅ سيتم إخفاء رسائل التنبيه تلقائياً بعد 10 ثواني.');
+            setTimeout(playWelcomeSound, 500);
+            console.log('✅ تم إزالة قسم "آخر عمليات المسح". التصميم احترافي ونظيف.');
         }
-        
+
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
