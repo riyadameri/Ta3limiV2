@@ -23902,14 +23902,9 @@ app.get('*', (req, res) => {
     }
   }
   
-  // If it's an HTML page request, redirect to 404
-  if (req.accepts('html')) {
-    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  } else {
-    res.status(404).json({ error: 'Page not found' });
-  }
+  // Redirect all other unmatched requests to the base URL
+  return res.redirect('/');
 });
-
 
     app.get('cards-auth',(req,res)=>{
       res.sendFile(path.join(__dirname, 'public', 'cards-auth.html'));
