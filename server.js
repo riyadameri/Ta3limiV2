@@ -7597,6 +7597,222 @@ app.post('/api/debug/fix-classes-schoolid', async (req, res) => {
         });
     }
   });  // نقطة نهاية جديدة للحصول على تفاصيل الأستاذ مع حصصه ومدفوعاته
+// ==============================================
+// ✅ GET /api/classes/:classId/attendance/monthly - Monthly Attendance Matrix
+// ==============================================
+app.get('/api/classes/:classId/attendance/monthly', async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { month, startDate, endDate } = req.query;
+    
+    console.log(`📊 جلب مصفوفة الغيابات الشهرية للحصة: ${classId}`);
+    console.log(`📅 الشهر: ${month}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف الحصة غير صالح'
+      });
+    }
+
+    // 1. تحديد نطاق التاريخ
+    let start, end;
+    
+    if (month) {
+      // استخدام الشهر المحدد (صيغة YYYY-MM)
+      const [year, monthNum] = month.split('-').map(Number);
+      start = new Date(year, monthNum - 1, 1);
+      end = new Date(year, monthNum, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate);
+    } else {
+      // افتراضي: الشهر الحالي
+      const now = new Date();
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    console.log(`📅 النطاق: ${start} - ${end}`);
+
+    // 2. جلب معلومات الحصة مع الطلاب
+    const classObj = await Class.findById(classId)
+      .populate('teacher', 'name')
+      .populate('students', 'name studentId');
+
+    if (!classObj) {
+      return res.status(404).json({
+        success: false,
+        error: 'الحصة غير موجودة'
+      });
+    }
+
+    // 3. جلب جميع الحصص الحية لهذه الحصة في الفترة
+    const liveClasses = await LiveClass.find({
+      class: classId,
+      date: { $gte: start, $lte: end },
+      status: { $in: ['completed', 'ongoing', 'scheduled'] }
+    })
+    .populate('attendance.student', 'name studentId')
+    .sort({ date: 1, startTime: 1 });
+
+    // 4. إنشاء مصفوفة التواريخ
+    const dates = [];
+    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    
+    // استخراج أيام الحصص من الجدول
+    const scheduleDays = classObj.schedule?.map(s => s.day) || [];
+    
+    // إنشاء قائمة بجميع الأيام في النطاق
+    let currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dayName = dayNames[currentDate.getDay()];
+      
+      // التحقق مما إذا كان هناك حصة في هذا اليوم
+      const hasClass = scheduleDays.includes(dayName);
+      // التحقق مما إذا كانت هناك حصة حية مسجلة في هذا اليوم
+      const hasLiveClass = liveClasses.some(lc => 
+        lc.date.toISOString().split('T')[0] === currentDate.toISOString().split('T')[0]
+      );
+      
+      if (hasClass || hasLiveClass) {
+        dates.push(new Date(currentDate));
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log(`📅 عدد أيام الحصص: ${dates.length}`);
+
+    // 5. بناء مصفوفة الحضور لكل طالب
+    const matrix = [];
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalLate = 0;
+    let totalClasses = dates.length;
+
+    for (const student of classObj.students) {
+      const studentRow = {
+        _id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        days: [],
+        attendanceRate: 0,
+        presentCount: 0,
+        absentCount: 0,
+        lateCount: 0
+      };
+
+      // لكل تاريخ في النطاق
+      for (const date of dates) {
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // البحث عن حصة حية في هذا اليوم
+        const liveClass = liveClasses.find(lc => 
+          lc.date.toISOString().split('T')[0] === dateStr
+        );
+        
+        if (liveClass) {
+          // البحث عن سجل حضور الطالب في هذه الحصة
+          const attendanceRecord = liveClass.attendance.find(
+            att => att.student._id.toString() === student._id.toString()
+          );
+          
+          const status = attendanceRecord?.status || 'absent';
+          studentRow.days.push(status);
+          
+          if (status === 'present') {
+            studentRow.presentCount++;
+            totalPresent++;
+          } else if (status === 'late') {
+            studentRow.lateCount++;
+            totalLate++;
+          } else if (status === 'absent') {
+            studentRow.absentCount++;
+            totalAbsent++;
+          }
+        } else {
+          // لا توجد حصة في هذا اليوم
+          studentRow.days.push('no-class');
+        }
+      }
+
+      // حساب نسبة الحضور (بناءً على الأيام التي توجد فيها حصة فقط)
+      const daysWithClass = studentRow.days.filter(d => d !== 'no-class').length;
+      studentRow.attendanceRate = daysWithClass > 0 
+        ? Math.round(((studentRow.presentCount + studentRow.lateCount) / daysWithClass) * 100)
+        : 0;
+
+      matrix.push(studentRow);
+    }
+
+    // 6. إحصائيات عامة
+    const statistics = {
+      totalClasses: totalClasses,
+      totalStudents: classObj.students.length,
+      totalPresent: totalPresent,
+      totalAbsent: totalAbsent,
+      totalLate: totalLate,
+      averageAttendance: classObj.students.length > 0
+        ? Math.round(matrix.reduce((sum, s) => sum + s.attendanceRate, 0) / matrix.length)
+        : 0
+    };
+
+    // 7. تفاصيل الحصص
+    const classesDetails = liveClasses.map(lc => ({
+      _id: lc._id,
+      date: lc.date,
+      startTime: lc.startTime,
+      endTime: lc.endTime,
+      status: lc.status,
+      presentCount: lc.attendance.filter(a => a.status === 'present').length,
+      absentCount: lc.attendance.filter(a => a.status === 'absent').length,
+      lateCount: lc.attendance.filter(a => a.status === 'late').length
+    }));
+
+    // 8. إرجاع الاستجابة
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classObj._id,
+          name: classObj.name,
+          subject: classObj.subject,
+          teacher: classObj.teacher?.name
+        },
+        period: {
+          start: start,
+          end: end,
+          totalDays: dates.length
+        },
+        dates: dates,
+        attendanceMatrix: matrix,
+        studentsAttendance: matrix,
+        statistics: statistics,
+        classesDetails: classesDetails,
+        summary: {
+          totalPresent,
+          totalAbsent,
+          totalLate,
+          totalClasses,
+          averageAttendance: statistics.averageAttendance
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب مصفوفة الغيابات الشهرية:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+
 app.get('/api/classes/:classId/students', async (req, res) => {
   try {
     const classId = req.params.classId;
@@ -15221,12 +15437,15 @@ app.put('/api/payments/:id', async (req, res) => {
 // 9. تسديد دفعة (تغيير الحالة إلى مدفوع) - مع schoolId
 // ==============================================
 // PUT /api/payments/:id/pay - متوافق مع الواجهة الحالية
+// ==============================================
+// ✅ تسديد دفعة (تغيير الحالة إلى مدفوع) - مع منع التكرار
+// ==============================================
 app.put('/api/payments/:id/pay', async (req, res) => {
   try {
     const paymentId = req.params.id;
     const { paymentMethod, paymentDate, notes } = req.body;
     
-    console.log(`✅ تسديد الدفعة: ${paymentId}`); 
+    console.log(`✅ تسديد الدفعة: ${paymentId}`);
 
     // جلب الدفعة
     const payment = await Payment.findById(paymentId)
@@ -15301,35 +15520,47 @@ app.put('/api/payments/:id/pay', async (req, res) => {
       }
     }
 
-    // تسجيل المعاملة المالية
-    const transaction = new FinancialTransaction({
-      schoolId: payment.schoolId,
-      type: 'income',
-      amount: payment.amount,
-      description: `دفعة من الطالب ${payment.student?.name || 'غير معروف'} - ${payment.month}`,
-      category: 'tuition',
-      recordedBy: req.user?.id || null,
+    // ==============================================
+    // 🔥 التحقق من وجود معاملة مالية مسبقاً (منع التكرار)
+    // ==============================================
+    const existingTransaction = await FinancialTransaction.findOne({
       reference: payment._id,
-      student: payment.student?._id,
-      date: payment.paymentDate
+      type: 'income'
     });
-    await transaction.save();
 
-    // جلب البيانات المحدثة (بنفس تنسيق الواجهة الحالية)
+    // إنشاء معاملة مالية فقط إذا لم تكن موجودة
+    if (!existingTransaction) {
+      const transaction = new FinancialTransaction({
+        schoolId: payment.schoolId,
+        type: 'income',
+        amount: payment.amount,
+        description: `دفعة من الطالب ${payment.student?.name || 'غير معروف'} - ${payment.month || ''}`,
+        category: 'tuition',
+        recordedBy: req.user?.id || null,
+        reference: payment._id,
+        student: payment.student?._id,
+        date: payment.paymentDate
+      });
+      await transaction.save();
+      console.log(`✅ تم إنشاء معاملة مالية جديدة: ${transaction._id}`);
+    } else {
+      console.log(`⚠️ معاملة مالية موجودة مسبقاً للدفعة ${paymentId}، تم تخطي الإنشاء`);
+    }
+
+    // جلب البيانات المحدثة
     const updatedPayment = await Payment.findById(paymentId)
       .populate('student', 'name studentId')
       .populate('class', 'name subject')
       .populate('recordedBy', 'username fullName');
 
-    // إرجاع الاستجابة بنفس تنسيق الواجهة الحالية
+    // إرجاع الاستجابة
     res.json({
       success: true,
       message: 'تم تسديد الدفعة بنجاح',
       payment: updatedPayment,
       invoiceNumber: payment.invoiceNumber,
-      // إضافة معلومات إضافية (لن تؤثر على الواجهة الحالية)
       _commissionUpdated: commissionUpdated,
-      _transactionId: transaction._id
+      _transactionId: existingTransaction ? existingTransaction._id : null
     });
 
   } catch (err) {
@@ -15340,7 +15571,224 @@ app.put('/api/payments/:id/pay', async (req, res) => {
     });
   }
 });
+// ==============================================
+// 🧹 إزالة المعاملات المالية المكررة (للمدرسة المحددة)
+// ==============================================
+app.post('/api/debug/remove-duplicate-transactions', async (req, res) => {
+  try {
+    const { schoolId, dryRun = true } = req.body;
+    
+    console.log(`🧹 بدء إزالة المعاملات المكررة للمدرسة: ${schoolId || 'جميع المدارس'}`);
+    console.log(`📋 وضع الاختبار (dryRun): ${dryRun ? 'نعم' : 'لا'}`);
+    
+    // بناء فلتر البحث
+    const filter = {};
+    if (schoolId) {
+      filter.schoolId = schoolId;
+    }
+    
+    // 1. جلب جميع المعاملات المالية
+    const transactions = await FinancialTransaction.find(filter);
+    console.log(`📊 إجمالي المعاملات المالية: ${transactions.length}`);
+    
+    // 2. جلب جميع معرفات الدفعات (Payments)
+    const paymentFilter = {};
+    if (schoolId) {
+      paymentFilter.schoolId = schoolId;
+    }
+    const payments = await Payment.find(paymentFilter);
+    const paymentIds = new Set();
+    payments.forEach(p => paymentIds.add(p._id.toString()));
+    console.log(`📊 عدد الدفعات: ${payments.length}`);
+    
+    // 3. جلب جميع معرفات رسوم التسجيل (SchoolFees)
+    const feeFilter = {};
+    if (schoolId) {
+      feeFilter.schoolId = schoolId;
+    }
+    const fees = await SchoolFee.find(feeFilter);
+    const feeIds = new Set();
+    fees.forEach(f => feeIds.add(f._id.toString()));
+    console.log(`📊 عدد رسوم التسجيل: ${fees.length}`);
+    
+    // 4. تحديد المعاملات المكررة
+    const duplicateIds = [];
+    const duplicatesWithDetails = [];
+    let totalDuplicatesAmount = 0;
+    
+    for (const transaction of transactions) {
+      if (transaction.reference) {
+        const refStr = transaction.reference.toString();
+        
+        // التحقق مما إذا كان المرجع يشير إلى دفعة أو رسوم تسجيل
+        if (paymentIds.has(refStr) || feeIds.has(refStr)) {
+          duplicateIds.push(transaction._id);
+          
+          // تخزين تفاصيل للمراجعة
+          const duplicateInfo = {
+            _id: transaction._id,
+            reference: transaction.reference,
+            amount: transaction.amount,
+            description: transaction.description,
+            date: transaction.date,
+            type: transaction.type,
+            category: transaction.category
+          };
+          
+          // تحديد النوع
+          if (paymentIds.has(refStr)) {
+            duplicateInfo.referenceType = 'payment';
+            // العثور على الدفعة المرتبطة
+            const relatedPayment = payments.find(p => p._id.toString() === refStr);
+            if (relatedPayment) {
+              duplicateInfo.studentName = relatedPayment.student ? 'موجود' : 'غير معروف';
+              duplicateInfo.amount = relatedPayment.amount;
+            }
+          } else if (feeIds.has(refStr)) {
+            duplicateInfo.referenceType = 'school_fee';
+          }
+          
+          duplicatesWithDetails.push(duplicateInfo);
+          totalDuplicatesAmount += transaction.amount;
+        }
+      }
+    }
+    
+    console.log(`📊 المعاملات المكررة: ${duplicateIds.length}`);
+    console.log(`📊 إجمالي المبلغ المكرر: ${totalDuplicatesAmount} د.ج`);
+    
+    // 5. حذف المعاملات المكررة (إذا لم يكن وضع الاختبار)
+    let deletedCount = 0;
+    let deletedIds = [];
+    
+    if (!dryRun && duplicateIds.length > 0) {
+      const result = await FinancialTransaction.deleteMany({
+        _id: { $in: duplicateIds }
+      });
+      deletedCount = result.deletedCount || 0;
+      deletedIds = duplicateIds;
+      console.log(`✅ تم حذف ${deletedCount} معاملة مالية مكررة`);
+    } else if (dryRun) {
+      console.log(`🔍 وضع الاختبار: سيتم حذف ${duplicateIds.length} معاملة مكررة`);
+    }
+    
+    // 6. إرجاع النتيجة
+    res.json({
+      success: true,
+      message: dryRun 
+        ? `وضع الاختبار: تم العثور على ${duplicateIds.length} معاملة مالية مكررة`
+        : `تم حذف ${deletedCount} معاملة مالية مكررة`,
+      stats: {
+        totalTransactions: transactions.length,
+        totalPayments: payments.length,
+        totalFees: fees.length,
+        duplicatesFound: duplicateIds.length,
+        duplicatesDeleted: deletedCount,
+        totalDuplicatesAmount: totalDuplicatesAmount,
+        dryRun: dryRun
+      },
+      duplicates: duplicatesWithDetails.slice(0, 50), // عرض أول 50 للتقرير
+      duplicateIds: deletedIds,
+      schoolId: schoolId || 'all'
+    });
 
+  } catch (err) {
+    console.error('❌ خطأ في إزالة المعاملات المكررة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
+// ==============================================
+// 🔍 التحقق من المعاملات المكررة (بدون حذف)
+// ==============================================
+app.get('/api/debug/check-duplicate-transactions', async (req, res) => {
+  try {
+    const { schoolId } = req.query;
+    
+    console.log(`🔍 التحقق من المعاملات المكررة للمدرسة: ${schoolId || 'جميع المدارس'}`);
+    
+    // بناء فلتر البحث
+    const filter = {};
+    if (schoolId) {
+      filter.schoolId = schoolId;
+    }
+    
+    // جلب جميع المعاملات المالية
+    const transactions = await FinancialTransaction.find(filter);
+    
+    // جلب جميع معرفات الدفعات
+    const paymentFilter = {};
+    if (schoolId) {
+      paymentFilter.schoolId = schoolId;
+    }
+    const payments = await Payment.find(paymentFilter);
+    const paymentIds = new Set();
+    payments.forEach(p => paymentIds.add(p._id.toString()));
+    
+    // جلب جميع معرفات رسوم التسجيل
+    const feeFilter = {};
+    if (schoolId) {
+      feeFilter.schoolId = schoolId;
+    }
+    const fees = await SchoolFee.find(feeFilter);
+    const feeIds = new Set();
+    fees.forEach(f => feeIds.add(f._id.toString()));
+    
+    // تحديد المعاملات المكررة
+    const duplicates = [];
+    let totalDuplicatesAmount = 0;
+    
+    for (const transaction of transactions) {
+      if (transaction.reference) {
+        const refStr = transaction.reference.toString();
+        if (paymentIds.has(refStr) || feeIds.has(refStr)) {
+          duplicates.push({
+            _id: transaction._id,
+            reference: transaction.reference,
+            referenceType: paymentIds.has(refStr) ? 'payment' : 'school_fee',
+            amount: transaction.amount,
+            description: transaction.description,
+            date: transaction.date,
+            type: transaction.type,
+            category: transaction.category
+          });
+          totalDuplicatesAmount += transaction.amount;
+        }
+      }
+    }
+    
+    // تجميع الإحصائيات حسب النوع
+    const byType = {};
+    duplicates.forEach(d => {
+      byType[d.referenceType] = (byType[d.referenceType] || 0) + 1;
+    });
+    
+    res.json({
+      success: true,
+      stats: {
+        totalTransactions: transactions.length,
+        totalPayments: payments.length,
+        totalFees: fees.length,
+        duplicatesFound: duplicates.length,
+        totalDuplicatesAmount: totalDuplicatesAmount,
+        byType: byType
+      },
+      duplicates: duplicates.slice(0, 100),
+      schoolId: schoolId || 'all'
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في التحقق من المعاملات المكررة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 // ==============================================
 // 10. إلغاء دفعة (جعلها معلقة)
 // ==============================================
@@ -16114,6 +16562,7 @@ app.get('/api/accounting/transactions-summary/:schoolId', async (req, res) => {
     });
   }
 });
+// في server.js - استبدل نقطة نهاية todays-transactions بهذا الكود
 app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
   try {
     const { schoolId } = req.params;
@@ -16145,19 +16594,7 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     console.log(`📊 جلب معاملات اليوم للمدرسة: ${schoolId}`);
     console.log(`📅 النطاق: ${startOfDay} - ${endOfDay}`);
 
-    // 1. جلب معاملات اليوم من FinancialTransaction
-    const transactions = await FinancialTransaction.find({
-      schoolId: schoolId,
-      date: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
-    })
-    .populate('recordedBy', 'username fullName')
-    .populate('student', 'name studentId')
-    .sort({ date: -1 });
-
-    // 2. جلب مدفوعات اليوم
+    // 1. جلب مدفوعات اليوم
     const todayPayments = await Payment.find({
       schoolId: schoolId,
       paymentDate: {
@@ -16171,7 +16608,7 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     .populate('recordedBy', 'username fullName')
     .sort({ paymentDate: -1 });
 
-    // 3. جلب رسوم التسجيل المدفوعة اليوم
+    // 2. جلب رسوم التسجيل المدفوعة اليوم
     const todayFees = await SchoolFee.find({
       schoolId: schoolId,
       paymentDate: {
@@ -16184,7 +16621,7 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     .populate('recordedBy', 'username fullName')
     .sort({ paymentDate: -1 });
 
-    // 4. جلب المصروفات اليوم
+    // 3. جلب المصروفات اليوم
     const todayExpenses = await Expense.find({
       schoolId: schoolId,
       date: {
@@ -16196,7 +16633,7 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     .populate('recordedBy', 'username fullName')
     .sort({ date: -1 });
 
-    // 5. جلب عمولات اليوم
+    // 4. جلب عمولات اليوم
     const todayCommissions = await TeacherCommission.find({
       schoolId: schoolId,
       paymentDate: {
@@ -16211,81 +16648,112 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
     .populate('recordedBy', 'username fullName')
     .sort({ paymentDate: -1 });
 
+    // 🔥 ==============================================
+    // 🔥 الجزء المهم: تجميع المعاملات دون تكرار
+    // 🔥 ==============================================
+    
+    // إنشاء مجموعة لتتبع المعرفات الفريدة
+    const seenIds = new Set();
+    const allTransactions = [];
+
+    // إضافة مدفوعات الطلاب (مع علامة _type)
+    for (const p of todayPayments) {
+      const id = p._id.toString();
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        allTransactions.push({
+          ...p.toObject(),
+          _type: 'payment',
+          typeLabel: 'دفعة طالب',
+          icon: 'fa-money-bill-wave',
+          transactionDate: p.paymentDate || p.createdAt,
+          description: `دفعة من الطالب ${p.student?.name || 'غير معروف'}`
+        });
+      }
+    }
+
+    // إضافة رسوم التسجيل
+    for (const f of todayFees) {
+      const id = f._id.toString();
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        allTransactions.push({
+          ...f.toObject(),
+          _type: 'registration_fee',
+          typeLabel: 'رسوم تسجيل',
+          icon: 'fa-file-invoice',
+          transactionDate: f.paymentDate || f.createdAt,
+          description: `رسوم تسجيل الطالب ${f.student?.name || 'غير معروف'}`
+        });
+      }
+    }
+
+    // إضافة المصروفات
+    for (const e of todayExpenses) {
+      const id = e._id.toString();
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        allTransactions.push({
+          ...e.toObject(),
+          _type: 'expense',
+          typeLabel: 'مصروف',
+          icon: 'fa-receipt',
+          transactionDate: e.date || e.createdAt,
+          description: e.description || 'مصروف'
+        });
+      }
+    }
+
+    // إضافة عمولات الأساتذة
+    for (const c of todayCommissions) {
+      const id = c._id.toString();
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        allTransactions.push({
+          ...c.toObject(),
+          _type: 'commission',
+          typeLabel: 'عمولة أستاذ',
+          icon: 'fa-user-graduate',
+          transactionDate: c.paymentDate || c.createdAt,
+          description: `عمولة الأستاذ ${c.teacher?.name || 'غير معروف'}`
+        });
+      }
+    }
+
+    // ⚠️ لا نقوم بإضافة FinancialTransactions هنا لأنها مكررة!
+    // بدلاً من ذلك، ندمج بيانات المعاملات المالية في المدفوعات نفسها
+
+    // ترتيب حسب التاريخ (الأحدث أولاً)
+    allTransactions.sort((a, b) => {
+      const dateA = a.transactionDate || a.paymentDate || a.date || a.createdAt;
+      const dateB = b.transactionDate || b.paymentDate || b.date || b.createdAt;
+      return new Date(dateB) - new Date(dateA);
+    });
+
     // حساب الإحصائيات
     const summary = {
       totalIncome: 0,
       totalExpenses: 0,
-      totalTransactions: 0,
+      totalTransactions: allTransactions.length,
       paymentsCount: todayPayments.length,
       feesCount: todayFees.length,
       expensesCount: todayExpenses.length,
       commissionsCount: todayCommissions.length
     };
 
-    // حساب إجمالي الإيرادات
+    // حساب الإيرادات
     let totalIncome = 0;
-    todayPayments.forEach(p => totalIncome += p.amount);
-    todayFees.forEach(f => totalIncome += f.amount);
+    todayPayments.forEach(p => totalIncome += (p.amount || 0));
+    todayFees.forEach(f => totalIncome += (f.amount || 0));
     summary.totalIncome = totalIncome;
 
-    // حساب إجمالي المصروفات
+    // حساب المصروفات
     let totalExpenses = 0;
-    todayExpenses.forEach(e => totalExpenses += e.amount);
-    todayCommissions.forEach(c => totalExpenses += c.amount);
+    todayExpenses.forEach(e => totalExpenses += (e.amount || 0));
+    todayCommissions.forEach(c => totalExpenses += (c.totalAmount || 0));
     summary.totalExpenses = totalExpenses;
 
-    summary.totalTransactions = 
-      transactions.length + 
-      todayPayments.length + 
-      todayFees.length + 
-      todayExpenses.length + 
-      todayCommissions.length;
-
-    // تجميع جميع المعاملات في مصفوفة واحدة
-    const allTransactions = [
-      ...transactions.map(t => ({
-        ...t.toObject(),
-        _type: 'financial_transaction',
-        typeLabel: 'معاملة مالية',
-        icon: 'fa-exchange-alt'
-      })),
-      ...todayPayments.map(p => ({
-        ...p.toObject(),
-        _type: 'payment',
-        typeLabel: 'دفعة طالب',
-        icon: 'fa-money-bill-wave',
-        description: `دفعة من الطالب ${p.student?.name || 'غير معروف'}`
-      })),
-      ...todayFees.map(f => ({
-        ...f.toObject(),
-        _type: 'registration_fee',
-        typeLabel: 'رسوم تسجيل',
-        icon: 'fa-file-invoice',
-        description: `رسوم تسجيل الطالب ${f.student?.name || 'غير معروف'}`
-      })),
-      ...todayExpenses.map(e => ({
-        ...e.toObject(),
-        _type: 'expense',
-        typeLabel: 'مصروف',
-        icon: 'fa-receipt',
-        description: e.description
-      })),
-      ...todayCommissions.map(c => ({
-        ...c.toObject(),
-        _type: 'commission',
-        typeLabel: 'عمولة أستاذ',
-        icon: 'fa-user-graduate',
-        description: `عمولة الأستاذ ${c.teacher?.name || 'غير معروف'}`
-      }))
-    ];
-
-    // ترتيب حسب التاريخ (الأحدث أولاً)
-    allTransactions.sort((a, b) => {
-      const dateA = a.paymentDate || a.date || a.createdAt;
-      const dateB = b.paymentDate || b.date || b.createdAt;
-      return new Date(dateB) - new Date(dateA);
-    });
-
+    // إرجاع النتيجة
     res.json({
       success: true,
       school: {
@@ -16306,11 +16774,15 @@ app.get('/api/accounting/todays-transactions/:schoolId', async (req, res) => {
       summary: summary,
       transactions: allTransactions,
       counts: {
-        financialTransactions: transactions.length,
         payments: todayPayments.length,
         fees: todayFees.length,
         expenses: todayExpenses.length,
-        commissions: todayCommissions.length
+        commissions: todayCommissions.length,
+        financialTransactions: 0 // لا نستخدم المعاملات المالية المكررة
+      },
+      debug: {
+        totalItems: allTransactions.length,
+        uniqueIds: seenIds.size
       }
     });
 
