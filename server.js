@@ -116,6 +116,301 @@ app.use((req, res, next) => {
       active: { type: Boolean, default: true }
     });
 
+
+    // ==============================================
+// School Settings Schema - إعدادات المدرسة
+// ==============================================
+const schoolSettingsSchema = new mongoose.Schema({
+  schoolId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    unique: true,
+    index: true
+  },
+  
+  // ==============================================
+  // مصادر المصاريف الافتراضية
+  // ==============================================
+  expenseSources: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    nameAr: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    category: {
+      type: String,
+      enum: ['salary', 'rent', 'utilities', 'supplies', 'maintenance', 'marketing', 'other'],
+      default: 'other'
+    },
+    description: {
+      type: String,
+      default: ''
+    },
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    icon: {
+      type: String,
+      default: 'fa-receipt'
+    },
+    color: {
+      type: String,
+      default: '#6c757d'
+    }
+  }],
+
+  // ==============================================
+  // إعدادات الحصص الحية
+  // ==============================================
+  liveClassSettings: {
+    // حذف الحصة إذا لم تبدأ
+    deleteIfNotStarted: {
+      type: Boolean,
+      default: false
+    },
+    // عدد الدقائق قبل حذف الحصة إذا لم تبدأ
+    deleteAfterMinutes: {
+      type: Number,
+      default: 30
+    },
+    // بدء الحصص تلقائياً
+    autoStartClasses: {
+      type: Boolean,
+      default: false
+    },
+    // عدد الدقائق قبل بدء الحصة للتشغيل التلقائي
+    autoStartBeforeMinutes: {
+      type: Number,
+      default: 5
+    },
+    // إنهاء الحصص تلقائياً
+    autoEndClasses: {
+      type: Boolean,
+      default: false
+    },
+    // عدد الدقائق بعد انتهاء وقت الحصة
+    autoEndAfterMinutes: {
+      type: Number,
+      default: 10
+    },
+    // تسجيل الغياب تلقائياً
+    autoMarkAbsent: {
+      type: Boolean,
+      default: true
+    },
+    // إرسال SMS للغائبين
+    sendAbsenceSMS: {
+      type: Boolean,
+      default: true
+    },
+    // وقت الانتظار لتسجيل التأخير (بالدقائق)
+    lateAfterMinutes: {
+      type: Number,
+      default: 15
+    }
+  },
+
+  // ==============================================
+  // إعدادات الإشعارات
+  // ==============================================
+  notificationSettings: {
+    // إشعارات الدفع
+    paymentReminders: {
+      enabled: { type: Boolean, default: true },
+      daysBeforeDue: { type: Number, default: 3 },
+      sendSMS: { type: Boolean, default: true },
+      sendEmail: { type: Boolean, default: false }
+    },
+    // إشعارات الغياب
+    absenceNotifications: {
+      enabled: { type: Boolean, default: true },
+      sendSMS: { type: Boolean, default: true },
+      sendEmail: { type: Boolean, default: false },
+      notifyAfterMinutes: { type: Number, default: 15 }
+    },
+    // إشعارات الحضور
+    attendanceNotifications: {
+      enabled: { type: Boolean, default: true },
+      sendSMS: { type: Boolean, default: true },
+      sendEmail: { type: Boolean, default: false }
+    },
+    // إشعارات التسجيل
+    registrationNotifications: {
+      enabled: { type: Boolean, default: true },
+      sendSMS: { type: Boolean, default: true },
+      sendEmail: { type: Boolean, default: false }
+    }
+  },
+
+  // ==============================================
+  // إعدادات عامة
+  // ==============================================
+  generalSettings: {
+    // السنة الدراسية الحالية
+    currentAcademicYear: {
+      type: String,
+      default: new Date().getFullYear().toString()
+    },
+    // بداية السنة الدراسية
+    academicYearStart: {
+      type: Date,
+      default: () => new Date(new Date().getFullYear(), 8, 1) // September 1st
+    },
+    // نهاية السنة الدراسية
+    academicYearEnd: {
+      type: Date,
+      default: () => new Date(new Date().getFullYear() + 1, 5, 30) // June 30th
+    },
+    // العملة
+    currency: {
+      type: String,
+      default: 'DZD'
+    },
+    // اللغة
+    language: {
+      type: String,
+      enum: ['ar', 'fr', 'en'],
+      default: 'ar'
+    },
+    // المنطقة الزمنية
+    timezone: {
+      type: String,
+      default: 'Africa/Algiers'
+    },
+    // تنسيق التاريخ
+    dateFormat: {
+      type: String,
+      default: 'DD/MM/YYYY'
+    },
+    // بداية الأسبوع
+    weekStartsOn: {
+      type: String,
+      enum: ['saturday', 'sunday', 'monday'],
+      default: 'sunday'
+    }
+  },
+
+  // ==============================================
+  // إعدادات الدفع والعمولات
+  // ==============================================
+  paymentSettings: {
+    // نسبة عمولة الأستاذ الافتراضية
+    defaultTeacherCommission: {
+      type: Number,
+      default: 70,
+      min: 0,
+      max: 100
+    },
+    // رسوم التسجيل
+    registrationFee: {
+      type: Number,
+      default: 600
+    },
+    // هل رسوم التسجيل إلزامية
+    registrationFeeRequired: {
+      type: Boolean,
+      default: true
+    },
+    // السماح بالدفع الجزئي
+    allowPartialPayments: {
+      type: Boolean,
+      default: false
+    },
+    // الحد الأدنى للدفع الجزئي
+    minimumPartialPayment: {
+      type: Number,
+      default: 0
+    },
+    // أيام السماح قبل اعتبار الدفعة متأخرة
+    gracePeriodDays: {
+      type: Number,
+      default: 5
+    }
+  },
+
+  // ==============================================
+  // إعدادات الأمان
+  // ==============================================
+  securitySettings: {
+    // مدة انتهاء الجلسة (بالساعات)
+    sessionTimeout: {
+      type: Number,
+      default: 8
+    },
+    // الحد الأقصى لمحاولات تسجيل الدخول
+    maxLoginAttempts: {
+      type: Number,
+      default: 5
+    },
+    // مدة الحظر بعد تجاوز المحاولات (بالدقائق)
+    lockoutDuration: {
+      type: Number,
+      default: 30
+    },
+    // تفعيل المصادقة الثنائية
+    twoFactorAuth: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  // ==============================================
+  // معلومات التحديث
+  // ==============================================
+  lastUpdatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  lastUpdatedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+// Middleware قبل الحفظ
+schoolSettingsSchema.pre('save', function(next) {
+  this.lastUpdatedAt = new Date();
+  next();
+});
+
+// Static method للحصول على إعدادات المدرسة أو إنشائها
+schoolSettingsSchema.statics.getOrCreate = async function(schoolId) {
+  let settings = await this.findOne({ schoolId });
+  
+  if (!settings) {
+    // إنشاء إعدادات افتراضية
+    settings = new this({
+      schoolId,
+      expenseSources: [
+        { name: 'rent', nameAr: 'إيجار', category: 'rent', isDefault: true, icon: 'fa-building', color: '#dc3545' },
+        { name: 'utilities', nameAr: 'فواتير (كهرباء، ماء، غاز)', category: 'utilities', isDefault: true, icon: 'fa-bolt', color: '#fd7e14' },
+        { name: 'supplies', nameAr: 'مستلزمات', category: 'supplies', isDefault: true, icon: 'fa-box', color: '#20c997' },
+        { name: 'maintenance', nameAr: 'صيانة', category: 'maintenance', isDefault: true, icon: 'fa-tools', color: '#6f42c1' },
+        { name: 'marketing', nameAr: 'تسويق وإعلان', category: 'marketing', isDefault: true, icon: 'fa-bullhorn', color: '#e83e8c' },
+        { name: 'other', nameAr: 'أخرى', category: 'other', isDefault: true, icon: 'fa-ellipsis-h', color: '#6c757d' }
+      ]
+    });
+    await settings.save();
+  }
+  
+  return settings;
+};
+
+const SchoolSettings = mongoose.model('SchoolSettings', schoolSettingsSchema);
+
 // ==============================================
 // نموذج المدرسة (نسخة مُصححة - بدون تكرار)
 // ==============================================
@@ -210,7 +505,7 @@ const schoolSchema = new mongoose.Schema({
       phone: String,
       role: { 
           type: String, 
-          enum: ['super_admin', 'admin', 'manager', 'accountant'],
+          enum: ['super_admin', 'admin', 'manager', 'accountant', 'secretary', 'teacher'],
           default: 'admin'
       },
       isActive: { type: Boolean, default: true },
@@ -21752,6 +22047,435 @@ app.get('/api/payments/student/:studentId', async (req, res) => {
         res.status(500).json({ error: err.message });
       }
     });
+
+    // ==============================================
+// School Settings API Routes - إعدادات المدرسة
+// ==============================================
+
+
+
+// 2. تحديث إعدادات المدرسة
+
+
+// 3. إضافة مصدر مصاريف جديد
+
+
+// 4. تحديث مصدر مصاريف
+
+
+// 5. حذف مصدر مصاريف
+
+// 6. تحديث إعدادات الحصص الحية
+
+
+// ==============================================
+// Employee Management API - إدارة العمال
+// ==============================================
+
+// 1. الحصول على جميع العمال
+
+
+// 2. إضافة عامل جديد
+
+
+// 3. تحديث عامل
+
+
+// 4. حذف عامل (تعطيل فقط)
+
+
+// 5. تفعيل/تعطيل عامل
+
+
+// 6. تحديث معلومات المدرسة
+// ==============================================
+// School Settings Routes
+// ==============================================
+
+// Get school settings
+app.get('/api/school-settings/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({ success: false, error: 'معرف المدرسة غير صالح' });
+    }
+
+    const settings = await SchoolSettings.getOrCreate(schoolId);
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update live class settings
+app.put('/api/school-settings/:schoolId/live-class-settings', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const liveClassSettings = req.body;
+
+    const settings = await SchoolSettings.getOrCreate(schoolId);
+    settings.liveClassSettings = {
+      ...settings.liveClassSettings.toObject(),
+      ...liveClassSettings
+    };
+    await settings.save();
+
+    res.json({ success: true, message: 'تم التحديث', data: settings.liveClassSettings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Add expense source
+app.post('/api/school-settings/:schoolId/expense-sources', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { name, nameAr, category, description, icon, color } = req.body;
+
+    if (!name || !nameAr) {
+      return res.status(400).json({ success: false, error: 'الاسم مطلوب' });
+    }
+
+    const settings = await SchoolSettings.getOrCreate(schoolId);
+    
+    const existing = settings.expenseSources.find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'المصدر موجود مسبقاً' });
+    }
+
+    settings.expenseSources.push({
+      name, nameAr,
+      category: category || 'other',
+      description: description || '',
+      icon: icon || 'fa-receipt',
+      color: color || '#6c757d',
+      isActive: true
+    });
+
+    await settings.save();
+    res.json({ success: true, message: 'تمت الإضافة', data: settings.expenseSources });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+// ==============================================
+// ✅ PUT /api/school-settings/:schoolId - تحديث الإعدادات العامة
+// ==============================================
+app.put('/api/school-settings/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const updateData = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    // إزالة الحقول التي لا يجب تحديثها
+    delete updateData._id;
+    delete updateData.schoolId;
+    delete updateData.createdAt;
+
+    // تحديث الإعدادات
+    const settings = await SchoolSettings.findOneAndUpdate(
+      { schoolId },
+      { 
+        $set: updateData,
+        lastUpdatedBy: req.user?.id || null,
+        lastUpdatedAt: new Date()
+      },
+      { 
+        new: true, 
+        upsert: true, 
+        runValidators: true 
+      }
+    );
+
+    console.log(`✅ تم تحديث إعدادات المدرسة: ${schoolId}`);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الإعدادات بنجاح',
+      data: settings
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث إعدادات المدرسة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// Update expense source
+app.put('/api/school-settings/:schoolId/expense-sources/:sourceId', async (req, res) => {
+  try {
+    const { schoolId, sourceId } = req.params;
+    const updateData = req.body;
+
+    const settings = await SchoolSettings.getOrCreate(schoolId);
+    const index = settings.expenseSources.findIndex(s => s._id.toString() === sourceId);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'المصدر غير موجود' });
+    }
+
+    ['name', 'nameAr', 'category', 'description', 'icon', 'color', 'isActive'].forEach(field => {
+      if (updateData[field] !== undefined) {
+        settings.expenseSources[index][field] = updateData[field];
+      }
+    });
+
+    await settings.save();
+    res.json({ success: true, message: 'تم التحديث', data: settings.expenseSources });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete expense source
+app.delete('/api/school-settings/:schoolId/expense-sources/:sourceId', async (req, res) => {
+  try {
+    const { schoolId, sourceId } = req.params;
+
+    const settings = await SchoolSettings.getOrCreate(schoolId);
+    const source = settings.expenseSources.find(s => s._id.toString() === sourceId);
+
+    if (!source) {
+      return res.status(404).json({ success: false, error: 'المصدر غير موجود' });
+    }
+
+    if (source.isDefault) {
+      return res.status(400).json({ success: false, error: 'لا يمكن حذف المصادر الافتراضية' });
+    }
+
+    settings.expenseSources = settings.expenseSources.filter(s => s._id.toString() !== sourceId);
+    await settings.save();
+
+    res.json({ success: true, message: 'تم الحذف', data: settings.expenseSources });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get employees
+app.get('/api/school/:schoolId/employees', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+
+    const school = await School.findById(schoolId).select('admins name');
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const employees = school.admins.map(admin => ({
+      _id: admin._id,
+      username: admin.username,
+      fullName: admin.fullName,
+      email: admin.email,
+      phone: admin.phone,
+      role: admin.role,
+      isActive: admin.isActive,
+      lastLogin: admin.lastLogin,
+      createdAt: admin.createdAt,
+      permissions: admin.permissions
+    }));
+
+    res.json({ success: true, data: employees, count: employees.length });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Add employee
+app.post('/api/school/:schoolId/employees', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { username, password, fullName, email, phone, role, permissions } = req.body;
+
+    if (!username || !password || !fullName) {
+      return res.status(400).json({ success: false, error: 'البيانات ناقصة' });
+    }
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const existing = school.admins.find(a => a.username === username);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'اسم المستخدم موجود' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    school.admins.push({
+      username,
+      password: hashedPassword,
+      fullName,
+      email: email || school.email,
+      phone: phone || school.phone,
+      role: role || 'secretary',
+      isActive: true,
+      createdAt: new Date(),
+      permissions: permissions || {
+        canManageStudents: true,
+        canManageTeachers: false,
+        canManageClasses: false,
+        canManagePayments: false,
+        canManageUsers: false,
+        canViewReports: true,
+        canManageSubscription: false
+      }
+    });
+
+    await school.save();
+    const newEmployee = school.admins[school.admins.length - 1];
+
+    res.status(201).json({ success: true, message: 'تمت الإضافة', data: newEmployee });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update employee
+app.put('/api/school/:schoolId/employees/:employeeId', async (req, res) => {
+  try {
+    const { schoolId, employeeId } = req.params;
+    const { fullName, email, phone, role, isActive, permissions, password } = req.body;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const index = school.admins.findIndex(a => a._id.toString() === employeeId);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'العامل غير موجود' });
+    }
+
+    if (school.admins[index].role === 'super_admin') {
+      return res.status(403).json({ success: false, error: 'لا يمكن تعديل المدير الأساسي' });
+    }
+
+    if (fullName) school.admins[index].fullName = fullName;
+    if (email) school.admins[index].email = email;
+    if (phone) school.admins[index].phone = phone;
+    if (role) school.admins[index].role = role;
+    if (isActive !== undefined) school.admins[index].isActive = isActive;
+    if (permissions) school.admins[index].permissions = permissions;
+    if (password) school.admins[index].password = await bcrypt.hash(password, 10);
+
+    await school.save();
+    res.json({ success: true, message: 'تم التحديث', data: school.admins[index] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete employee
+app.delete('/api/school/:schoolId/employees/:employeeId', async (req, res) => {
+  try {
+    const { schoolId, employeeId } = req.params;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const index = school.admins.findIndex(a => a._id.toString() === employeeId);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'العامل غير موجود' });
+    }
+
+    if (school.admins[index].role === 'super_admin') {
+      return res.status(400).json({ success: false, error: 'لا يمكن حذف المدير الأساسي' });
+    }
+
+    school.admins.splice(index, 1);
+    await school.save();
+
+    res.json({ success: true, message: 'تم الحذف' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Toggle employee
+app.put('/api/school/:schoolId/employees/:employeeId/toggle', async (req, res) => {
+  try {
+    const { schoolId, employeeId } = req.params;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const employee = school.admins.id(employeeId);
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'العامل غير موجود' });
+    }
+
+    if (employee.role === 'super_admin') {
+      return res.status(400).json({ success: false, error: 'لا يمكن تعطيل المدير الأساسي' });
+    }
+
+    employee.isActive = !employee.isActive;
+    await school.save();
+
+    res.json({
+      success: true,
+      message: employee.isActive ? 'تم التفعيل' : 'تم التعطيل',
+      data: { _id: employee._id, isActive: employee.isActive }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update school info
+app.put('/api/school/:schoolId/info', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { name, email, phone, address } = req.body;
+
+    const school = await School.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    if (name) school.name = name;
+    if (email) school.email = email;
+    if (phone) school.phone = phone;
+    if (address !== undefined) school.address = address;
+
+    await school.save();
+
+    res.json({
+      success: true,
+      message: 'تم التحديث',
+      data: {
+        _id: school._id,
+        name: school.name,
+        email: school.email,
+        phone: school.phone,
+        address: school.address,
+        schoolKey: school.schoolKey
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================
+// Change server port to 5090
+
+
+
 
     // Toggle account status (active/inactive)
     app.put('/api/student-accounts/:id/toggle-status',  async (req, res) => {
