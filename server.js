@@ -772,6 +772,7 @@ const School = mongoose.model('School', schoolSchema);
     }, { strictPopulate: false });
 
 // في server.js
+// في server.js
 const teacherSchema = new mongoose.Schema({
   schoolId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -794,12 +795,12 @@ const teacherSchema = new mongoose.Schema({
     default: [] 
   },
   phone: { type: String },
-  email: { type: String },
+  // ✅ تم إزالة required: true من حقل البريد الإلكتروني
+  email: { type: String }, 
   hireDate: { type: Date, default: Date.now },
   active: { type: Boolean, default: true },
   salaryPercentage: { type: Number, default: 0.7 }
 }, { timestamps: true });
-
 // models/Classroom.js - النسخة المحدثة
 // models/Classroom.js - تأكد من وجود حقل status
 // ==============================================
