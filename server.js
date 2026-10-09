@@ -711,8 +711,8 @@ const School = mongoose.model('School', schoolSchema);
     }, { timestamps: true });
     
     const RoundPayment = mongoose.model('RoundPayment', roundPaymentSchema);
-    const studentSchema = new mongoose.Schema({
-        username: { 
+const studentSchema = new mongoose.Schema({
+  username: { 
     type: String, 
     unique: true,
     sparse: true 
@@ -725,54 +725,108 @@ const School = mongoose.model('School', schoolSchema);
     default: false 
   },
 
-      
-        schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
 
-      name: { type: String, required: true }, 
-      studentId: { 
-        type: String, 
-        unique: true,
-        default: function() {
-          return 'STU-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-        }
+  name: { type: String, required: true }, 
+  studentId: { 
+    type: String, 
+    unique: true,
+    default: function() {
+      return 'STU-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    }
+  },
+  birthDate: Date,
+  parentName: String,
+  
+  // ==============================================
+  // 🔥 الحقل القديم (للتوافق مع البيانات القديمة)
+  // ==============================================
+  parentPhone: { type: String, required: true },
+  
+  // ==============================================
+  // ✨ حقول جديدة: أرقام هواتف متعددة لولي الأمر
+  // ==============================================
+  parentPhones: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: function(v) {
+        // التحقق من أن كل رقم هاتف صالح (اختياري)
+        if (!v || v.length === 0) return true;
+        return v.every(phone => phone && phone.trim().length >= 8);
       },
-      birthDate: Date,
-      parentName: String,
-      parentPhone: { type: String, required: true },
-      parentEmail: { type: String, required: false },
-      registrationDate: { type: Date, default: Date.now },
-      active: { type: Boolean, default: true },
-      academicYear: { 
-        type: String, 
-        enum: ['1AS', '2AS', '3AS', '1MS', '2MS', '3MS', '4MS', '5MS' ,'1AP','2AP','3AP','4AP','5AP','NS', null , 'اولى ابتدائي', 'ثانية ابتدائي', 'ثالثة ابتدائي', 'رابعة ابتدائي', 'خامسة ابتدائي', 'غير محدد'],
-        required: true
+      message: 'أرقام الهواتف يجب أن تكون صالحة'
+    }
+  },
+  
+  // ==============================================
+  // ✨ حقل جديد: رقم هاتف الطالب نفسه (اختياري)
+  // ==============================================
+  studentPhone: { 
+    type: String, 
+    default: '',
+    validate: {
+      validator: function(v) {
+        if (!v || v === '') return true;
+        return v.trim().length >= 8;
       },
-      new : { type: Boolean, default: true }, 
-      classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
-      status: { 
-        type: String, 
-        enum: ['pending', 'active', 'inactive', 'banned'], 
-        default: 'pending'
-      },
-      // Add this field to track registration payment
-      hasPaidRegistration: { 
-        type: Boolean, 
-        default: false 
-      },
-      registrationData: {
-        address: String,
-        previousSchool: String,
-        healthInfo: String,
-        documents: [{
-          name: String,
-          url: String,
-          verified: { type: Boolean, default: false }
-        }]
-      }
-    }, { strictPopulate: false });
-
+      message: 'رقم هاتف الطالب غير صالح'
+    }
+  },
+  
+  parentEmail: { type: String, required: false },
+  registrationDate: { type: Date, default: Date.now },
+  active: { type: Boolean, default: true },
+  academicYear: { 
+    type: String, 
+    enum: ['1AS', '2AS', '3AS', '1MS', '2MS', '3MS', '4MS', '5MS' ,'1AP','2AP','3AP','4AP','5AP','NS', null , 'اولى ابتدائي', 'ثانية ابتدائي', 'ثالثة ابتدائي', 'رابعة ابتدائي', 'خامسة ابتدائي', 'غير محدد'],
+    required: true
+  },
+  new : { type: Boolean, default: true }, 
+  classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
+  status: { 
+    type: String, 
+    enum: ['pending', 'active', 'inactive', 'banned'], 
+    default: 'pending'
+  },
+  
+  // ==============================================
+  // ✨ حقل جديد: جنس الطالب (ذكر/أنثى) - اختياري
+  // ==============================================
+  gender: {
+    type: String,
+    enum: ['male', 'female', '', null],
+    default: ''
+  },
+  
+  // ==============================================
+  // ✨ حقل جديد: عنوان الطالب - اختياري
+  // ==============================================
+  address: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  
+  hasPaidRegistration: { 
+    type: Boolean, 
+    default: false 
+  },
+  registrationData: {
+    address: String,
+    previousSchool: String,
+    healthInfo: String,
+    documents: [{
+      name: String,
+      url: String,
+      verified: { type: Boolean, default: false }
+    }]
+  }
+}, { strictPopulate: false });
 // في server.js
 // في server.js
+
+
 const teacherSchema = new mongoose.Schema({
   schoolId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -787,16 +841,16 @@ const teacherSchema = new mongoose.Schema({
       'رياضيات', 'فيزياء', 'كيمياء', 'علوم طبيعية',
       'لغة عربية', 'لغة فرنسية', 'لغة انجليزية',
       'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي',
-      'تربية بدنية', 'تربية فنية', 'تربية موسيقية',
+      'تربية بدنية', 'تربية فنية', 'تربية موسيقية','هندسة مدنية', 'هندسة كهربائية', 'هندسة ميكانيكية',
       'كيمياء', 'بيولوجيا', 'علوم الأرض',
       'تربية إسلامية', 'تربية مدنية', "تسيير و اقتصاد",
       'لغة أمازيغية', 'لغة تركية', 'لغة ألمانية'
     ],
     default: [] 
   },
-  phone: { type: String },
+  phone: { type: String ,required: false, unique: false },
   // ✅ تم إزالة required: true من حقل البريد الإلكتروني
-  email: { type: String }, 
+  email: { type: String ,required: false, unique: false }, 
   hireDate: { type: Date, default: Date.now },
   active: { type: Boolean, default: true },
   salaryPercentage: { type: Number, default: 0.7 }
@@ -863,7 +917,7 @@ classroomSchema.methods.hasEquipment = function(item) {
     name: { type: String, required: true },
   subject: { 
     type: String, 
-    enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية', 'لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] 
+    enum: ['رياضيات', 'فيزياء', 'علوم', 'لغة عربية', 'لغة فرنسية','هندسة مدنية', 'هندسة كهربائية', 'هندسة ميكانيكية','لغة انجليزية', 'تاريخ', 'جغرافيا', 'فلسفة', 'إعلام آلي'] 
   },
     description: String,
     schedule: [{
@@ -7166,7 +7220,6 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    // ✅ التحقق من وجود المدرسة
     const school = await School.findById(schoolId);
     if (!school) {
       return res.status(404).json({
@@ -7175,9 +7228,9 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    const { name, parentPhone, academicYear } = req.body;
+    const { name, parentPhone, parentPhones, academicYear } = req.body;
 
-    // ✅ التحقق من البيانات الأساسية فقط
+    // ✅ التحقق من البيانات الأساسية
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
@@ -7185,10 +7238,27 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    if (!parentPhone || !parentPhone.trim()) {
+    // ✅ دعم كلا الحقلين: parentPhone القديم و parentPhones الجديد
+    let phoneNumbers = [];
+    
+    // إذا تم إرسال parentPhones (مصفوفة)
+    if (parentPhones && Array.isArray(parentPhones) && parentPhones.length > 0) {
+      phoneNumbers = parentPhones.filter(p => p && p.trim() !== '');
+    }
+    
+    // إذا تم إرسال parentPhone (حقل واحد)
+    if (parentPhone && parentPhone.trim() !== '') {
+      // تجنب التكرار
+      if (!phoneNumbers.includes(parentPhone.trim())) {
+        phoneNumbers.push(parentPhone.trim());
+      }
+    }
+    
+    // التحقق من وجود رقم واحد على الأقل
+    if (phoneNumbers.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'رقم هاتف ولي الأمر مطلوب'
+        error: 'رقم هاتف ولي الأمر مطلوب (رقم واحد على الأقل)'
       });
     }
 
@@ -7199,20 +7269,27 @@ app.post('/api/students', async (req, res) => {
       });
     }
 
-    // ✅ إنشاء معرف طالب فريد
     const studentId = `STU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
-    // ✅ إنشاء اسم مستخدم وكلمة مرور للطالب
     const username = generateStudentUsername(name, academicYear);
     const password = generateStudentPassword(name, academicYear);
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ إنشاء الطالب الجديد (بدون أي تحقق مسبق)
+    // ✅ إنشاء الطالب مع الحقول الجديدة
     const studentData = {
       schoolId: schoolId,
       name: name.trim(),
       studentId: studentId,
-      parentPhone: parentPhone.trim(),
+      
+      // 🔥 الحقل القديم (أول رقم هاتف)
+      parentPhone: phoneNumbers[0],
+      
+      // ✨ الحقل الجديد (جميع الأرقام)
+      parentPhones: phoneNumbers,
+      
+      // ✨ رقم هاتف الطالب (اختياري)
+      studentPhone: req.body.studentPhone || '',
+      
       parentName: req.body.parentName || '',
       parentEmail: req.body.parentEmail || '',
       birthDate: req.body.birthDate ? new Date(req.body.birthDate) : null,
@@ -7221,6 +7298,13 @@ app.post('/api/students', async (req, res) => {
       status: req.body.status || 'pending',
       active: true,
       new: true,
+      
+      // ✨ الجنس (اختياري)
+      gender: req.body.gender || '',
+      
+      // ✨ العنوان (اختياري)
+      address: req.body.address || '',
+      
       username: username,
       password: hashedPassword,
       studentAccountCreated: false,
@@ -7237,10 +7321,12 @@ app.post('/api/students', async (req, res) => {
     await student.save();
     
     console.log(`✅ تم إنشاء الطالب: ${student.name} (${student.studentId})`);
-    console.log(`👤 اسم المستخدم: ${username}`);
-    console.log(`🔑 كلمة المرور: ${password}`);
+    console.log(`📞 أرقام الهواتف: ${phoneNumbers.join(', ')}`);
+    console.log(`📱 هاتف الطالب: ${student.studentPhone || 'غير محدد'}`);
+    console.log(`⚥ الجنس: ${student.gender || 'غير محدد'}`);
+    console.log(`📍 العنوان: ${student.address || 'غير محدد'}`);
 
-    // ✅ إنشاء سجل رسوم التسجيل (اختياري)
+    // إنشاء سجل رسوم التسجيل
     const registrationAmount = 600;
     const schoolFee = new SchoolFee({
       student: student._id,
@@ -7251,7 +7337,6 @@ app.post('/api/students', async (req, res) => {
     });
     await schoolFee.save();
 
-    // ✅ إرجاع الاستجابة مع بيانات الطالب
     res.status(201).json({
       success: true,
       message: "✅ تم إنشاء الطالب بنجاح",
@@ -7262,13 +7347,17 @@ app.post('/api/students', async (req, res) => {
         academicYear: student.academicYear,
         parentName: student.parentName,
         parentPhone: student.parentPhone,
+        parentPhones: student.parentPhones,
+        studentPhone: student.studentPhone,
+        gender: student.gender,
+        address: student.address,
         parentEmail: student.parentEmail,
         birthDate: student.birthDate,
         registrationDate: student.registrationDate,
         status: student.status,
         active: student.active,
         username: student.username,
-        password: password, // كلمة المرور غير المشفرة للطباعة
+        password: password,
         plainPassword: password,
         hasPaidRegistration: student.hasPaidRegistration || false
       },
@@ -7291,7 +7380,6 @@ app.post('/api/students', async (req, res) => {
   } catch (err) {
     console.error('❌ خطأ في إنشاء الطالب:', err);
     
-    // معالجة أخطاء التحقق من صحة البيانات
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
       return res.status(400).json({
@@ -7301,7 +7389,6 @@ app.post('/api/students', async (req, res) => {
       });
     }
     
-    // معالجة أخطاء التكرار (إذا كان هناك فهرس فريد)
     if (err.code === 11000) {
       const field = Object.keys(err.keyPattern)[0];
       return res.status(400).json({
@@ -9435,18 +9522,70 @@ app.get('/api/students/:id', validateObjectId, async (req, res) => {
   }
 });
     
-    app.put('/api/students/:id',  async (req, res) => {
-      try {
-        const student = await Student.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          { new: true }
-        );
-        res.json(student);
-      } catch (err) {
-        res.status(400).json({ error: err.message });
+app.put('/api/students/:id', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    
+    console.log('📝 تحديث الطالب:', studentId);
+    console.log('📦 البيانات:', req.body);
+    
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: 'الطالب غير موجود'
+      });
+    }
+
+    // ✅ الحقول القابلة للتحديث
+    const allowedFields = [
+      'name', 'parentName', 'parentPhone', 'parentPhones', 
+      'studentPhone', 'gender', 'address', 
+      'parentEmail', 'birthDate', 'academicYear', 
+      'status', 'active'
+    ];
+
+    // تحديث الحقول المسموح بها فقط
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        if (field === 'birthDate' && req.body[field]) {
+          student[field] = new Date(req.body[field]);
+        } else if (field === 'parentPhones') {
+          // التأكد من أن parentPhones مصفوفة
+          if (Array.isArray(req.body[field])) {
+            student.parentPhones = req.body[field].filter(p => p && p.trim() !== '');
+          }
+        } else {
+          student[field] = req.body[field];
+        }
       }
     });
+
+    // 🔥 إذا تم تحديث parentPhones، تحديث parentPhone أيضاً (أول رقم)
+    if (req.body.parentPhones && Array.isArray(req.body.parentPhones)) {
+      const validPhones = req.body.parentPhones.filter(p => p && p.trim() !== '');
+      if (validPhones.length > 0) {
+        student.parentPhone = validPhones[0];
+      }
+    }
+
+    await student.save();
+    console.log(`✅ تم تحديث الطالب: ${student.name}`);
+
+    res.json({
+      success: true,
+      message: 'تم تحديث بيانات الطالب بنجاح',
+      student: student
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الطالب:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
     app.delete('/api/students/:id',  async (req, res) => {
       try {

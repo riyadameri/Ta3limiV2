@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
 
         :root {
             --primary-color: #4361ee;
@@ -19,65 +19,78 @@
             --success-color: #06d6a0;
             --warning-color: #ffb703;
             --danger-color: #e63946;
-            --dark-color: #1e1e2f;
+            --dark-color: #8b98b6;
             --light-color: #f8f9fa;
             --gray-color: #6c757d;
-            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: rgba(255, 255, 255, 0.97);
             --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-success: linear-gradient(135deg, #06d6a0 0%, #118ab2 100%);
             --gradient-warning: linear-gradient(135deg, #ffb703 0%, #fb8500 100%);
             --gradient-danger: linear-gradient(135deg, #e63946 0%, #9d0208 100%);
-            --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            --border-radius: 20px;
-            --redox-navy: #101828;
-            --redox-cyan: #16c7d9;
+            --gradient-dark: linear-gradient(135deg, #96aad7 0%, #5e6d84 100%);
+            --box-shadow: 0 20px 60px rgba(167, 173, 186, 0.18);
+            --border-radius: 24px;
+            --redox-navy: #2d4e90;
+            --redox-cyan: #2e565a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Tajawal', sans-serif;
             background: var(--gradient-primary);
-            min-height: 100vh;
-            padding: 20px;
             position: relative;
-            overflow-x: hidden;
             color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         body::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path fill="white" d="M50 0 L100 50 L50 100 L0 50 Z"/></svg>');
-            background-size: 50px 50px;
-            animation: moveBackground 20s linear infinite;
+            inset: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.08"><path fill="white" d="M50 0 L100 50 L50 100 L0 50 Z"/></svg>');
+            background-size: 60px 60px;
+            animation: moveBackground 25s linear infinite;
             pointer-events: none;
         }
 
         @keyframes moveBackground {
             0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(50px, 50px) rotate(10deg); }
+            100% { transform: translate(60px, 60px) rotate(10deg); }
         }
 
-        .container-fluid {
+        .main-wrapper {
             position: relative;
             z-index: 10;
-            max-width: 1200px;
             width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
         }
 
         .scan-card {
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(14px);
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
             overflow: hidden;
             animation: fadeInUp 0.6s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1180px;
+            height: 100%;
+            max-height: 100%;
         }
 
         @keyframes fadeInUp {
@@ -85,63 +98,27 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ===== Header ===== */
         .scan-header {
-            background: var(--gradient-primary);
+            background: var(--gradient-dark);
             color: white;
-            padding: 25px 30px;
-            text-align: center;
+            padding: 14px 24px 12px;
             position: relative;
             overflow: hidden;
-            isolation: isolate;
+            flex-shrink: 0;
+            border-bottom: 3px solid var(--redox-cyan);
         }
-
-        .scan-header>* { position: relative; z-index: 1; }
-
-        .brand-mark {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 18px;
-            padding: 8px 16px 8px 12px;
-            border: 1px solid rgba(255, 255, 255, .3);
-            border-radius: 999px;
-            background: rgba(16, 24, 40, .25);
-            color: #fff;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        .brand-mark img {
-            display: block;
-            width: auto;
-            height: 36px;
-            max-width: 150px;
-            object-fit: contain;
-            border-radius: 6px;
-        }
-
-        .brand-mark-icon {
-            display: inline-grid;
-            place-items: center;
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--redox-cyan), #fff);
-            color: var(--redox-navy);
-            font-size: 1.15rem;
-        }
-
-        .school-slogan { opacity: .9; }
 
         .scan-header::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
+            top: -60%;
+            right: -30%;
+            width: 160%;
+            height: 220%;
+            background: radial-gradient(circle, rgba(22, 199, 217, 0.15) 0%, transparent 60%);
+            animation: rotate 25s linear infinite;
+            pointer-events: none;
         }
 
         @keyframes rotate {
@@ -149,91 +126,319 @@
             to { transform: rotate(360deg); }
         }
 
-        .school-logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            border: 4px solid white;
-            object-fit: cover;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            animation: pulse 2s infinite;
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            position: relative;
+            z-index: 2;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        /* ===== Redox Logo (القديم) ===== */
+        .redox-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(6px);
+            flex-shrink: 0;
+        }
+
+        .redox-logo img {
+            height: 34px;
+            width: auto;
+            max-width: 120px;
+            object-fit: contain;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .redox-logo .brand-mark-icon {
+            display: inline-grid;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--redox-cyan), #fff);
+            color: var(--redox-navy);
+            font-size: 1rem;
+        }
+
+        /* ===== School Logo (الجديد) ===== */
+        .school-logo-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 62px;
+            height: 62px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px dashed rgba(22, 199, 217, 0.55);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .school-logo-box:hover {
+            border-color: var(--redox-cyan);
+            background: rgba(22, 199, 217, 0.15);
+            transform: scale(1.05);
+        }
+
+        .school-logo-box i {
+            font-size: 1.6rem;
+            color: rgba(22, 199, 217, 0.85);
+        }
+
+        .school-logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 14px;
+        }
+
+        .school-logo-box .logo-label {
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.55rem;
+            color: rgba(255, 255, 255, 0.55);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== Center Info ===== */
+        .header-center {
+            flex: 1;
+            text-align: center;
+            min-width: 0;
         }
 
         .school-name {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 2px;
+            color: #fff;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .school-slogan {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .datetime-strip {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            padding: 5px 16px;
+            border-radius: 999px;
+            background: rgba(22, 199, 217, 0.12);
+            border: 1px solid rgba(22, 199, 217, 0.25);
+            backdrop-filter: blur(6px);
+        }
+
+        .dt-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .dt-item.time {
             font-weight: 800;
-            margin-bottom: 5px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            font-size: 1rem;
+            color: var(--redox-cyan);
+            font-variant-numeric: tabular-nums;
         }
 
-        .datetime-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 15px;
-            margin-top: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .dt-divider {
+            width: 1px;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.15);
         }
 
-        .current-time {
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 5px;
+        /* ===== Fullscreen Button ===== */
+        .fullscreen-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.15rem;
+            flex-shrink: 0;
         }
 
+        .fullscreen-btn:hover {
+            background: rgba(22, 199, 217, 0.25);
+            border-color: var(--redox-cyan);
+            transform: scale(1.06);
+        }
+
+        /* ===== Scan Area ===== */
         .scan-area {
-            padding: 30px;
-            background: rgba(255, 255, 255, 0.5);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+            padding: 14px 24px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(248,249,250,0.85) 100%);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+            flex-shrink: 0;
         }
+
+        .scan-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            background: white;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            transition: all 0.3s ease;
+            gap: 7px;
+            border: 2px solid transparent;
+        }
+
+        .status-ready { color: var(--success-color); border-color: var(--success-color); }
+        .status-scanning { color: var(--warning-color); border-color: var(--warning-color); animation: pulse 1.5s infinite; }
+        .status-success { color: var(--success-color); border-color: var(--success-color); background: rgba(6, 214, 160, 0.08); }
+        .status-error { color: var(--danger-color); border-color: var(--danger-color); background: rgba(230, 57, 70, 0.08); }
+        .status-warning { color: var(--warning-color); border-color: var(--warning-color); background: rgba(255, 183, 3, 0.08); animation: pulseWarning 1s infinite; }
+        .status-overdue { color: var(--danger-color); border-color: var(--danger-color); background: rgba(230, 57, 70, 0.12); animation: pulseOverdue 1s infinite; }
+        .status-completed { color: var(--primary-color); border-color: var(--primary-color); background: rgba(67, 97, 238, 0.08); }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
+        @keyframes pulseWarning { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        @keyframes pulseOverdue { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.03); opacity: 0.9; } 100% { transform: scale(1); opacity: 1; } }
 
         .scan-input-wrapper {
             position: relative;
-            max-width: 500px;
+            max-width: 560px;
             margin: 0 auto;
         }
 
         .scan-input {
             width: 100%;
-            padding: 20px 25px;
-            font-size: 1.2rem;
+            padding: 13px 24px 13px 52px;
+            font-size: 1.05rem;
             text-align: center;
-            border: 3px solid #e9ecef;
-            border-radius: 50px;
-            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 999px;
+            background: #fff;
             transition: all 0.3s ease;
             font-family: 'Tajawal', sans-serif;
             letter-spacing: 2px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .scan-input::placeholder {
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
         }
 
         .scan-input:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 5px rgba(67, 97, 238, 0.2);
+            box-shadow: 0 0 0 5px rgba(67, 97, 238, 0.12);
             outline: none;
         }
 
+        .scan-input-wrapper .scan-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            pointer-events: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            transition: all 0.25s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15); }
+        .btn-action:active { transform: translateY(0); }
+        .btn-primary-custom { background: var(--gradient-primary); color: white; }
+        .btn-success-custom { background: var(--gradient-success); color: white; }
+        .btn-warning-custom { background: var(--gradient-warning); color: white; }
+
+        /* ===== Result Area ===== */
+        .result-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 20px;
+            min-height: 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(67, 97, 238, 0.3) transparent;
+        }
+
+        .result-area::-webkit-scrollbar { width: 6px; }
+        .result-area::-webkit-scrollbar-thumb { background: rgba(67, 97, 238, 0.3); border-radius: 10px; }
+
+        /* ===== Virtual Card ===== */
         .virtual-student-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            padding: 20px;
+            background: var(--gradient-primary);
+            border-radius: 18px;
+            padding: 16px 20px;
             color: white;
             position: relative;
             overflow: hidden;
-            margin: 20px 0;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+            box-shadow: 0 14px 30px rgba(67, 97, 238, 0.28);
             transition: transform 0.3s ease;
             animation: fadeInUp 0.5s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        .virtual-student-card:hover { transform: translateY(-5px); }
+        .virtual-student-card:hover { transform: translateY(-3px); }
 
         .virtual-student-card::before {
             content: '';
@@ -242,58 +447,64 @@
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            animation: rotate 15s linear infinite;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 65%);
+            animation: rotate 18s linear infinite;
+            pointer-events: none;
         }
-
-        .privacy-blur {
-            filter: blur(8px);
-            transition: filter 0.8s ease;
-            user-select: none;
-        }
-
-        .privacy-blur:hover { filter: blur(0px); }
 
         .card-chip {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 50px;
-            height: 40px;
+            top: 14px;
+            left: 14px;
+            width: 42px;
+            height: 32px;
             background: linear-gradient(135deg, #ffd700, #ffed4e);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .card-chip i { font-size: 24px; color: #b8860b; }
+        .card-chip i { font-size: 18px; color: #b8860b; }
 
         .student-avatar-large {
-            width: 100px;
-            height: 100px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
-            border: 4px solid white;
+            border: 3px solid white;
             object-fit: cover;
-            margin: 0 auto 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin: 0 auto 6px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
             background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.5s ease;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
 
-        .student-avatar-large img { transition: filter 0.8s ease; }
+        .student-avatar-large img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            transition: filter 0.8s ease;
+        }
+
         .student-avatar-large.blurred img { filter: blur(10px); }
-        .student-avatar-large i { font-size: 50px; color: white; }
+        .student-avatar-large i { font-size: 32px; color: white; }
 
         .student-name-card {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 5px;
+            font-size: 1.25rem;
+            font-weight: 900;
+            margin-bottom: 2px;
             text-align: center;
             transition: all 0.8s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .student-name-card.blurred {
@@ -302,12 +513,14 @@
         }
 
         .student-id-card {
-            font-size: 0.9rem;
-            opacity: 0.9;
+            font-size: 0.78rem;
+            opacity: 0.85;
             text-align: center;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             letter-spacing: 2px;
             transition: all 0.8s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .student-id-card.blurred {
@@ -316,200 +529,80 @@
         }
 
         .card-number {
-            font-size: 1.2rem;
-            font-family: monospace;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
             letter-spacing: 3px;
-            margin: 15px 0;
+            margin: 8px 0;
             text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
+            background: rgba(0, 0, 0, 0.28);
+            padding: 6px;
             border-radius: 10px;
+            position: relative;
+            z-index: 1;
+            font-weight: 600;
         }
 
         .card-expiry {
             display: flex;
             justify-content: space-between;
-            margin-top: 15px;
-            font-size: 0.8rem;
+            margin-top: 6px;
+            font-size: 0.68rem;
             opacity: 0.8;
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin: 20px 0;
-            background: white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .status-ready { color: var(--success-color); border: 2px solid var(--success-color); }
-        .status-scanning { color: var(--warning-color); border: 2px solid var(--warning-color); animation: pulse 1.5s infinite; }
-        .status-success { color: var(--success-color); border: 2px solid var(--success-color); background: rgba(6, 214, 160, 0.1); }
-        .status-error { color: var(--danger-color); border: 2px solid var(--danger-color); background: rgba(230, 57, 70, 0.1); }
-        .status-warning { color: var(--warning-color); border: 2px solid var(--warning-color); background: rgba(255, 183, 3, 0.1); animation: pulseWarning 1s infinite; }
-        .status-overdue { color: var(--danger-color); border: 2px solid var(--danger-color); background: rgba(230, 57, 70, 0.15); animation: pulseOverdue 1s infinite; }
-        .status-completed { color: var(--primary-color); border: 2px solid var(--primary-color); background: rgba(67, 97, 238, 0.1); }
-
-        @keyframes pulseWarning { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        @keyframes pulseOverdue { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.03); opacity: 0.9; } 100% { transform: scale(1); opacity: 1; } }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .btn-action {
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1rem;
-        }
-
-        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); }
-        .btn-primary-custom { background: var(--gradient-primary); color: white; }
-        .btn-success-custom { background: var(--gradient-success); color: white; }
-        .btn-warning-custom { background: var(--gradient-warning); color: white; }
-
-        /* Alert Overlay */
-        .alert-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeInOverlay 0.3s ease-out;
-            backdrop-filter: blur(5px);
-        }
-
-        .alert-overlay.fade-out { animation: fadeOutOverlay 0.5s ease-out forwards; }
-
-        @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeOutOverlay { from { opacity: 1; } to { opacity: 0; } }
-
-        .alert-box {
-            background: white;
-            border-radius: 30px;
-            padding: 40px 50px;
-            max-width: 600px;
-            width: 95%;
-            text-align: center;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-            animation: bounceIn 0.5s ease-out;
-            border: 5px solid var(--danger-color);
             position: relative;
-            max-height: 90vh;
-            overflow-y: auto;
+            z-index: 1;
         }
 
-        .alert-box.fade-out { animation: bounceOut 0.5s ease-out forwards; }
-
-        @keyframes bounceOut {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(0.5); opacity: 0; }
+        /* ===== Info Items ===== */
+        .info-item {
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            border: 1px solid #eef2f7;
         }
 
-        .alert-box.registration-warning { border-color: var(--warning-color); }
-        .alert-box.overdue-warning { border-color: var(--danger-color); }
+        .info-label { font-size: 0.7rem; color: #64748b; margin-bottom: 2px; font-weight: 600; }
+        .info-value { font-size: 0.9rem; font-weight: 600; color: var(--dark-color); }
 
-        @keyframes bounceIn { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
-
-        .alert-box .alert-icon { font-size: 80px; margin-bottom: 20px; animation: shakeWarning 0.8s infinite; }
-        .alert-box .alert-icon.danger { color: var(--danger-color); }
-        .alert-box .alert-icon.warning { color: var(--warning-color); }
-
-        @keyframes shakeWarning { 0% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } 100% { transform: rotate(0deg); } }
-
-        .alert-box .alert-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 15px; }
-        .alert-box .alert-title.danger { color: var(--danger-color); }
-        .alert-box .alert-title.warning { color: var(--warning-color); }
-        .alert-box .alert-message { font-size: 1.1rem; color: var(--dark-color); margin-bottom: 10px; line-height: 1.6; }
-
-        .alert-box .alert-details {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: right;
+        .attendance-panel {
+            background: #ffffff;
+            border: 1px solid #eef2f7;
+            border-radius: 14px;
+            padding: 10px;
+            text-align: center;
+            height: 100%;
         }
 
-        .alert-box .alert-details .detail-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 0.95rem;
+        .attendance-panel .icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            font-size: 1.5rem;
         }
 
-        .alert-box .alert-details .detail-item:last-child { border-bottom: none; }
-        .alert-box .alert-details .detail-label { color: var(--gray-color); font-weight: 500; }
-        .alert-box .alert-details .detail-value { font-weight: 700; }
-        .alert-box .alert-details .detail-value.danger { color: var(--danger-color); }
-        .alert-box .alert-details .detail-value.warning { color: var(--warning-color); }
-
-        .countdown-timer {
-            display: inline-block;
-            background: var(--primary-color);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-
-        .alert-box .btn-dismiss-alert {
-            color: white;
-            border: none;
-            padding: 12px 40px;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-top: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .alert-box .btn-dismiss-alert.danger { background: var(--gradient-danger); }
-        .alert-box .btn-dismiss-alert.warning { background: var(--gradient-warning); }
-        .alert-box .btn-dismiss-alert.success { background: var(--gradient-success); }
-        .alert-box .btn-dismiss-alert:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); }
-        .alert-box .btn-dismiss-alert:active { transform: scale(0.95); }
-
+        /* ===== Toast ===== */
         .alert-message {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 9999;
-            min-width: 300px;
+            min-width: 280px;
             max-width: 500px;
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 12px 18px;
+            border-radius: 12px;
             background: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
             display: flex;
             align-items: center;
             gap: 10px;
             animation: slideDown 0.3s ease-out;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .alert-message.fade-out { animation: slideUp 0.3s ease-out forwards; }
@@ -534,151 +627,165 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ===== Footer ===== */
         .footer {
-            padding: 15px 30px;
-            background: var(--dark-color) !important;
-            color: rgba(255, 255, 255, 0.7) !important;
+            padding: 7px 20px;
+            background: var(--gradient-dark) !important;
+            color: rgba(255, 255, 255, 0.65) !important;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
+            flex-shrink: 0;
+            border-top: 2px solid var(--redox-cyan);
+            letter-spacing: 0.5px;
         }
 
-        .info-item {
-            background: #f8f9fa;
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 8px;
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            .school-name { font-size: 1.2rem; }
+            .redox-logo img { height: 28px; }
+            .redox-logo .brand-mark-icon { width: 26px; height: 26px; font-size: 0.85rem; }
+            .school-logo-box { width: 52px; height: 52px; }
+            .school-logo-box i { font-size: 1.3rem; }
         }
-
-        .info-label { font-size: 0.8rem; color: #6c757d; margin-bottom: 2px; }
-        .info-value { font-size: 1rem; font-weight: 500; }
-
-        .attendance-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .attendance-badge.present { background: #d1fae5; color: #065f46; }
-        .attendance-badge.late { background: #fef3c7; color: #92400e; }
-        .attendance-badge.absent { background: #fee2e2; color: #991b1b; }
 
         @media (max-width: 768px) {
-            .school-name { font-size: 1.4rem; }
-            .current-time { font-size: 2rem; }
-            .student-name-card { font-size: 1.2rem; }
-            .alert-box { padding: 25px 20px; }
-            .alert-box .alert-title { font-size: 1.4rem; }
-            .alert-box .alert-icon { font-size: 60px; }
-            .action-buttons .btn-action { padding: 10px 18px; font-size: 0.9rem; }
-            .scan-input { font-size: 1rem; padding: 15px 20px; }
+            .main-wrapper { padding: 8px; }
+            .scan-header { padding: 10px 14px; }
+            .school-name { font-size: 1rem; }
+            .school-slogan { font-size: 0.7rem; }
+            .dt-item { font-size: 0.75rem; }
+            .dt-item.time { font-size: 0.9rem; }
+            .action-buttons .btn-action { padding: 6px 12px; font-size: 0.72rem; }
+            .scan-input { font-size: 0.85rem; padding: 10px 18px 10px 44px; }
+            .scan-area { padding: 10px 14px; }
+            .student-name-card { font-size: 1rem; }
+            .virtual-student-card { padding: 12px 14px; }
+            .student-avatar-large { width: 56px; height: 56px; }
+            .card-number { font-size: 0.78rem; letter-spacing: 2px; }
+            .redox-logo { padding: 4px 10px 4px 8px; }
+            .redox-logo img { height: 24px; }
+            .redox-logo .brand-mark-icon { width: 22px; height: 22px; font-size: 0.75rem; }
+            .school-logo-box { width: 44px; height: 44px; }
+            .school-logo-box i { font-size: 1.1rem; }
+            .fullscreen-btn { width: 36px; height: 36px; font-size: 1rem; }
         }
 
         @media (max-width: 480px) {
-            body { padding: 10px; }
-            .scan-header { padding: 15px 20px; }
-            .scan-area { padding: 20px; }
-            .alert-box { padding: 20px 15px; max-width: 100%; margin: 10px; border-radius: 20px; }
-            .alert-box .alert-title { font-size: 1.2rem; }
-            .alert-box .alert-icon { font-size: 50px; }
+            .redox-logo .brand-mark-icon { display: none; }
+            .redox-logo img { height: 22px; }
+            .school-logo-box { width: 38px; height: 38px; border-radius: 12px; }
+            .school-logo-box i { font-size: 0.95rem; }
+            .school-name { font-size: 0.85rem; }
+            .school-slogan { display: none; }
+            .datetime-strip { padding: 3px 10px; gap: 8px; }
+            .dt-item { font-size: 0.68rem; }
+            .dt-item.time { font-size: 0.8rem; }
+            .dt-divider { height: 12px; }
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="scan-card">
-                    <!-- Header -->
-                    <div class="scan-header">
-                        <div class="d-flex justify-content-center">
-                            <img src="/Redox.png" alt="شعار Redox" loading="eager" style="width: 100px; height: auto;">
+    <div class="main-wrapper">
+        <div class="scan-card">
+            <!-- Header -->
+            <div class="scan-header">
+                <div class="header-top">
+                    <!-- Redox Logo (القديم) -->
+                    <div class="redox-logo" title="Redox Academy">
+                        <img src="/Redox.png" alt="شعار Redox" loading="eager"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-grid';">
+                        <span class="brand-mark-icon" style="display:none;"><i class="bi bi-hexagon-fill"></i></span>
+                    </div>
 
-                        </div>
-            
+                    <!-- Center Info -->
+                    <div class="header-center">
                         <h1 class="school-name" id="schoolName">اسم المدرسة</h1>
                         <p class="school-slogan">نظام تسجيل الطلاب بالبطاقات الذكية</p>
-                        <div class="datetime-section">
-                            <div class="current-time">
-                                <i class="bi bi-clock"></i>
+                        <div class="datetime-strip">
+                            <div class="dt-item time">
+                                <i class="bi bi-clock-fill"></i>
                                 <span id="timeDisplay">--:--:--</span>
                             </div>
-                            <div class="current-date">
-                                <i class="bi bi-calendar"></i>
+                            <div class="dt-divider"></div>
+                            <div class="dt-item">
+                                <i class="bi bi-calendar-event"></i>
                                 <span id="dateDisplay">---</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Scan Area -->
-                    <div class="scan-area">
-                        <div class="text-center mb-4">
-                            <div class="status-indicator status-ready" id="scannerStatus">
-                                <i class="bi bi-check-circle"></i>
-                                <span>جاهز لمسح البطاقة</span>
-                            </div>
-                        </div>
-
-                        <div class="scan-input-wrapper">
-                            <input type="text"
-                                   class="scan-input"
-                                   id="cardInput"
-                                   placeholder="امسح البطاقة أو أدخل الرقم يدوياً"
-                                   autocomplete="off"
-                                   autofocus>
-                            <i class="bi bi-upc-scan scan-icon" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--primary-color);"></i>
-                        </div>
-
-                        <div class="action-buttons">
-                            <button class="btn-action btn-primary-custom" onclick="focusScanner()">
-                                <i class="bi bi-upc-scan"></i>
-                                <span>تركيز الماسح</span>
-                            </button>
-                            <button class="btn-action btn-success-custom" onclick="manualEntry()">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>إدخال يدوي</span>
-                            </button>
-                            <button class="btn-action btn-warning-custom" onclick="clearScanner()">
-                                <i class="bi bi-arrow-clockwise"></i>
-                                <span>إعادة تعيين</span>
-                            </button>
-                        </div>
+                    <!-- School Logo (الجديد) -->
+                    <div class="school-logo-box" id="schoolLogoBox" title="اضغط لتحميل شعار المدرسة">
+                        <i class="bi bi-building" id="schoolLogoIcon"></i>
+                        <span class="logo-label">شعار المدرسة</span>
                     </div>
 
-                    <!-- Result Area -->
-                    <div class="result-area p-4" id="resultArea">
-                        <div id="scanResult"></div>
-                    </div>
+                    <!-- Fullscreen Button -->
+                    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="تكبير الشاشة">
+                        <i class="bi bi-arrows-fullscreen" id="fullscreenIcon"></i>
+                    </button>
+                </div>
+            </div>
 
-                    <!-- Footer -->
-                    <div class="footer">
-                        <p class="mb-0">
-                            <i class="bi bi-c-circle"></i>
-                            2026 Redox Academy - جميع الحقوق محفوظة
-                        </p>
+            <!-- Scan Area -->
+            <div class="scan-area">
+                <div class="scan-top-row">
+                    <div class="status-indicator status-ready" id="scannerStatus">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>جاهز لمسح البطاقة</span>
                     </div>
                 </div>
+
+                <div class="scan-input-wrapper">
+                    <input type="text"
+                           class="scan-input"
+                           id="cardInput"
+                           placeholder="امسح البطاقة أو أدخل الرقم يدوياً"
+                           autocomplete="off"
+                           autofocus>
+                    <i class="bi bi-upc-scan scan-icon"></i>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-action btn-primary-custom" onclick="focusScanner()">
+                        <i class="bi bi-upc-scan"></i>
+                        <span>تركيز الماسح</span>
+                    </button>
+                    <button class="btn-action btn-success-custom" onclick="manualEntry()">
+                        <i class="bi bi-pencil-square"></i>
+                        <span>إدخال يدوي</span>
+                    </button>
+                    <button class="btn-action btn-warning-custom" onclick="clearScanner()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>إعادة تعيين</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Area -->
+            <div class="result-area" id="resultArea">
+                <div id="scanResult"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <i class="bi bi-c-circle"></i> 2026 Redox Academy — جميع الحقوق محفوظة
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ar.js"></script>
 
     <script>
         // ============================================================
-        //  نظام تسجيل الطلاب بالبطاقات - نسخة احترافية (بدون سجل المسحات)
+        //  نظام تسجيل الطلاب بالبطاقات — نسخة احترافية
+        //  بدون أي رسائل عن الدفعات أو رسوم التسجيل
         // ============================================================
 
         let isScanning = false;
         let audioEnabled = true;
         let audioContext = null;
         let privacyTimer = null;
-        let alertTimer = null;
 
         // ----- helpers -----
         function getSchoolName() {
@@ -720,8 +827,6 @@
         function playScanSound() { playBeep(800, 0.2); }
         function playSuccessSound() { playBeep(1046, 0.15); setTimeout(() => playBeep(1318, 0.15), 150); setTimeout(() => playBeep(1568, 0.3), 300); }
         function playErrorSound() { playBeep(440, 0.3); setTimeout(() => playBeep(349, 0.3), 300); }
-        function playWarningSound() { playBeep(880, 0.2, 0.2); setTimeout(() => playBeep(784, 0.2, 0.2), 200); setTimeout(() => playBeep(880, 0.2, 0.2), 400); setTimeout(() => playBeep(784, 0.2, 0.2), 600); setTimeout(() => playBeep(880, 0.3, 0.25), 800); }
-        function playOverdueSound() { for (let i = 0; i < 3; i++) { setTimeout(() => playBeep(600, 0.3, 0.3), i * 400); setTimeout(() => playBeep(450, 0.3, 0.3), i * 400 + 200); } }
         function playWelcomeSound() { const notes = [523, 587, 659, 784]; notes.forEach((f, i) => setTimeout(() => playBeep(f, 0.2), i * 150)); }
         function playCompletionSound() { playBeep(880, 0.15, 0.2); setTimeout(() => playBeep(1108, 0.15, 0.2), 150); setTimeout(() => playBeep(1318, 0.2, 0.25), 300); }
 
@@ -734,7 +839,9 @@
         function updateDateTime() {
             const now = new Date();
             document.getElementById('timeDisplay').textContent = now.toLocaleTimeString();
-            document.getElementById('dateDisplay').textContent = now.toLocaleDateString( { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('dateDisplay').textContent = now.toLocaleDateString(
+                { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+            );
         }
 
         // ----- status -----
@@ -746,15 +853,10 @@
 
         // ----- privacy blur -----
         function applyPrivacyBlur() {
-            const nameEl = document.querySelector('.student-name-card');
-            const idEl = document.querySelector('.student-id-card');
-            const avatarEl = document.querySelector('.student-avatar-large');
-            if (nameEl) nameEl.classList.add('blurred');
-            if (idEl) idEl.classList.add('blurred');
-            if (avatarEl) avatarEl.classList.add('blurred');
-            document.querySelectorAll('.info-value').forEach(el => {
-                if (!el.closest('.payment-status') && !el.closest('.status-badge')) el.classList.add('privacy-blur');
-            });
+            document.querySelector('.student-name-card')?.classList.add('blurred');
+            document.querySelector('.student-id-card')?.classList.add('blurred');
+            document.querySelector('.student-avatar-large')?.classList.add('blurred');
+            document.querySelectorAll('.info-value').forEach(el => el.classList.add('privacy-blur'));
         }
 
         function removePrivacyBlur() {
@@ -773,219 +875,80 @@
             }, 15000);
         }
 
-        // ----- alert auto dismiss -----
-        function startAlertAutoDismiss() {
-            if (alertTimer) clearTimeout(alertTimer);
-            const box = document.querySelector('.alert-box');
-            if (box) {
-                const old = box.querySelector('.countdown-timer');
-                if (old) old.remove();
-                const counter = document.createElement('div');
-                counter.className = 'countdown-timer';
-                counter.id = 'countdownTimer';
-                counter.textContent = '⏱️ سيختفي خلال 10 ثواني';
-                box.appendChild(counter);
-                let sec = 10;
-                const interval = setInterval(() => {
-                    sec--;
-                    if (counter) counter.textContent = `⏱️ سيختفي خلال ${sec} ثواني`;
-                    if (sec <= 0) clearInterval(interval);
-                }, 1000);
-            }
-            alertTimer = setTimeout(() => { dismissAlert(); alertTimer = null; }, 10000);
-        }
-
-        // ----- show payment alert -----
-        function showPaymentAlert(student, overduePayments = [], hasRegistrationFee = false) {
-            if (alertTimer) clearTimeout(alertTimer);
-            const payments = Array.isArray(overduePayments) ? overduePayments : [];
-            const totalOverdue = payments.reduce((s, p) => s + (p.amount || 0), 0);
-            const monthsCount = payments.length;
-
-            if (payments.length) playOverdueSound();
-            else if (hasRegistrationFee) playWarningSound();
-
-            const overlay = document.createElement('div');
-            overlay.className = 'alert-overlay';
-            overlay.id = 'paymentAlertOverlay';
-
-            let paymentsList = '';
-            if (payments.length) {
-                payments.slice(0, 10).forEach(p => {
-                    const cls = p.class?.name || 'غير محدد';
-                    const month = p.month || p.monthCode || 'شهر غير محدد';
-                    paymentsList += `<div class="detail-item"><span class="detail-label">${month}</span><span class="detail-value danger">${(p.amount||0).toLocaleString()} د.ج - ${cls}</span></div>`;
-                });
-                if (payments.length > 10) paymentsList += `<div class="detail-item"><span class="detail-label">و ${payments.length-10} دفعات أخرى</span><span class="detail-value danger">...</span></div>`;
-            }
-
-            let registrationHtml = '';
-            if (hasRegistrationFee) registrationHtml = `<div class="alert alert-warning mt-2" style="border-radius:10px;"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>⚠️ رسوم التسجيل غير مدفوعة</strong><br><small>المبلغ: 600 د.ج</small></div>`;
-
-            const isOverdue = payments.length > 0;
-            const alertType = isOverdue ? 'danger' : 'warning';
-            const icon = isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
-            const title = isOverdue ? '⚠️ تنبيه: دفعات متأخرة' : '⚠️ تنبيه: رسوم التسجيل غير مدفوعة';
-
-            overlay.innerHTML = `
-                <div class="alert-box ${isOverdue ? 'overdue-warning' : 'registration-warning'}">
-                    <div class="alert-icon ${alertType}"><i class="bi ${icon}"></i></div>
-                    <div class="alert-title ${alertType}">${title}</div>
-                    <div class="alert-message">
-                        عزيزي ولي أمر الطالب <strong>${student.name}</strong>،
-                        ${isOverdue ? `<br>هناك <strong>${monthsCount}</strong> دفعة (شهر) متأخرة<br>بإجمالي مبلغ <strong>${totalOverdue.toLocaleString()} د.ج</strong>` : `<br>رسوم التسجيل غير مدفوعة<br>المبلغ المطلوب: <strong>600 د.ج</strong>`}
-                    </div>
-                    <div class="alert-details">
-                        <div class="detail-item"><span class="detail-label">الطالب</span><span class="detail-value">${student.name} (${student.studentId||'غير محدد'})</span></div>
-                        ${isOverdue ? `
-                            <div class="detail-item"><span class="detail-label">عدد الدفعات المتأخرة</span><span class="detail-value danger">${monthsCount} شهر</span></div>
-                            <div class="detail-item"><span class="detail-label">المبلغ الإجمالي</span><span class="detail-value danger">${totalOverdue.toLocaleString()} د.ج</span></div>
-                            ${paymentsList}
-                        ` : `
-                            <div class="detail-item"><span class="detail-label">رسوم التسجيل</span><span class="detail-value warning">600 د.ج (غير مدفوعة)</span></div>
-                        `}
-                        ${registrationHtml}
-                    </div>
-                    <div class="alert-message" style="color: ${isOverdue ? 'var(--danger-color)' : 'var(--warning-color)'}; font-weight: 600;">
-                        <i class="bi bi-info-circle"></i>
-                        ${isOverdue ? 'يرجى التوجه إلى الإدارة لتسوية الدفعات المتأخرة' : 'يرجى التوجه إلى الإدارة لدفع رسوم التسجيل'}
-                    </div>
-                    <button class="btn-dismiss-alert ${isOverdue ? 'danger' : 'warning'}" onclick="dismissAlert()">
-                        <i class="bi bi-check2-circle"></i> تم التوجيه للإدارة
-                    </button>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-            document.body.style.overflow = 'hidden';
-            startAlertAutoDismiss();
-        }
-
-        function dismissAlert() {
-            const overlay = document.getElementById('paymentAlertOverlay');
-            if (overlay) {
-                overlay.classList.add('fade-out');
-                const box = overlay.querySelector('.alert-box');
-                if (box) box.classList.add('fade-out');
-                setTimeout(() => { overlay.remove(); document.body.style.overflow = ''; document.getElementById('cardInput').focus(); }, 500);
-            }
-            if (alertTimer) { clearTimeout(alertTimer); alertTimer = null; }
-        }
-
-        // ----- display student info -----
-        function displayStudentInfo(student, classInfo = null, attendance = null, overduePayments = null, registrationStatus = null, hasIssues = false) {
+        // ----- display student info (بدون أي بيانات مالية) -----
+        function displayStudentInfo(student, classInfo = null, attendance = null) {
             const resultDiv = document.getElementById('scanResult');
             const status = attendance?.status || 'present';
-            const statusText = status === 'present' ? '✅ حاضر' : status === 'late' ? '⚠️ متأخر' : '❌ غائب';
+            const statusText = status === 'present' ? 'حاضر' : status === 'late' ? 'متأخر' : 'غائب';
             const statusClass = status === 'present' ? 'success' : status === 'late' ? 'warning' : 'danger';
-
-            const hasOverdue = overduePayments && Array.isArray(overduePayments) && overduePayments.length > 0;
-            const hasRegistrationFee = registrationStatus === 'pending' || registrationStatus === false;
-            const hasWarning = hasOverdue || hasRegistrationFee;
-
-            const totalOverdue = hasOverdue ? overduePayments.reduce((s, p) => s + (p.amount || 0), 0) : 0;
-            const monthsCount = hasOverdue ? overduePayments.length : 0;
-
-            let warningHtml = '';
-            if (hasWarning) {
-                let items = [];
-                if (hasOverdue) {
-                    let details = '';
-                    overduePayments.slice(0, 10).forEach(p => {
-                        const cls = p.class?.name || 'غير محدد';
-                        const month = p.month || p.monthCode || 'شهر غير محدد';
-                        details += `<div class="d-flex justify-content-between px-2 py-1 border-bottom" style="font-size:0.85rem;"><span>${month}</span><span class="text-danger fw-bold">${(p.amount||0).toLocaleString()} د.ج - ${cls}</span></div>`;
-                    });
-                    if (overduePayments.length > 10) details += `<div class="d-flex justify-content-between px-2 py-1 text-muted" style="font-size:0.8rem;"><span>... و ${overduePayments.length-10} دفعات أخرى</span></div>`;
-                    items.push(`<div class="mb-2"><div class="d-flex justify-content-between px-2 py-1 border-bottom fw-bold"><span>الشهر</span><span>المبلغ</span></div>${details}<div class="d-flex justify-content-between px-2 py-2 mt-1 fw-bold" style="background:rgba(220,53,69,0.1);border-radius:8px;"><span>الإجمالي</span><span class="text-danger">${totalOverdue.toLocaleString()} د.ج</span></div></div>`);
-                }
-                if (hasRegistrationFee) items.push(`<div class="d-flex justify-content-between px-2 py-1 border-bottom"><span><i class="bi bi-exclamation-circle-fill text-warning me-1"></i> رسوم التسجيل</span><span class="text-warning fw-bold">600 د.ج (غير مدفوعة)</span></div>`);
-
-                const alertClass = hasOverdue ? 'alert-danger' : 'alert-warning';
-                const borderColor = hasOverdue ? 'var(--danger-color)' : 'var(--warning-color)';
-                const iconClass = hasOverdue ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
-                const titleClass = hasOverdue ? 'text-danger' : 'text-warning';
-                const titleText = hasOverdue ? '⚠️ تنبيه: دفعات متأخرة' : '⚠️ تنبيه: رسوم التسجيل غير مدفوعة';
-
-                warningHtml = `
-                    <div class="alert ${alertClass} animate__animated animate__pulse animate__infinite" style="border-radius:15px;margin-top:15px;border-right:5px solid ${borderColor};">
-                        <div class="d-flex align-items-start">
-                            <i class="bi ${iconClass} display-6 me-3" style="color:${borderColor};"></i>
-                            <div class="w-100">
-                                <h6 class="mb-1 ${titleClass} fw-bold">${titleText}</h6>
-                                <small class="${hasOverdue ? 'text-danger' : 'text-warning'}">
-                                    ${hasOverdue ? `هناك <strong>${monthsCount}</strong> دفعة متأخرة` : 'رسوم التسجيل (600 د.ج) غير مدفوعة'}
-                                    ${hasOverdue ? `<br>إجمالي المبلغ: <strong>${totalOverdue.toLocaleString()} د.ج</strong>` : ''}
-                                </small>
-                                <div class="mt-2" style="font-size:0.85rem;">${items.join('')}<div class="text-center text-muted small mt-2"><i class="bi bi-info-circle"></i> يرجى التوجه للإدارة لتسوية المستحقات</div></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            const statusIcon = status === 'present' ? 'bi-check-circle-fill' : status === 'late' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill';
 
             let classHtml = '';
             if (classInfo) {
                 classHtml = `
-                    <div class="info-item bg-light p-3 rounded mb-2">
-                        <div class="info-label text-muted">الحصة</div>
-                        <div class="info-value fw-bold">${classInfo.name||'غير محدد'}</div>
-                        <div class="info-label text-muted mt-2">المادة</div>
+                    <div class="info-item">
+                        <div class="info-label">الحصة</div>
+                        <div class="info-value">${classInfo.name||'غير محدد'}</div>
+                        <div class="info-label mt-1">المادة</div>
                         <div class="info-value">${classInfo.subject||'غير محدد'}</div>
-                        ${classInfo.teacher ? `<div class="info-label text-muted mt-2">الأستاذ</div><div class="info-value">${classInfo.teacher.name||classInfo.teacher}</div>` : ''}
+                        ${classInfo.teacher ? `<div class="info-label mt-1">الأستاذ</div><div class="info-value">${classInfo.teacher.name||classInfo.teacher}</div>` : ''}
                     </div>
                 `;
             }
 
-            const paymentStatusText = hasOverdue ? '⚠️ متأخرة' : '✅ مسددة';
-            const paymentStatusClass = hasOverdue ? 'text-danger' : 'text-success';
-            const registrationStatusText = hasRegistrationFee ? '⚠️ غير مدفوعة' : '✅ مدفوعة';
-            const registrationStatusClass = hasRegistrationFee ? 'text-warning' : 'text-success';
-
             resultDiv.innerHTML = `
                 <div class="animate__animated animate__fadeIn">
                     ${displayVirtualStudentCard(student)}
-                    ${warningHtml}
-                    <div class="row mt-3 g-3">
-                        <div class="col-md-6">
-                            <div class="bg-${statusClass} bg-opacity-10 p-3 rounded text-center">
-                                <i class="bi ${status === 'present' ? 'bi-check-circle-fill' : status === 'late' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} display-6 text-${statusClass}"></i>
-                                <h5 class="mt-2 text-${statusClass}">${statusText}</h5>
-                                ${attendance?.time ? `<small class="text-muted">${new Date(attendance.time).toLocaleTimeString('it-IT')}</small>` : ''}
+                    <div class="row mt-2 g-2">
+                        <div class="col-6">
+                            <div class="attendance-panel">
+                                <div class="icon-wrap bg-${statusClass} bg-opacity-10 text-${statusClass} mx-auto">
+                                    <i class="bi ${statusIcon}"></i>
+                                </div>
+                                <h6 class="mb-0 text-${statusClass} fw-bold">${statusText}</h6>
+                                ${attendance?.time ? `<small class="text-muted d-block mt-1">${new Date(attendance.time).toLocaleTimeString('it-IT')}</small>` : ''}
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            ${classHtml || '<div class="bg-info bg-opacity-10 p-3 rounded text-center"><i class="bi bi-info-circle display-6"></i><h5 class="mt-2">لا توجد حصص حالياً</h5></div>'}
+                        <div class="col-6">
+                            ${classHtml || `
+                                <div class="attendance-panel">
+                                    <div class="icon-wrap bg-info bg-opacity-10 text-info mx-auto">
+                                        <i class="bi bi-info-circle-fill"></i>
+                                    </div>
+                                    <h6 class="mb-0 text-info fw-bold">لا توجد حصص حالياً</h6>
+                                </div>
+                            `}
                         </div>
                     </div>
-                    <div class="row mt-3">
+                    <div class="row mt-2">
                         <div class="col-12">
-                            <div class="bg-light p-3 rounded">
-                                <h6><i class="bi bi-telephone"></i> معلومات الاتصال</h6>
-                                <div class="row">
-                                    <div class="col-6"><small class="text-muted">ولي الأمر</small><div class="info-value">${student.parentName||'غير محدد'}</div></div>
-                                    <div class="col-6"><small class="text-muted">رقم الهاتف</small><div class="info-value">${student.parentPhone||'غير محدد'}</div></div>
+                            <div class="info-item">
+                                <h6 class="mb-2 fw-bold" style="font-size:0.85rem;"><i class="bi bi-telephone-fill text-primary"></i> معلومات الاتصال</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="info-label">ولي الأمر</div>
+                                        <div class="info-value">${student.parentName||'غير محدد'}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="info-label">رقم الهاتف</div>
+                                        <div class="info-value">${student.parentPhone||'غير محدد'}</div>
+                                    </div>
+                                    <div class="col-12 mt-1">
+                                        <div class="info-label">السنة الدراسية</div>
+                                        <div class="info-value">${getAcademicYearName(student.academicYear)}</div>
+                                    </div>
                                 </div>
-                                <div class="row mt-2">
-                                    <div class="col-12"><small class="text-muted">السنة الدراسية</small><div class="info-value">${getAcademicYearName(student.academicYear)}</div></div>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-6"><small class="text-muted">حالة الدفعات</small><div class="${paymentStatusClass} fw-bold">${paymentStatusText}${hasOverdue ? ` (${monthsCount} دفعة)` : ''}</div></div>
-                                    <div class="col-6"><small class="text-muted">رسوم التسجيل</small><div class="${registrationStatusClass} fw-bold">${registrationStatusText}</div></div>
-                                </div>
-                                ${hasOverdue ? `<div class="row mt-2"><div class="col-12"><div class="alert alert-danger p-2" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle-fill"></i> إجمالي المبلغ المتأخر: <strong>${totalOverdue.toLocaleString()} د.ج</strong></div></div></div>` : ''}
-                                ${hasWarning ? `<div class="row mt-2"><div class="col-12"><button class="btn ${hasOverdue ? 'btn-danger' : 'btn-warning'} btn-sm w-100" onclick="showPaymentAlert(student, overduePayments, ${hasRegistrationFee})"><i class="bi bi-eye"></i> عرض تفاصيل المستحقات</button></div></div>` : ''}
                             </div>
                         </div>
                     </div>
                 </div>
             `;
             startPrivacyTimer();
-            if (hasWarning) setTimeout(() => showPaymentAlert(student, overduePayments || [], hasRegistrationFee), 800);
         }
 
         // ----- virtual card -----
         function displayVirtualStudentCard(student, cardUid = null) {
-            const avatarUrl = student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true&length=2`;
+            const avatarUrl = student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=667eea&color=fff&size=100&bold=true&length=2`;
             const expiry = new Date(); expiry.setFullYear(expiry.getFullYear()+2);
             const expiryStr = `${expiry.getMonth()+1}/${expiry.getFullYear().toString().slice(-2)}`;
             const cardNum = cardUid || student.cardUid || '**** **** **** ' + (student.studentId?.slice(-4)||'0000');
@@ -995,18 +958,21 @@
                     <div class="card-chip"><i class="bi bi-wifi"></i></div>
                     <div class="text-center">
                         <div class="student-avatar-large mx-auto" id="studentAvatar">
-                            <img src="${avatarUrl}" alt="${student.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4361ee&color=fff&size=100&bold=true'">
+                            <img src="${avatarUrl}" alt="${student.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=667eea&color=fff&size=100&bold=true'">
                         </div>
-                        <h3 class="student-name-card mt-3" id="studentName">${student.name}</h3>
+                        <h3 class="student-name-card mt-1" id="studentName">${student.name}</h3>
                         <div class="student-id-card" id="studentId">رقم الطالب: ${student.studentId||'غير محدد'}</div>
-                        <div class="card-number"><i class="bi bi-credit-card"></i> ${formatted}</div>
-                        <div class="card-expiry"><span><i class="bi bi-calendar"></i> صالحة حتى: ${expiryStr}</span><span><i class="bi bi-shield-check"></i> بطاقة ذكية</span></div>
+                        <div class="card-number"><i class="bi bi-credit-card-2-front"></i> ${formatted}</div>
+                        <div class="card-expiry">
+                            <span><i class="bi bi-calendar-check"></i> صالحة حتى: ${expiryStr}</span>
+                            <span><i class="bi bi-shield-check"></i> بطاقة ذكية</span>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
-        // ----- process card -----
+        // ----- process card (بدون فحص الدفعات) -----
         async function processCard(cardUid) {
             if (isScanning) return;
             try {
@@ -1015,12 +981,23 @@
                 if (clean.length < 4) throw new Error('رقم البطاقة غير مكتمل');
                 updateStatus('جاري التعرف على البطاقة...', 'status-scanning', 'bi-arrow-repeat');
                 playScanSound();
-                document.getElementById('scanResult').innerHTML = `<div class="text-center py-5"><div class="loading-spinner"></div><h5 class="mt-3">جاري المعالجة...</h5><p class="text-muted">يرجى الانتظار</p></div>`;
+                document.getElementById('scanResult').innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="loading-spinner"></div>
+                        <h5 class="mt-3 fw-bold">جاري المعالجة...</h5>
+                        <p class="text-muted mb-0">يرجى الانتظار</p>
+                    </div>
+                `;
 
                 const res = await fetch('/api/attendance/card-scan-enhanced', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cardUid: clean, sendSMS: false, checkPayments: true, checkRegistration: true })
+                    body: JSON.stringify({
+                        cardUid: clean,
+                        sendSMS: false,
+                        checkPayments: false,
+                        checkRegistration: false
+                    })
                 });
                 const data = await res.json();
 
@@ -1028,26 +1005,12 @@
                     const student = data.data?.student;
                     const classInfo = data.data?.class;
                     const attendance = data.data?.attendance;
-                    const overduePayments = data.data?.overduePayments || [];
-                    const registrationStatus = data.data?.registrationStatus;
-                    const hasOverdue = data.data?.hasOverdue || overduePayments.length > 0;
-                    const hasRegistrationIssue = data.data?.hasRegistrationIssue || false;
-                    const hasIssues = data.data?.hasIssues || hasOverdue || hasRegistrationIssue;
-                    const totalOverdueAmount = data.data?.totalOverdueAmount || 0;
 
                     if (student) {
-                        displayStudentInfo(student, classInfo, attendance, overduePayments, registrationStatus, hasIssues);
-                        if (hasOverdue) {
-                            updateStatus(`⚠️ ${overduePayments.length} دفعة متأخرة (${totalOverdueAmount.toLocaleString()} د.ج)`, 'status-overdue', 'bi-exclamation-triangle');
-                            playOverdueSound();
-                        } else if (hasRegistrationIssue) {
-                            updateStatus('⚠️ رسوم التسجيل غير مدفوعة', 'status-warning', 'bi-exclamation-circle');
-                            playWarningSound();
-                        } else {
-                            updateStatus('✅ تم التسجيل بنجاح', 'status-success', 'bi-check-circle');
-                            playSuccessSound();
-                        }
-                        showToast('success', `✅ تم تسجيل حضور الطالب ${student.name} بنجاح`);
+                        displayStudentInfo(student, classInfo, attendance);
+                        updateStatus('تم التسجيل بنجاح', 'status-success', 'bi-check-circle-fill');
+                        playSuccessSound();
+                        showToast('success', `تم تسجيل حضور الطالب ${student.name} بنجاح`);
                     } else {
                         showErrorResult('بيانات الطالب غير مكتملة');
                     }
@@ -1063,7 +1026,7 @@
                 setTimeout(() => {
                     const cur = document.getElementById('scannerStatus');
                     if (!cur.classList.contains('status-overdue') && !cur.classList.contains('status-warning')) {
-                        updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
+                        updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle-fill');
                     }
                 }, 2000);
                 document.getElementById('cardInput').value = '';
@@ -1074,24 +1037,39 @@
         // ----- error handlers -----
         function handleUnknownCard(cardUid) {
             document.getElementById('scanResult').innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shake" style="background:linear-gradient(135deg,#e63946,#9d0208);">
-                    <div class="text-center"><i class="bi bi-exclamation-triangle display-1"></i><h3 class="mt-3">بطاقة غير معروفة</h3><div class="card-number">${cardUid}</div><p class="mt-3">هذه البطاقة غير مسجلة في النظام</p><button class="btn btn-light mt-3" onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i> إعادة المحاولة</button></div>
+                <div class="virtual-student-card animate__animated animate__shakeX" style="background: linear-gradient(135deg, #e63946, #9d0208);">
+                    <div class="text-center">
+                        <i class="bi bi-exclamation-triangle-fill display-1"></i>
+                        <h3 class="mt-2 fw-bold">بطاقة غير معروفة</h3>
+                        <div class="card-number">${cardUid}</div>
+                        <p class="mt-2">هذه البطاقة غير مسجلة في النظام</p>
+                        <button class="btn btn-light mt-2 fw-bold" onclick="clearScanner()">
+                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
+                        </button>
+                    </div>
                 </div>
             `;
-            updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle');
+            updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle-fill');
             playErrorSound();
         }
 
         function handleFailedAttendance(data) {
             showErrorResult(data.error || 'حدث خطأ أثناء التسجيل');
             playErrorSound();
-            updateStatus('فشل التسجيل', 'status-error', 'bi-exclamation-triangle');
+            updateStatus('فشل التسجيل', 'status-error', 'bi-exclamation-triangle-fill');
         }
 
         function showErrorResult(msg) {
             document.getElementById('scanResult').innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shake" style="background:linear-gradient(135deg,#e63946,#9d0208);">
-                    <div class="text-center"><i class="bi bi-x-circle display-1"></i><h3 class="mt-3">حدث خطأ</h3><p>${msg}</p><button class="btn btn-light mt-3" onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i> إعادة المحاولة</button></div>
+                <div class="virtual-student-card animate__animated animate__shakeX" style="background: linear-gradient(135deg, #e63946, #9d0208);">
+                    <div class="text-center">
+                        <i class="bi bi-x-circle-fill display-1"></i>
+                        <h3 class="mt-2 fw-bold">حدث خطأ</h3>
+                        <p>${msg}</p>
+                        <button class="btn btn-light mt-2 fw-bold" onclick="clearScanner()">
+                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -1109,7 +1087,12 @@
 
         // ----- helpers -----
         function getAcademicYearName(code) {
-            const map = { '1AS':'الأولى ثانوي','2AS':'الثانية ثانوي','3AS':'الثالثة ثانوي','1MS':'الأولى متوسط','2MS':'الثانية متوسط','3MS':'الثالثة متوسط','4MS':'الرابعة متوسط','5MS':'الخامسة متوسط','1AP':'الأولى ابتدائي','2AP':'الثانية ابتدائي','3AP':'الثالثة ابتدائي','4AP':'الرابعة ابتدائي','5AP':'الخامسة ابتدائي','NS':'غير محدد' };
+            const map = {
+                '1AS':'الأولى ثانوي','2AS':'الثانية ثانوي','3AS':'الثالثة ثانوي',
+                '1MS':'الأولى متوسط','2MS':'الثانية متوسط','3MS':'الثالثة متوسط','4MS':'الرابعة متوسط',
+                '5MS':'الخامسة متوسط','1AP':'الأولى ابتدائي','2AP':'الثانية ابتدائي',
+                '3AP':'الثالثة ابتدائي','4AP':'الرابعة ابتدائي','5AP':'الخامسة ابتدائي','NS':'غير محدد'
+            };
             return map[code] || code || 'غير محدد';
         }
 
@@ -1118,13 +1101,37 @@
 
         function clearScanner() {
             if (privacyTimer) { clearTimeout(privacyTimer); privacyTimer = null; }
-            if (alertTimer) { clearTimeout(alertTimer); alertTimer = null; }
             document.getElementById('cardInput').value = '';
             document.getElementById('scanResult').innerHTML = '';
             document.getElementById('cardInput').focus();
-            updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle');
+            updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle-fill');
             removePrivacyBlur();
         }
+
+        // ----- fullscreen -----
+        function toggleFullscreen() {
+            const icon = document.getElementById('fullscreenIcon');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (icon) icon.className = 'bi bi-fullscreen-exit';
+                }).catch(() => showToast('error', 'تعذر تكبير الشاشة'));
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().then(() => {
+                        if (icon) icon.className = 'bi bi-arrows-fullscreen';
+                    });
+                }
+            }
+        }
+
+        document.addEventListener('fullscreenchange', function() {
+            const icon = document.getElementById('fullscreenIcon');
+            if (document.fullscreenElement) {
+                if (icon) icon.className = 'bi bi-fullscreen-exit';
+            } else {
+                if (icon) icon.className = 'bi bi-arrows-fullscreen';
+            }
+        });
 
         // ----- setup scanner -----
         function setupScanner() {
@@ -1156,24 +1163,73 @@
             });
 
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    if (document.getElementById('paymentAlertOverlay')) dismissAlert();
-                    clearScanner();
-                }
+                if (e.key === 'Escape') clearScanner();
             });
+        }
+
+        // ----- School Logo Upload -----
+        function setupSchoolLogo() {
+            const box = document.getElementById('schoolLogoBox');
+            const icon = document.getElementById('schoolLogoIcon');
+            if (!box) return;
+
+            // استرجاع الشعار المحفوظ
+            try {
+                const saved = localStorage.getItem('schoolLogo');
+                if (saved) {
+                    box.innerHTML = `<img src="${saved}" alt="شعار المدرسة">`;
+                }
+            } catch (err) { /* ignore */ }
+
+            box.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        box.innerHTML = `<img src="${ev.target.result}" alt="شعار المدرسة">`;
+                        try { localStorage.setItem('schoolLogo', ev.target.result); } catch (err) { /* ignore */ }
+                        showToast('success', 'تم تحميل شعار المدرسة بنجاح');
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            });
+
+            // إعادة تعيين الشعار عند الضغط مطولاً
+            let pressTimer;
+            box.addEventListener('mousedown', () => {
+                pressTimer = setTimeout(() => {
+                    try { localStorage.removeItem('schoolLogo'); } catch (e) {}
+                    box.innerHTML = `<i class="bi bi-building" id="schoolLogoIcon"></i><span class="logo-label">شعار المدرسة</span>`;
+                    showToast('info', 'تم إزالة شعار المدرسة');
+                }, 1200);
+            });
+            box.addEventListener('mouseup', () => clearTimeout(pressTimer));
+            box.addEventListener('mouseleave', () => clearTimeout(pressTimer));
         }
 
         // ----- init -----
         function initApp() {
-            console.log('🚀 نظام تسجيل الطلاب (نسخة احترافية)');
+            console.log('نظام تسجيل الطلاب — نسخة احترافية');
+
             const name = getSchoolName().trim();
             const el = document.getElementById('schoolName');
-            if (name) { el.textContent = name; document.title = `${name} | Redox`; } else el.textContent = 'اسم المدرسة غير محدد';
+            if (name) {
+                el.textContent = name;
+                document.title = `${name} | Redox`;
+            } else {
+                el.textContent = 'اسم المدرسة غير محدد';
+            }
+
             updateDateTime();
             setInterval(updateDateTime, 1000);
             setupScanner();
+            setupSchoolLogo();
             setTimeout(playWelcomeSound, 500);
-            console.log('✅ تم إزالة قسم "آخر عمليات المسح". التصميم احترافي ونظيف.');
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
