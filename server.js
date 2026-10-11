@@ -422,125 +422,101 @@ const SchoolSettings = mongoose.model('SchoolSettings', schoolSettingsSchema);
 // نموذج المدرسة (School Schema) - النسخة الكاملة
 // ==============================================
 
+// ==============================================
+// School Schema - النسخة المحدثة مع الصورة والميزانية
+// ==============================================
 const schoolSchema = new mongoose.Schema({
-  name: { 
-      type: String, 
-      required: true, 
-      unique: true,
-      trim: true 
+  name: { type: String, required: true, unique: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  phone: { type: String, required: true },
+  address: { type: String, default: '' },
+  schoolKey: { type: String, required: true, unique: true },
+  
+  // ✅ NEW: صورة المدرسة
+  logo: {
+    type: String,
+    default: '' // Base64 أو URL
   },
-  email: { 
-      type: String, 
-      required: true, 
-      unique: true,
-      lowercase: true,
-      trim: true 
+  
+  // ✅ NEW: الميزانية
+  budget: {
+    total: { type: Number, default: 0 },
+    spent: { type: Number, default: 0 },
+    remaining: { type: Number, default: 0 },
+    currency: { type: String, default: 'DZD' },
+    lastUpdated: { type: Date, default: Date.now }
   },
-  phone: { 
-      type: String, 
-      required: true 
-  },
-  address: {
-      type: String,
-      default: ''
-  },
-  schoolKey: { 
-      type: String, 
-      required: true, 
-      unique: true 
-  },
-  // نظام الاشتراك السنوي
-  subscription: {
-      plan: {
-          type: String,
-          enum: ['basic', 'standard', 'premium', 'enterprise', 'trial'],
-          default: 'trial'
-      },
-      planName: {
-          type: String,
-          enum: ['تجريبي', 'أساسي', 'قياسي', 'مميز', 'مؤسسات'],
-          default: 'تجريبي'
-      },
-      startDate: { type: Date, default: Date.now },
-      endDate: { type: Date },
-      amount: { type: Number, default: 0 },
-      currency: { type: String, default: 'DZD' },
-      status: {
-          type: String,
-          enum: ['active', 'expired', 'pending', 'cancelled', 'trial'],
-          default: 'trial'
-      },
-      paymentMethod: {
-          type: String,
-          enum: ['cash', 'bank_transfer', 'online', 'check', 'free'],
-          default: 'free'
-      },
-      paymentDate: { type: Date },
-      invoiceNumber: { type: String },
-      notes: { type: String, default: '' },
-      features: {
-          maxStudents: { type: Number, default: 10 },
-          maxTeachers: { type: Number, default: 3 },
-          maxClasses: { type: Number, default: 5 },
-          hasRFID: { type: Boolean, default: false },
-          hasSMS: { type: Boolean, default: false },
-          hasReports: { type: Boolean, default: false },
-          hasAPI: { type: Boolean, default: false }
-      },
-      payments: [{
-          amount: Number,
-          date: { type: Date, default: Date.now },
-          method: String,
-          receiptNumber: String,
-          notes: String
-      }]
-  },
-  // المديرون
-  admins: [{
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      username: { type: String, required: true },
-      password: { type: String, required: true },
-      fullName: { type: String, required: true },
-      email: String,
-      phone: String,
-      role: { 
-          type: String, 
-          enum: ['super_admin', 'admin', 'manager', 'accountant', 'secretary', 'teacher'],
-          default: 'admin'
-      },
-      isActive: { type: Boolean, default: true },
-      lastLogin: Date,
-      createdAt: { type: Date, default: Date.now },
-      permissions: {
-          canManageStudents: { type: Boolean, default: true },
-          canManageTeachers: { type: Boolean, default: true },
-          canManageClasses: { type: Boolean, default: true },
-          canManagePayments: { type: Boolean, default: true },
-          canManageUsers: { type: Boolean, default: false },
-          canViewReports: { type: Boolean, default: true },
-          canManageSubscription: { type: Boolean, default: false }
-      }
-  }],
+  
+  // ✅ NEW: إعدادات إضافية
   settings: {
-      currency: { type: String, default: 'DZD' },
-      language: { type: String, default: 'ar' },
-      timezone: { type: String, default: 'Africa/Algiers' }
+    currency: { type: String, default: 'DZD' },
+    language: { type: String, default: 'ar' },
+    timezone: { type: String, default: 'Africa/Algiers' },
+    theme: { type: String, default: 'light' }
   },
+  
+  subscription: {
+    plan: { type: String, enum: ['basic', 'standard', 'premium', 'enterprise', 'trial'], default: 'trial' },
+    planName: { type: String, enum: ['تجريبي', 'أساسي', 'قياسي', 'مميز', 'مؤسسات'], default: 'تجريبي' },
+    startDate: { type: Date, default: Date.now },
+    endDate: { type: Date },
+    amount: { type: Number, default: 0 },
+    currency: { type: String, default: 'DZD' },
+    status: { type: String, enum: ['active', 'expired', 'pending', 'cancelled', 'trial'], default: 'trial' },
+    paymentMethod: { type: String, enum: ['cash', 'bank_transfer', 'online', 'check', 'free'], default: 'free' },
+    paymentDate: { type: Date },
+    invoiceNumber: { type: String },
+    notes: { type: String, default: '' },
+    features: {
+      maxStudents: { type: Number, default: 10 },
+      maxTeachers: { type: Number, default: 3 },
+      maxClasses: { type: Number, default: 5 },
+      hasRFID: { type: Boolean, default: false },
+      hasSMS: { type: Boolean, default: false },
+      hasReports: { type: Boolean, default: false },
+      hasAPI: { type: Boolean, default: false }
+    },
+    payments: [{
+      amount: Number,
+      date: { type: Date, default: Date.now },
+      method: String,
+      receiptNumber: String,
+      notes: String
+    }]
+  },
+  
+  admins: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    username: { type: String, required: true },
+    password: { type: String, required: true },
+    fullName: { type: String, required: true },
+    email: String,
+    phone: String,
+    role: { type: String, enum: ['super_admin', 'admin', 'manager', 'accountant', 'secretary', 'teacher'], default: 'admin' },
+    isActive: { type: Boolean, default: true },
+    lastLogin: Date,
+    createdAt: { type: Date, default: Date.now },
+    permissions: {
+      canManageStudents: { type: Boolean, default: true },
+      canManageTeachers: { type: Boolean, default: true },
+      canManageClasses: { type: Boolean, default: true },
+      canManagePayments: { type: Boolean, default: true },
+      canManageUsers: { type: Boolean, default: false },
+      canViewReports: { type: Boolean, default: true },
+      canManageSubscription: { type: Boolean, default: false }
+    }
+  }],
+  
   stats: {
-      totalStudents: { type: Number, default: 0 },
-      totalTeachers: { type: Number, default: 0 },
-      totalClasses: { type: Number, default: 0 },
-      totalIncome: { type: Number, default: 0 },
-      totalExpenses: { type: Number, default: 0 }
+    totalStudents: { type: Number, default: 0 },
+    totalTeachers: { type: Number, default: 0 },
+    totalClasses: { type: Number, default: 0 },
+    totalIncome: { type: Number, default: 0 },
+    totalExpenses: { type: Number, default: 0 }
   },
-  status: { 
-      type: String, 
-      enum: ['active', 'inactive', 'suspended', 'expired'], 
-      default: 'active' 
-  }
-}, { 
-  timestamps: true 
-});
+  
+  status: { type: String, enum: ['active', 'inactive', 'suspended', 'expired'], default: 'active' }
+}, { timestamps: true });
 
 // ==============================================
 // ⚠️ دوال النموذج - تأكد من وجودها هنا ⚠️
@@ -1860,7 +1836,9 @@ app.post('/api/redox-admin/school', async (req, res) => {
       adminPhone,
       plan = 'trial',
       subscriptionDuration = 1,
-      subscriptionAmount = 0
+      subscriptionAmount = 0,
+            logo,                    // ✅ ADD THIS
+
     } = req.body;
     
     // ✅ التحقق من البيانات المطلوبة
@@ -1929,6 +1907,8 @@ app.post('/api/redox-admin/school', async (req, res) => {
         endDate: endDate,
         amount: subscriptionAmount || 0,
         status: 'active',
+          logo: logo || '',           // ✅ ADD THIS LINE
+
         paymentMethod: 'free',
         paymentDate: now,
         invoiceNumber: `SUB-${Date.now().toString().slice(-8)}`,
@@ -2091,17 +2071,369 @@ app.get('/api/redox-admin/school/:id', async (req, res) => {
       });
   }
 });
+app.put('/api/redox-admin/school/:id/logo', async (req, res) => {
+  try {
+    const { logo } = req.body; // Base64 أو URL
+    
+    if (!logo) {
+      return res.status(400).json({ success: false, error: 'الصورة مطلوبة' });
+    }
+
+    const school = await School.findByIdAndUpdate(
+      req.params.id,
+      { logo: logo },
+      { new: true }
+    ).select('-admins.password');
+
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث صورة المدرسة بنجاح',
+      logo: school.logo
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الصورة:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.put('/api/redox-admin/school/:id/budget', async (req, res) => {
+  try {
+    const { total, spent, notes } = req.body;
+
+    const school = await School.findById(req.params.id);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    school.budget.total = total !== undefined ? total : school.budget.total;
+    school.budget.spent = spent !== undefined ? spent : school.budget.spent;
+    school.budget.remaining = school.budget.total - school.budget.spent;
+    school.budget.lastUpdated = new Date();
+
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث الميزانية بنجاح',
+      budget: school.budget
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الميزانية:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.put('/api/redox-admin/school/:id/subscription-features', async (req, res) => {
+  try {
+    const { features } = req.body;
+
+    const school = await School.findById(req.params.id);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    if (features) {
+      Object.keys(features).forEach(key => {
+        if (school.subscription.features[key] !== undefined) {
+          school.subscription.features[key] = features[key];
+        }
+      });
+    }
+
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث ميزات الاشتراك بنجاح',
+      features: school.subscription.features
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الميزات:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.put('/api/redox-admin/school/:id/subscription-full', async (req, res) => {
+  try {
+    const { plan, amount, startDate, endDate, status, features, paymentMethod, notes } = req.body;
+
+    const school = await School.findById(req.params.id);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    const planNames = {
+      trial: 'تجريبي',
+      basic: 'أساسي',
+      standard: 'قياسي',
+      premium: 'مميز',
+      enterprise: 'مؤسسات'
+    };
+
+    if (plan) {
+      school.subscription.plan = plan;
+      school.subscription.planName = planNames[plan] || 'تجريبي';
+    }
+    if (amount !== undefined) school.subscription.amount = amount;
+    if (startDate) school.subscription.startDate = new Date(startDate);
+    if (endDate) school.subscription.endDate = new Date(endDate);
+    if (status) school.subscription.status = status;
+    if (paymentMethod) school.subscription.paymentMethod = paymentMethod;
+    if (notes) school.subscription.notes = notes;
+    if (features) {
+      Object.keys(features).forEach(key => {
+        if (school.subscription.features[key] !== undefined) {
+          school.subscription.features[key] = features[key];
+        }
+      });
+    }
+
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث الاشتراك بالكامل بنجاح',
+      subscription: school.subscription
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث الاشتراك:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+// ==============================================
+// ✅ جلب معلومات المدرسة العامة (للشاشات)
+// ==============================================
+// ==============================================
+// ✅ جلب معلومات المدرسة العامة (للشاشات)
+// ==============================================
+app.get('/api/school/public-info', async (req, res) => {
+  try {
+    // الحصول على schoolKey من query أو headers
+    const schoolKey = req.query.schoolKey || req.headers['x-school-key'];
+    
+    // أو من التوكن إذا كان متاحاً
+    let school = null;
+    
+    if (schoolKey) {
+      school = await School.findOne({ schoolKey }).select('name logo address phone email');
+    } else if (req.user?.schoolId) {
+      school = await School.findById(req.user.schoolId).select('name logo address phone email');
+    }
+    
+    if (!school) {
+      // إذا لم يوجد schoolKey، أرجع أول مدرسة نشطة (للتطوير)
+      school = await School.findOne({ status: 'active' }).select('name logo address phone email');
+    }
+
+    if (!school) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'المدرسة غير موجودة' 
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        _id: school._id,
+        name: school.name,
+        logo: school.logo || '',
+        address: school.address || '',
+        phone: school.phone || '',
+        email: school.email || ''
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب معلومات المدرسة:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message 
+    });
+  }
+});
+
+
+// ==============================================
+// ✅ جلب شعار المدرسة بواسطة معرف المدرسة
+// GET /api/school/:schoolId/logo
+// ==============================================
+app.get('/api/school/:schoolId/logo', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    
+    console.log(`🖼️ جلب شعار المدرسة: ${schoolId}`);
+    
+    // التحقق من صحة المعرف
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'معرف المدرسة غير صالح'
+      });
+    }
+
+    // البحث عن المدرسة وجلب الشعار فقط
+    const school = await School.findById(schoolId).select('name logo');
+    
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        error: 'المدرسة غير موجودة'
+      });
+    }
+
+    // التحقق من وجود الشعار
+    if (!school.logo || school.logo === '') {
+      return res.status(404).json({
+        success: false,
+        error: 'لا يوجد شعار لهذه المدرسة',
+        schoolName: school.name,
+        hasLogo: false
+      });
+    }
+
+    console.log(`✅ تم جلب شعار المدرسة: ${school.name}`);
+
+    res.json({
+      success: true,
+      data: {
+        _id: school._id,
+        name: school.name,
+        logo: school.logo,
+        hasLogo: true
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في جلب شعار المدرسة:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+// ==============================================
+// ✅ حفظ شعار المدرسة عبر API (بدلاً من localStorage فقط)
+// ==============================================
+app.put('/api/school/:schoolId/logo-public', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { logo } = req.body;
+
+    if (!logo) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'الصورة مطلوبة' 
+      });
+    }
+
+    const school = await School.findByIdAndUpdate(
+      schoolId,
+      { logo: logo },
+      { new: true }
+    ).select('name logo');
+
+    if (!school) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'المدرسة غير موجودة' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '✅ تم حفظ شعار المدرسة',
+      logo: school.logo
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في حفظ الشعار:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message 
+    });
+  }
+});
+app.put('/api/redox-admin/school/:id/subscription-amount', async (req, res) => {
+  try {
+    const { amount, currency } = req.body;
+
+    const school = await School.findById(req.params.id);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'المدرسة غير موجودة' });
+    }
+
+    school.subscription.amount = amount !== undefined ? amount : school.subscription.amount;
+    if (currency) school.subscription.currency = currency;
+
+    await school.save();
+
+    res.json({
+      success: true,
+      message: '✅ تم تحديث مبلغ الاشتراك بنجاح',
+      subscription: {
+        amount: school.subscription.amount,
+        currency: school.subscription.currency
+      }
+    });
+  } catch (err) {
+    console.error('❌ خطأ في تحديث مبلغ الاشتراك:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // 4. تحديث المدرسة
+// ==============================================
+// 4. تحديث المدرسة (مع دعم الشعار)
+// ==============================================
 app.put('/api/redox-admin/school/:id', async (req, res) => {
   try {
-      const { name, address, phone, email, status } = req.body;
-      const updateData = { name, address, phone, email, status };
+      console.log('📝 استلام طلب تحديث مدرسة:', req.params.id);
+      console.log('📦 البيانات المستلمة:', {
+          name: req.body.name,
+          email: req.body.email,
+          phone: req.body.phone,
+          address: req.body.address,
+          status: req.body.status,
+          hasLogo: !!req.body.logo,
+          logoLength: req.body.logo ? req.body.logo.length : 0
+      });
+
+      const { name, address, phone, email, status, logo } = req.body;
+      const updateData = {};
+
+      // ✅ تحديث الحقول الأساسية فقط إذا تم إرسالها
+      if (name !== undefined) updateData.name = name;
+      if (address !== undefined) updateData.address = address;
+      if (phone !== undefined) updateData.phone = phone;
+      if (email !== undefined) updateData.email = email;
+      if (status !== undefined) updateData.status = status;
+
+      // ✅ إضافة الشعار إذا تم إرساله (بدون قيود على الحجم)
+      if (logo !== undefined && logo !== null && logo !== '') {
+          updateData.logo = logo;
+          console.log(`🖼️ سيتم تحديث الشعار (${logo.length} حرف)`);
+      }
 
       // منع تحديث الحقول الحساسة
       delete updateData.schoolKey;
       delete updateData.admins;
       delete updateData.subscription;
+
+      // ✅ التحقق من عدم وجود حقول لتحديثها
+      if (Object.keys(updateData).length === 0) {
+          return res.status(400).json({
+              success: false,
+              status: 'error',
+              error: 'لا توجد بيانات للتحديث'
+          });
+      }
+
+      console.log('🔄 البيانات النهائية للتحديث:', {
+          fields: Object.keys(updateData),
+          hasLogo: !!updateData.logo
+      });
 
       const school = await School.findByIdAndUpdate(
           req.params.id,
@@ -2110,21 +2442,49 @@ app.put('/api/redox-admin/school/:id', async (req, res) => {
       ).select('-__v -admins.password');
 
       if (!school) {
-          return res.status(404).json({ 
-              error: 'المدرسة غير موجودة',
-              status: 'error' 
+          return res.status(404).json({
+              success: false,
+              status: 'error',
+              error: 'المدرسة غير موجودة'
           });
       }
 
-      res.json({ 
-          message: '✅ تم تحديث المدرسة بنجاح', 
+      console.log(`✅ تم تحديث المدرسة: ${school.name}`);
+
+      res.json({
+          success: true,
+          message: '✅ تم تحديث المدرسة بنجاح',
           school,
-          status: 'success' 
+          status: 'success'
       });
   } catch (error) {
-      res.status(500).json({ 
-          error: 'فشل في تحديث المدرسة: ' + error.message,
-          status: 'error' 
+      console.error('❌ خطأ في تحديث المدرسة:', error);
+
+      // معالجة أخطاء التحقق
+      if (error.name === 'ValidationError') {
+          const errors = Object.values(error.errors).map(e => e.message);
+          return res.status(400).json({
+              success: false,
+              status: 'error',
+              error: 'خطأ في صحة البيانات',
+              details: errors
+          });
+      }
+
+      // معالجة أخطاء التكرار
+      if (error.code === 11000) {
+          const field = Object.keys(error.keyPattern)[0];
+          return res.status(400).json({
+              success: false,
+              status: 'error',
+              error: `القيمة المكررة في حقل ${field}`
+          });
+      }
+
+      res.status(500).json({
+          success: false,
+          status: 'error',
+          error: 'فشل في تحديث المدرسة: ' + error.message
       });
   }
 });

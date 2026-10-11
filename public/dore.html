@@ -1,1238 +1,399 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تسجيل الطلاب | Redox</title>
-
-    <!-- Bootstrap CSS & Icons & Animate -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
-
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --success-color: #06d6a0;
-            --warning-color: #ffb703;
-            --danger-color: #e63946;
-            --dark-color: #8b98b6;
-            --light-color: #f8f9fa;
-            --gray-color: #6c757d;
-            --card-bg: rgba(255, 255, 255, 0.97);
-            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #118ab2 100%);
-            --gradient-warning: linear-gradient(135deg, #ffb703 0%, #fb8500 100%);
-            --gradient-danger: linear-gradient(135deg, #e63946 0%, #9d0208 100%);
-            --gradient-dark: linear-gradient(135deg, #96aad7 0%, #5e6d84 100%);
-            --box-shadow: 0 20px 60px rgba(167, 173, 186, 0.18);
-            --border-radius: 24px;
-            --redox-navy: #2d4e90;
-            --redox-cyan: #2e565a;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        html, body {
-            height: 100%;
-            overflow: hidden;
-        }
-
-        body {
-            font-family: 'Tajawal', sans-serif;
-            background: var(--gradient-primary);
-            position: relative;
-            color: var(--dark-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.08"><path fill="white" d="M50 0 L100 50 L50 100 L0 50 Z"/></svg>');
-            background-size: 60px 60px;
-            animation: moveBackground 25s linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes moveBackground {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(60px, 60px) rotate(10deg); }
-        }
-
-        .main-wrapper {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-        }
-
-        .scan-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(14px);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            overflow: hidden;
-            animation: fadeInUp 0.6s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            max-width: 1180px;
-            height: 100%;
-            max-height: 100%;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== Header ===== */
-        .scan-header {
-            background: var(--gradient-dark);
-            color: white;
-            padding: 14px 24px 12px;
-            position: relative;
-            overflow: hidden;
-            flex-shrink: 0;
-            border-bottom: 3px solid var(--redox-cyan);
-        }
-
-        .scan-header::before {
-            content: '';
-            position: absolute;
-            top: -60%;
-            right: -30%;
-            width: 160%;
-            height: 220%;
-            background: radial-gradient(circle, rgba(22, 199, 217, 0.15) 0%, transparent 60%);
-            animation: rotate 25s linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* ===== Redox Logo (القديم) ===== */
-        .redox-logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 14px 6px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(6px);
-            flex-shrink: 0;
-        }
-
-        .redox-logo img {
-            height: 34px;
-            width: auto;
-            max-width: 120px;
-            object-fit: contain;
-            border-radius: 6px;
-            display: block;
-        }
-
-        .redox-logo .brand-mark-icon {
-            display: inline-grid;
-            place-items: center;
-            width: 30px;
-            height: 30px;
-            border-radius: 9px;
-            background: linear-gradient(135deg, var(--redox-cyan), #fff);
-            color: var(--redox-navy);
-            font-size: 1rem;
-        }
-
-        /* ===== School Logo (الجديد) ===== */
-        .school-logo-box {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 62px;
-            height: 62px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px dashed rgba(22, 199, 217, 0.55);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex-shrink: 0;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .school-logo-box:hover {
-            border-color: var(--redox-cyan);
-            background: rgba(22, 199, 217, 0.15);
-            transform: scale(1.05);
-        }
-
-        .school-logo-box i {
-            font-size: 1.6rem;
-            color: rgba(22, 199, 217, 0.85);
-        }
-
-        .school-logo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 14px;
-        }
-
-        .school-logo-box .logo-label {
-            position: absolute;
-            bottom: -16px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.55rem;
-            color: rgba(255, 255, 255, 0.55);
-            white-space: nowrap;
-            letter-spacing: 0.5px;
-        }
-
-        /* ===== Center Info ===== */
-        .header-center {
-            flex: 1;
-            text-align: center;
-            min-width: 0;
-        }
-
-        .school-name {
-            font-size: 1.5rem;
-            font-weight: 900;
-            margin-bottom: 2px;
-            color: #fff;
-            letter-spacing: 0.5px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .school-slogan {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.65);
-            margin-bottom: 6px;
-            letter-spacing: 1px;
-            font-weight: 500;
-        }
-
-        .datetime-strip {
-            display: inline-flex;
-            align-items: center;
-            gap: 14px;
-            padding: 5px 16px;
-            border-radius: 999px;
-            background: rgba(22, 199, 217, 0.12);
-            border: 1px solid rgba(22, 199, 217, 0.25);
-            backdrop-filter: blur(6px);
-        }
-
-        .dt-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .dt-item.time {
-            font-weight: 800;
-            font-size: 1rem;
-            color: var(--redox-cyan);
-            font-variant-numeric: tabular-nums;
-        }
-
-        .dt-divider {
-            width: 1px;
-            height: 16px;
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* ===== Fullscreen Button ===== */
-        .fullscreen-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            color: #fff;
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1.15rem;
-            flex-shrink: 0;
-        }
-
-        .fullscreen-btn:hover {
-            background: rgba(22, 199, 217, 0.25);
-            border-color: var(--redox-cyan);
-            transform: scale(1.06);
-        }
-
-        /* ===== Scan Area ===== */
-        .scan-area {
-            padding: 14px 24px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(248,249,250,0.85) 100%);
-            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-            flex-shrink: 0;
-        }
-
-        .scan-top-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            padding: 7px 18px;
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            background: white;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-            transition: all 0.3s ease;
-            gap: 7px;
-            border: 2px solid transparent;
-        }
-
-        .status-ready { color: var(--success-color); border-color: var(--success-color); }
-        .status-scanning { color: var(--warning-color); border-color: var(--warning-color); animation: pulse 1.5s infinite; }
-        .status-success { color: var(--success-color); border-color: var(--success-color); background: rgba(6, 214, 160, 0.08); }
-        .status-error { color: var(--danger-color); border-color: var(--danger-color); background: rgba(230, 57, 70, 0.08); }
-        .status-warning { color: var(--warning-color); border-color: var(--warning-color); background: rgba(255, 183, 3, 0.08); animation: pulseWarning 1s infinite; }
-        .status-overdue { color: var(--danger-color); border-color: var(--danger-color); background: rgba(230, 57, 70, 0.12); animation: pulseOverdue 1s infinite; }
-        .status-completed { color: var(--primary-color); border-color: var(--primary-color); background: rgba(67, 97, 238, 0.08); }
-
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
-        @keyframes pulseWarning { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        @keyframes pulseOverdue { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.03); opacity: 0.9; } 100% { transform: scale(1); opacity: 1; } }
-
-        .scan-input-wrapper {
-            position: relative;
-            max-width: 560px;
-            margin: 0 auto;
-        }
-
-        .scan-input {
-            width: 100%;
-            padding: 13px 24px 13px 52px;
-            font-size: 1.05rem;
-            text-align: center;
-            border: 2px solid #e2e8f0;
-            border-radius: 999px;
-            background: #fff;
-            transition: all 0.3s ease;
-            font-family: 'Tajawal', sans-serif;
-            letter-spacing: 2px;
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-
-        .scan-input::placeholder {
-            font-weight: 400;
-            letter-spacing: 0.5px;
-            color: #94a3b8;
-        }
-
-        .scan-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 5px rgba(67, 97, 238, 0.12);
-            outline: none;
-        }
-
-        .scan-input-wrapper .scan-icon {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.3rem;
-            color: var(--primary-color);
-            pointer-events: none;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .btn-action {
-            padding: 8px 18px;
-            border-radius: 999px;
-            font-weight: 700;
-            transition: all 0.25s ease;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.82rem;
-            cursor: pointer;
-            letter-spacing: 0.3px;
-        }
-
-        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15); }
-        .btn-action:active { transform: translateY(0); }
-        .btn-primary-custom { background: var(--gradient-primary); color: white; }
-        .btn-success-custom { background: var(--gradient-success); color: white; }
-        .btn-warning-custom { background: var(--gradient-warning); color: white; }
-
-        /* ===== Result Area ===== */
-        .result-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 14px 20px;
-            min-height: 0;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(67, 97, 238, 0.3) transparent;
-        }
-
-        .result-area::-webkit-scrollbar { width: 6px; }
-        .result-area::-webkit-scrollbar-thumb { background: rgba(67, 97, 238, 0.3); border-radius: 10px; }
-
-        /* ===== Virtual Card ===== */
-        .virtual-student-card {
-            background: var(--gradient-primary);
-            border-radius: 18px;
-            padding: 16px 20px;
-            color: white;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 10px;
-            box-shadow: 0 14px 30px rgba(67, 97, 238, 0.28);
-            transition: transform 0.3s ease;
-            animation: fadeInUp 0.5s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .virtual-student-card:hover { transform: translateY(-3px); }
-
-        .virtual-student-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 65%);
-            animation: rotate 18s linear infinite;
-            pointer-events: none;
-        }
-
-        .card-chip {
-            position: absolute;
-            top: 14px;
-            left: 14px;
-            width: 42px;
-            height: 32px;
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .card-chip i { font-size: 18px; color: #b8860b; }
-
-        .student-avatar-large {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            border: 3px solid white;
-            object-fit: cover;
-            margin: 0 auto 6px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.5s ease;
-            overflow: hidden;
-            position: relative;
-            z-index: 1;
-        }
-
-        .student-avatar-large img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            transition: filter 0.8s ease;
-        }
-
-        .student-avatar-large.blurred img { filter: blur(10px); }
-        .student-avatar-large i { font-size: 32px; color: white; }
-
-        .student-name-card {
-            font-size: 1.25rem;
-            font-weight: 900;
-            margin-bottom: 2px;
-            text-align: center;
-            transition: all 0.8s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .student-name-card.blurred {
-            filter: blur(8px);
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        .student-id-card {
-            font-size: 0.78rem;
-            opacity: 0.85;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 2px;
-            transition: all 0.8s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .student-id-card.blurred {
-            filter: blur(6px);
-            opacity: 0.4;
-        }
-
-        .card-number {
-            font-size: 0.95rem;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 3px;
-            margin: 8px 0;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.28);
-            padding: 6px;
-            border-radius: 10px;
-            position: relative;
-            z-index: 1;
-            font-weight: 600;
-        }
-
-        .card-expiry {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 6px;
-            font-size: 0.68rem;
-            opacity: 0.8;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ===== Info Items ===== */
-        .info-item {
-            background: #f8fafc;
-            padding: 8px 12px;
-            border-radius: 12px;
-            margin-bottom: 6px;
-            border: 1px solid #eef2f7;
-        }
-
-        .info-label { font-size: 0.7rem; color: #64748b; margin-bottom: 2px; font-weight: 600; }
-        .info-value { font-size: 0.9rem; font-weight: 600; color: var(--dark-color); }
-
-        .attendance-panel {
-            background: #ffffff;
-            border: 1px solid #eef2f7;
-            border-radius: 14px;
-            padding: 10px;
-            text-align: center;
-            height: 100%;
-        }
-
-        .attendance-panel .icon-wrap {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 4px;
-            font-size: 1.5rem;
-        }
-
-        /* ===== Toast ===== */
-        .alert-message {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            min-width: 280px;
-            max-width: 500px;
-            padding: 12px 18px;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: slideDown 0.3s ease-out;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .alert-message.fade-out { animation: slideUp 0.3s ease-out forwards; }
-
-        @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-        @keyframes slideUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -20px); } }
-
-        .alert-success { border-right: 5px solid var(--success-color); }
-        .alert-error { border-right: 5px solid var(--danger-color); }
-        .alert-warning { border-right: 5px solid var(--warning-color); }
-        .alert-info { border-right: 5px solid var(--primary-color); }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid rgba(67, 97, 238, 0.2);
-            border-top-color: var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ===== Footer ===== */
-        .footer {
-            padding: 7px 20px;
-            background: var(--gradient-dark) !important;
-            color: rgba(255, 255, 255, 0.65) !important;
-            text-align: center;
-            font-size: 0.72rem;
-            flex-shrink: 0;
-            border-top: 2px solid var(--redox-cyan);
-            letter-spacing: 0.5px;
-        }
-
-        /* ===== Responsive ===== */
-        @media (max-width: 900px) {
-            .school-name { font-size: 1.2rem; }
-            .redox-logo img { height: 28px; }
-            .redox-logo .brand-mark-icon { width: 26px; height: 26px; font-size: 0.85rem; }
-            .school-logo-box { width: 52px; height: 52px; }
-            .school-logo-box i { font-size: 1.3rem; }
-        }
-
-        @media (max-width: 768px) {
-            .main-wrapper { padding: 8px; }
-            .scan-header { padding: 10px 14px; }
-            .school-name { font-size: 1rem; }
-            .school-slogan { font-size: 0.7rem; }
-            .dt-item { font-size: 0.75rem; }
-            .dt-item.time { font-size: 0.9rem; }
-            .action-buttons .btn-action { padding: 6px 12px; font-size: 0.72rem; }
-            .scan-input { font-size: 0.85rem; padding: 10px 18px 10px 44px; }
-            .scan-area { padding: 10px 14px; }
-            .student-name-card { font-size: 1rem; }
-            .virtual-student-card { padding: 12px 14px; }
-            .student-avatar-large { width: 56px; height: 56px; }
-            .card-number { font-size: 0.78rem; letter-spacing: 2px; }
-            .redox-logo { padding: 4px 10px 4px 8px; }
-            .redox-logo img { height: 24px; }
-            .redox-logo .brand-mark-icon { width: 22px; height: 22px; font-size: 0.75rem; }
-            .school-logo-box { width: 44px; height: 44px; }
-            .school-logo-box i { font-size: 1.1rem; }
-            .fullscreen-btn { width: 36px; height: 36px; font-size: 1rem; }
-        }
-
-        @media (max-width: 480px) {
-            .redox-logo .brand-mark-icon { display: none; }
-            .redox-logo img { height: 22px; }
-            .school-logo-box { width: 38px; height: 38px; border-radius: 12px; }
-            .school-logo-box i { font-size: 0.95rem; }
-            .school-name { font-size: 0.85rem; }
-            .school-slogan { display: none; }
-            .datetime-strip { padding: 3px 10px; gap: 8px; }
-            .dt-item { font-size: 0.68rem; }
-            .dt-item.time { font-size: 0.8rem; }
-            .dt-divider { height: 12px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>بوابة المدخل | Redox</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+:root{--bg:#eef2f8;--panel:#fff;--line:#dfe5ef;--tx:#0f1b33;--mut:#64748b;--navy:#0b2250;--navy2:#143a82;
+--ok:#0e9f6e;--blue:#1f5eff;--warn:#f59e0b;--bad:#e11d48;--ac:var(--blue);--r:20px;--sh:0 10px 30px rgba(15,27,51,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;min-height:100%}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body[data-state=ready]{--ac:var(--blue)}body[data-state=scanning]{--ac:#6366f1}
+body[data-state=success]{--ac:var(--ok)}body[data-state=late]{--ac:var(--warn)}body[data-state=error]{--ac:var(--bad)}
+.app{min-height:100vh;min-height:100dvh;width:100%;display:flex;flex-direction:column}
+/* header */
+header{display:flex;align-items:center;gap:clamp(10px,1.6vw,22px);padding:clamp(10px,1.2vw,18px) clamp(14px,2.4vw,40px);color:#fff;
+background:linear-gradient(110deg,var(--navy),var(--navy2));border-bottom:4px solid var(--ac);transition:border-color .5s;animation:down .7s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 6px 24px rgba(11,34,80,.25)}
+@keyframes down{from{opacity:0;transform:translateY(-100%)}}
+.logo{height:clamp(30px,3.4vw,46px);max-width:140px;object-fit:contain;background:#fff;border-radius:10px;padding:4px 8px}
+.logo-fb{display:none;width:42px;height:42px;border-radius:12px;background:#fff;color:var(--navy);place-items:center;font-size:1.2rem}
+.sch{flex:1;min-width:0;display:flex;align-items:center;gap:clamp(10px,1.4vw,18px)}
+#schoolLogoBox{width:clamp(44px,4.6vw,64px);height:clamp(44px,4.6vw,64px);border-radius:16px;background:#fff;display:grid;place-items:center;overflow:hidden;flex-shrink:0;color:var(--navy);font-size:1.5rem}
+#schoolLogoBox img{width:100%;height:100%;object-fit:cover}
+#schoolLogoBox.loading::after{content:'';width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+.sch h1{font-size:clamp(1.05rem,2.4vw,2rem);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sch p{font-size:clamp(.7rem,1vw,.9rem);opacity:.75}
+.clock{text-align:left;direction:ltr;flex-shrink:0}
+#timeDisplay{display:block;font-size:clamp(1.3rem,3vw,2.6rem);font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+#dateDisplay{font-size:clamp(.68rem,1vw,.88rem);opacity:.75}
+.fs{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:12px;border:0;background:#fff;color:var(--navy);font:800 .9rem 'Tajawal';cursor:pointer;flex-shrink:0;transition:.25s}
+.fs:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.fs i{font-size:1.15rem}
+/* main fills whole screen */
+main{flex:1;display:grid;grid-template-columns:minmax(320px,.85fr) 1.15fr;gap:clamp(12px,1.8vw,28px);padding:clamp(12px,1.8vw,28px) clamp(14px,2.4vw,40px);min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.stage{padding:clamp(18px,3vw,44px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(16px,2.6vw,34px);animation:up .8s .1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes up{from{opacity:0;transform:translateY(30px)}}
+.status{display:inline-flex;align-items:center;gap:8px;padding:9px 22px;border-radius:99px;font-weight:800;font-size:clamp(.82rem,1.2vw,1rem);background:color-mix(in srgb,var(--ac) 11%,#fff);border:1.5px solid var(--ac);color:var(--ac);transition:.4s}
+.ring{position:relative;width:clamp(160px,24vw,300px);aspect-ratio:1;display:grid;place-items:center}
+.ring i.ic{font-size:clamp(3.2rem,7.5vw,6rem);color:var(--ac);transition:.4s;z-index:2}
+.ring span{position:absolute;inset:0;border-radius:50%;border:2px solid var(--ac);opacity:0}
+body[data-state=ready] .ring span{animation:ping 3s ease-out infinite}
+body[data-state=ready] .ring span:nth-child(2){animation-delay:1s}body[data-state=ready] .ring span:nth-child(3){animation-delay:2s}
+@keyframes ping{0%{transform:scale(.55);opacity:.7}100%{transform:scale(1.2);opacity:0}}
+.ring .arc{opacity:1;inset:5%;border:4px solid transparent;border-top-color:var(--ac);border-bottom-color:color-mix(in srgb,var(--ac) 30%,transparent);animation:spin 6s linear infinite}
+body[data-state=scanning] .ring .arc{animation-duration:.7s}
+body[data-state=success] .ring,body[data-state=late] .ring{animation:pop .6s}body[data-state=error] .ring{animation:shake .5s}
+.ring .core{opacity:1;inset:19%;background:color-mix(in srgb,var(--ac) 9%,#fff);border:1px solid color-mix(in srgb,var(--ac) 35%,transparent)}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pop{40%{transform:scale(1.14)}}
+@keyframes shake{20%,60%{transform:translateX(-12px)}40%,80%{transform:translateX(12px)}}
+.in-wrap{position:relative;width:100%;max-width:500px}
+#cardInput{width:100%;padding:16px 22px 16px 56px;border-radius:14px;border:2px solid var(--line);background:#f8fafd;color:var(--tx);font:700 clamp(1rem,1.4vw,1.15rem) 'Tajawal';text-align:center;letter-spacing:2px;transition:.3s}
+#cardInput::placeholder{font-weight:400;letter-spacing:.3px;color:#94a3b8}
+#cardInput:focus{outline:none;border-color:var(--ac);background:#fff;box-shadow:0 0 0 5px color-mix(in srgb,var(--ac) 16%,transparent)}
+.in-wrap i{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:var(--ac);font-size:1.35rem;pointer-events:none}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btns button{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--navy);font:700 .85rem 'Tajawal';cursor:pointer;transition:.25s}
+.btns button:hover{background:var(--navy);color:#fff;border-color:var(--navy);transform:translateY(-3px);box-shadow:0 10px 22px rgba(11,34,80,.25)}
+/* result */
+.result{padding:clamp(16px,2.2vw,32px);display:flex;flex-direction:column;justify-content:center;min-height:320px;animation:up .8s .25s cubic-bezier(.2,.8,.2,1) both;overflow:hidden}
+.idle{text-align:center;color:var(--mut);animation:fade 1s both}
+.idle i{font-size:clamp(3.5rem,7vw,5.5rem);display:block;margin-bottom:10px;animation:float 3.5s ease-in-out infinite;color:#b8c4dc}
+.idle h3{color:var(--tx);font-weight:800;font-size:clamp(1.1rem,2vw,1.6rem);margin-bottom:4px}
+@keyframes float{50%{transform:translateY(-12px)}}@keyframes fade{from{opacity:0}}
+.loader{text-align:center}
+.loader .sp{width:58px;height:58px;border:5px solid var(--line);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.pass{display:grid;grid-template-columns:auto 1fr;gap:clamp(16px,2.6vw,36px);align-items:center;padding:clamp(16px,2.2vw,32px);border-radius:18px;position:relative;overflow:hidden;color:#fff;
+background:linear-gradient(120deg,var(--navy),var(--navy2));border-inline-start:8px solid var(--ac);animation:reveal .7s cubic-bezier(.2,.9,.2,1) both;box-shadow:0 18px 40px rgba(11,34,80,.28)}
+@keyframes reveal{from{opacity:0;transform:perspective(900px) rotateX(16deg) translateY(30px) scale(.95)}}
+.pass::before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);transform:translateX(120%);animation:shine 2.4s .5s ease-out 1 forwards}
+@keyframes shine{to{transform:translateX(-120%)}}
+.av{width:clamp(90px,13vw,170px);aspect-ratio:1;border-radius:50%;padding:5px;background:var(--ac)}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:4px solid #fff;display:block;transition:filter .8s}
+.pass .nm{font-size:clamp(1.2rem,2.8vw,2.3rem);font-weight:900;line-height:1.25;transition:.8s}
+.pass .sid{font-family:'Courier New',monospace;letter-spacing:2px;opacity:.75;font-size:clamp(.75rem,1.1vw,.95rem);transition:.8s}
+.pass .cn{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:10px;background:rgba(255,255,255,.14);font-family:'Courier New',monospace;letter-spacing:3px;font-size:clamp(.75rem,1.1vw,.95rem)}
+.blurred .nm,.blurred .sid{filter:blur(9px);opacity:.35}.blurred .av img{filter:blur(12px)}
+.pill{display:inline-flex;align-items:center;gap:7px;margin-bottom:8px;padding:6px 16px;border-radius:99px;font-weight:800;font-size:.9rem;background:var(--ac);color:#fff}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
+.fact{padding:12px 16px;border-radius:14px;background:#f5f8fd;border:1px solid var(--line);animation:fade .6s .3s both}
+.fact small{display:block;color:var(--mut);font-size:.75rem;font-weight:600;margin-bottom:2px}
+.fact b{font-size:1rem;font-weight:800;color:var(--navy);word-break:break-word}
+.fact.wide{grid-column:1/-1}
+.timer{position:absolute;bottom:0;right:0;height:4px;background:var(--ac);width:100%;transform-origin:right;animation:drain 15s linear forwards}
+@keyframes drain{to{transform:scaleX(0)}}
+.errbox{text-align:center;animation:reveal .6s both}
+.errbox i{font-size:clamp(3.8rem,8vw,6rem);color:var(--bad);display:block}
+.errbox h3{font-weight:900;margin:8px 0 4px;font-size:clamp(1.2rem,2.2vw,1.8rem)}
+.errbox .cn{display:inline-block;margin:6px 0;padding:6px 14px;border-radius:10px;background:#fff1f3;color:var(--bad);font-family:'Courier New',monospace;letter-spacing:3px}
+.errbox button{margin-top:14px;padding:10px 26px;border-radius:12px;border:0;background:var(--bad);color:#fff;font:800 .95rem 'Tajawal';cursor:pointer;transition:.25s}
+.errbox button:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(225,29,72,.35)}
+footer{text-align:center;color:var(--mut);font-size:.78rem;padding:10px;border-top:1px solid var(--line);background:#fff}
+.toast{position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:99;min-width:260px;max-width:92vw;padding:14px 22px;border-radius:14px;background:#fff;border:1px solid var(--line);border-right:6px solid var(--ok);display:flex;gap:10px;align-items:center;font-weight:700;font-size:.92rem;box-shadow:0 18px 50px rgba(15,27,51,.25);animation:tin .4s cubic-bezier(.2,.9,.2,1)}
+.toast.error{border-right-color:var(--bad)}.toast.warning{border-right-color:var(--warn)}.toast.info{border-right-color:var(--blue)}
+.toast.out{animation:tout .3s forwards}
+@keyframes tin{from{opacity:0;transform:translate(-50%,-30px)}}@keyframes tout{to{opacity:0;transform:translate(-50%,-30px)}}
+/* responsive: full screen on every device */
+@media(min-width:1100px){html,body{height:100%;overflow:hidden}.app{height:100dvh}.result{overflow-y:auto}}
+@media(max-width:900px){main{grid-template-columns:1fr}.clock{display:none}}
+@media(max-width:560px){.pass{grid-template-columns:1fr;text-align:center;justify-items:center;border-inline-start:0;border-top:8px solid var(--ac)}.logo,.sch p{display:none}.fs span{display:none}.fs{padding:0 13px}.ring{width:150px}.btns button{padding:9px 13px;font-size:.78rem}.facts{grid-template-columns:1fr 1fr}}
+@media(max-height:560px) and (orientation:landscape){html,body{overflow:auto;height:auto}.app{height:auto}.ring{width:110px}main{grid-template-columns:1fr 1.2fr}}
+@media(min-width:1900px){html{font-size:20px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
 </head>
-<body>
-    <div class="main-wrapper">
-        <div class="scan-card">
-            <!-- Header -->
-            <div class="scan-header">
-                <div class="header-top">
-                    <!-- Redox Logo (القديم) -->
-                    <div class="redox-logo" title="Redox Academy">
-                        <img src="/Redox.png" alt="شعار Redox" loading="eager"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-grid';">
-                        <span class="brand-mark-icon" style="display:none;"><i class="bi bi-hexagon-fill"></i></span>
-                    </div>
-
-                    <!-- Center Info -->
-                    <div class="header-center">
-                        <h1 class="school-name" id="schoolName">اسم المدرسة</h1>
-                        <p class="school-slogan">نظام تسجيل الطلاب بالبطاقات الذكية</p>
-                        <div class="datetime-strip">
-                            <div class="dt-item time">
-                                <i class="bi bi-clock-fill"></i>
-                                <span id="timeDisplay">--:--:--</span>
-                            </div>
-                            <div class="dt-divider"></div>
-                            <div class="dt-item">
-                                <i class="bi bi-calendar-event"></i>
-                                <span id="dateDisplay">---</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- School Logo (الجديد) -->
-                    <div class="school-logo-box" id="schoolLogoBox" title="اضغط لتحميل شعار المدرسة">
-                        <i class="bi bi-building" id="schoolLogoIcon"></i>
-                        <span class="logo-label">شعار المدرسة</span>
-                    </div>
-
-                    <!-- Fullscreen Button -->
-                    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="تكبير الشاشة">
-                        <i class="bi bi-arrows-fullscreen" id="fullscreenIcon"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Scan Area -->
-            <div class="scan-area">
-                <div class="scan-top-row">
-                    <div class="status-indicator status-ready" id="scannerStatus">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>جاهز لمسح البطاقة</span>
-                    </div>
-                </div>
-
-                <div class="scan-input-wrapper">
-                    <input type="text"
-                           class="scan-input"
-                           id="cardInput"
-                           placeholder="امسح البطاقة أو أدخل الرقم يدوياً"
-                           autocomplete="off"
-                           autofocus>
-                    <i class="bi bi-upc-scan scan-icon"></i>
-                </div>
-
-                <div class="action-buttons">
-                    <button class="btn-action btn-primary-custom" onclick="focusScanner()">
-                        <i class="bi bi-upc-scan"></i>
-                        <span>تركيز الماسح</span>
-                    </button>
-                    <button class="btn-action btn-success-custom" onclick="manualEntry()">
-                        <i class="bi bi-pencil-square"></i>
-                        <span>إدخال يدوي</span>
-                    </button>
-                    <button class="btn-action btn-warning-custom" onclick="clearScanner()">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        <span>إعادة تعيين</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Result Area -->
-            <div class="result-area" id="resultArea">
-                <div id="scanResult"></div>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer">
-                <i class="bi bi-c-circle"></i> 2026 Redox Academy — جميع الحقوق محفوظة
-            </div>
-        </div>
+<body data-state="ready">
+<div class="app">
+  <header>
+    <img class="logo" src="/Redox.png" alt="Redox" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+    <span class="logo-fb"><i class="bi bi-hexagon-fill"></i></span>
+    <div class="sch">
+      <div id="schoolLogoBox"><i class="bi bi-building"></i></div>
+      <div style="min-width:0"><h1 id="schoolName">اسم المدرسة</h1><p>بوابة المدخل · تسجيل الحضور بالبطاقة الذكية</p></div>
     </div>
+    <div class="clock"><span id="timeDisplay">--:--:--</span><span id="dateDisplay">---</span></div>
+    <button class="fs" onclick="toggleFullscreen()" title="ملء الشاشة (F)" aria-label="ملء الشاشة"><i class="bi bi-arrows-fullscreen" id="fullscreenIcon"></i><span id="fsLabel">ملء الشاشة</span></button>
+  </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <main>
+    <section class="card stage">
+      <div class="status" id="scannerStatus"><i class="bi bi-check-circle-fill"></i><span>جاهز لمسح البطاقة</span></div>
+      <div class="ring"><span></span><span></span><span></span><span class="core"></span><span class="arc"></span><i class="bi bi-upc-scan ic" id="ringIcon"></i></div>
+      <div class="in-wrap">
+        <input type="text" id="cardInput" placeholder="امسح البطاقة أو أدخل الرقم يدوياً" autocomplete="off" inputmode="numeric" autofocus>
+        <i class="bi bi-credit-card-2-front"></i>
+      </div>
+      <div class="btns">
+        <button onclick="focusScanner()"><i class="bi bi-upc-scan"></i>تركيز الماسح</button>
+        <button onclick="manualEntry()"><i class="bi bi-pencil-square"></i>إدخال يدوي</button>
+        <button onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i>إعادة تعيين</button>
+      </div>
+    </section>
 
-    <script>
-        // ============================================================
-        //  نظام تسجيل الطلاب بالبطاقات — نسخة احترافية
-        //  بدون أي رسائل عن الدفعات أو رسوم التسجيل
-        // ============================================================
+    <section class="card result" id="resultArea">
+      <div id="scanResult"></div>
+    </section>
+  </main>
+  <footer>© 2026 Redox Academy — جميع الحقوق محفوظة</footer>
+</div>
 
-        let isScanning = false;
-        let audioEnabled = true;
-        let audioContext = null;
-        let privacyTimer = null;
+<script>
+let isScanning=false,audioEnabled=true,audioContext=null,privacyTimer=null,logoRetryCount=0;
+const MAX_LOGO_RETRIES=5,$=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-        // ----- helpers -----
-        function getSchoolName() {
-            try {
-                const raw = localStorage.getItem('school');
-                if (!raw) return '';
-                const parsed = JSON.parse(raw);
-                return typeof parsed === 'string' ? parsed : (parsed?.name || '');
-            } catch { return ''; }
-        }
+/* ===== School data ===== */
+function extractIdFromRaw(raw){
+  if(!raw)return null;
+  try{
+    const p=JSON.parse(raw);
+    if(p&&typeof p==='object'&&p._id)return p._id;
+    if(typeof p==='string'){try{const i=JSON.parse(p);if(i&&i._id)return i._id}catch{if(p.length===24)return p}}
+    return null;
+  }catch{return raw.length===24?raw:null}
+}
+function getSchoolId(){
+  try{
+    for(const k of['school','schoolData']){const id=extractIdFromRaw(localStorage.getItem(k));if(id)return id}
+    const d=localStorage.getItem('schoolId');
+    return d&&d.length===24?d:null;
+  }catch{return null}
+}
+function getSchoolName(){
+  try{
+    let p=JSON.parse(localStorage.getItem('school')||'null');
+    if(typeof p==='string')p=JSON.parse(p);
+    return p&&p.name?p.name:'';
+  }catch{return ''}
+}
 
-        // ----- audio -----
-        function initAudio() {
-            if (!audioContext && audioEnabled) {
-                try { audioContext = new(window.AudioContext || window.webkitAudioContext)(); } catch (e) { console.warn('Web Audio not supported'); }
-            }
-            return audioContext;
-        }
+/* ===== Audio ===== */
+function initAudio(){
+  if(!audioContext&&audioEnabled){try{audioContext=new(window.AudioContext||window.webkitAudioContext)()}catch{}}
+  return audioContext;
+}
+function playBeep(f,d,v=.15){
+  if(!audioEnabled)return;
+  try{
+    const c=initAudio();if(!c||c.state==='closed')return;
+    if(c.state==='suspended')c.resume();
+    const o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;g.gain.value=v;
+    o.start();g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.stop(c.currentTime+d);
+  }catch{}
+}
+const seq=(notes,d,v)=>notes.forEach((f,i)=>setTimeout(()=>playBeep(f,d,v),i*150));
+const playScanSound=()=>playBeep(800,.2);
+const playSuccessSound=()=>seq([1046,1318,1568],.2);
+const playErrorSound=()=>seq([440,349],.3);
+const playWelcomeSound=()=>seq([523,587,659,784],.2);
+const playCompletionSound=()=>seq([880,1108,1318],.18,.2);
+document.addEventListener('click',()=>{if(audioContext&&audioContext.state==='suspended')audioContext.resume()},{once:true});
 
-        function playBeep(freq, dur, vol = 0.15) {
-            if (!audioEnabled) return;
-            try {
-                const ctx = initAudio();
-                if (!ctx || ctx.state === 'closed') return;
-                if (ctx.state === 'suspended') ctx.resume();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                gain.gain.value = vol;
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-                osc.stop(ctx.currentTime + dur);
-            } catch (e) { /* ignore */ }
-        }
+/* ===== Clock ===== */
+function updateDateTime(){
+  const n=new Date();
+  $('timeDisplay').textContent=n.toLocaleTimeString('en-GB');
+  $('dateDisplay').textContent=n.toLocaleDateString('ar-DZ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
 
-        function playScanSound() { playBeep(800, 0.2); }
-        function playSuccessSound() { playBeep(1046, 0.15); setTimeout(() => playBeep(1318, 0.15), 150); setTimeout(() => playBeep(1568, 0.3), 300); }
-        function playErrorSound() { playBeep(440, 0.3); setTimeout(() => playBeep(349, 0.3), 300); }
-        function playWelcomeSound() { const notes = [523, 587, 659, 784]; notes.forEach((f, i) => setTimeout(() => playBeep(f, 0.2), i * 150)); }
-        function playCompletionSound() { playBeep(880, 0.15, 0.2); setTimeout(() => playBeep(1108, 0.15, 0.2), 150); setTimeout(() => playBeep(1318, 0.2, 0.25), 300); }
+/* ===== State (colors + ring + status chip) ===== */
+function updateStatus(text,state,icon,ringIcon){
+  document.body.dataset.state=state;
+  $('scannerStatus').innerHTML=`<i class="bi ${icon}"></i><span>${text}</span>`;
+  $('ringIcon').className=`bi ${ringIcon||'bi-upc-scan'} ic`;
+}
+const ready=()=>updateStatus('جاهز لمسح البطاقة','ready','bi-check-circle-fill','bi-upc-scan');
 
-        document.addEventListener('click', function enableAudio() {
-            if (audioContext && audioContext.state === 'suspended') audioContext.resume();
-            document.removeEventListener('click', enableAudio);
-        }, { once: true });
+/* ===== Privacy ===== */
+function applyPrivacyBlur(){document.querySelector('.pass')?.classList.add('blurred')}
+function removePrivacyBlur(){document.querySelector('.pass')?.classList.remove('blurred')}
+function startPrivacyTimer(){
+  clearTimeout(privacyTimer);
+  privacyTimer=setTimeout(()=>{
+    applyPrivacyBlur();playCompletionSound();
+    $('scanResult').innerHTML=`<div class="idle"><i class="bi bi-shield-check"></i><h3>تم إخفاء البيانات للخصوصية</h3><p>جاهز للبطاقة التالية</p></div>`;
+    ready();privacyTimer=null;
+  },15000);
+}
 
-        // ----- time -----
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('timeDisplay').textContent = now.toLocaleTimeString();
-            document.getElementById('dateDisplay').textContent = now.toLocaleDateString(
-                { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-            );
-        }
+/* ===== Idle ===== */
+function showIdle(){
+  $('scanResult').innerHTML=`<div class="idle"><i class="bi bi-person-badge"></i><h3>قرّب البطاقة من القارئ</h3><p>ستظهر بيانات الطالب وحالة الحضور هنا</p></div>`;
+}
 
-        // ----- status -----
-        function updateStatus(text, statusClass, icon) {
-            const el = document.getElementById('scannerStatus');
-            el.className = `status-indicator ${statusClass}`;
-            el.innerHTML = `<i class="bi ${icon}"></i><span>${text}</span>`;
-        }
+/* ===== Student view ===== */
+function getAcademicYearName(c){
+  const m={'1AS':'الأولى ثانوي','2AS':'الثانية ثانوي','3AS':'الثالثة ثانوي','1MS':'الأولى متوسط','2MS':'الثانية متوسط','3MS':'الثالثة متوسط','4MS':'الرابعة متوسط','5MS':'الخامسة متوسط','1AP':'الأولى ابتدائي','2AP':'الثانية ابتدائي','3AP':'الثالثة ابتدائي','4AP':'الرابعة ابتدائي','5AP':'الخامسة ابتدائي','NS':'غير محدد'};
+  return m[c]||c||'غير محدد';
+}
+function displayStudentInfo(student,classInfo=null,attendance=null){
+  const st=attendance?.status||'present';
+  const txt=st==='present'?'حاضر':st==='late'?'متأخر':'غائب';
+  const ic=st==='present'?'bi-check-circle-fill':st==='late'?'bi-exclamation-triangle-fill':'bi-x-circle-fill';
+  const state=st==='present'?'success':st==='late'?'late':'error';
+  const av=student.avatarUrl||`https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=143a82&color=fff&size=200&bold=true&length=2`;
+  const raw=String(student.cardUid||('**** **** **** '+(student.studentId?.slice(-4)||'0000')));
+  const cn=raw.match(/.{1,4}/g)?.join(' ')||raw;
+  const t=attendance?.time?new Date(attendance.time).toLocaleTimeString('en-GB'):'';
+  const cls=classInfo?`
+    <div class="fact"><small>الحصة</small><b>${esc(classInfo.name||'غير محدد')}</b></div>
+    <div class="fact"><small>المادة</small><b>${esc(classInfo.subject||'غير محدد')}</b></div>
+    ${classInfo.teacher?`<div class="fact"><small>الأستاذ</small><b>${esc(classInfo.teacher.name||classInfo.teacher)}</b></div>`:''}`
+    :`<div class="fact"><small>الحصص</small><b>لا توجد حصص حالياً</b></div>`;
+  $('scanResult').innerHTML=`
+    <div class="pass">
+      <div class="av"><img src="${esc(av)}" alt="" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=143a82&color=fff&size=200&bold=true'"></div>
+      <div>
+        <div class="pill"><i class="bi ${ic}"></i>${txt}${t?` · ${t}`:''}</div>
+        <div class="nm">${esc(student.name)}</div>
+        <div class="sid">رقم الطالب: ${esc(student.studentId||'غير محدد')}</div>
+        <span class="cn"><i class="bi bi-credit-card-2-front"></i> ${esc(cn)}</span>
+      </div>
+      <div class="timer"></div>
+    </div>
+    <div class="facts">
+      ${cls}
+      <div class="fact"><small>ولي الأمر</small><b>${esc(student.parentName||'غير محدد')}</b></div>
+      <div class="fact wide"><small>السنة الدراسية</small><b>${esc(getAcademicYearName(student.academicYear))}</b></div>
+    </div>`;
+  updateStatus(st==='late'?'تم التسجيل — متأخر':st==='present'?'تم التسجيل بنجاح':'غائب',state,ic,ic);
+  startPrivacyTimer();
+}
 
-        // ----- privacy blur -----
-        function applyPrivacyBlur() {
-            document.querySelector('.student-name-card')?.classList.add('blurred');
-            document.querySelector('.student-id-card')?.classList.add('blurred');
-            document.querySelector('.student-avatar-large')?.classList.add('blurred');
-            document.querySelectorAll('.info-value').forEach(el => el.classList.add('privacy-blur'));
-        }
+/* ===== Process card ===== */
+async function processCard(cardUid){
+  if(isScanning)return;
+  try{
+    isScanning=true;
+    const clean=cardUid.toString().trim();
+    if(clean.length<4)throw new Error('رقم البطاقة غير مكتمل');
+    clearTimeout(privacyTimer);
+    updateStatus('جاري التعرف على البطاقة...','scanning','bi-arrow-repeat','bi-wifi');
+    playScanSound();
+    $('scanResult').innerHTML=`<div class="loader"><div class="sp"></div><h4>جاري المعالجة...</h4><p style="color:var(--mut)">يرجى الانتظار</p></div>`;
+    const res=await fetch('/api/attendance/card-scan-enhanced',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cardUid:clean,sendSMS:false,checkPayments:false,checkRegistration:false})
+    });
+    const data=await res.json();
+    if(data.success){
+      const student=data.data?.student;
+      if(student){
+        displayStudentInfo(student,data.data?.class,data.data?.attendance);
+        playSuccessSound();
+        showToast('success',`تم تسجيل حضور الطالب ${student.name} بنجاح`);
+      }else showErrorResult('بيانات الطالب غير مكتملة');
+    }else{
+      if(data.error&&data.error.includes('بطاقة غير مسجلة'))handleUnknownCard(clean);
+      else handleFailedAttendance(data);
+    }
+  }catch(err){
+    console.error(err);handleUnknownCard(cardUid);
+  }finally{
+    isScanning=false;
+    $('cardInput').value='';$('cardInput').focus();
+    setTimeout(()=>{if(!isScanning&&!privacyTimer)ready()},4000);
+  }
+}
 
-        function removePrivacyBlur() {
-            document.querySelectorAll('.student-name-card, .student-id-card').forEach(el => el.classList.remove('blurred'));
-            document.querySelector('.student-avatar-large')?.classList.remove('blurred');
-            document.querySelectorAll('.info-value').forEach(el => el.classList.remove('privacy-blur'));
-        }
+/* ===== Errors ===== */
+function errorCard(icon,title,body,extra=''){
+  $('scanResult').innerHTML=`<div class="errbox"><i class="bi ${icon}"></i><h3>${title}</h3>${extra}<p style="color:var(--mut)">${body}</p>
+  <button onclick="clearScanner()"><i class="bi bi-arrow-clockwise"></i> إعادة المحاولة</button></div>`;
+}
+function handleUnknownCard(uid){
+  errorCard('bi-exclamation-triangle-fill','بطاقة غير معروفة','هذه البطاقة غير مسجلة في النظام',`<div class="cn">${esc(uid)}</div>`);
+  updateStatus('بطاقة غير معروفة','error','bi-exclamation-triangle-fill','bi-exclamation-lg');
+  playErrorSound();
+}
+function handleFailedAttendance(d){
+  showErrorResult(d.error||'حدث خطأ أثناء التسجيل');
+  playErrorSound();
+  updateStatus('فشل التسجيل','error','bi-exclamation-triangle-fill','bi-x-lg');
+}
+function showErrorResult(m){errorCard('bi-x-circle-fill','حدث خطأ',esc(m))}
 
-        function startPrivacyTimer() {
-            if (privacyTimer) clearTimeout(privacyTimer);
-            privacyTimer = setTimeout(() => {
-                applyPrivacyBlur();
-                playCompletionSound();
-                updateStatus('تم إخفاء البيانات للخصوصية', 'status-completed', 'bi-shield-check');
-                privacyTimer = null;
-            }, 15000);
-        }
+/* ===== Toast ===== */
+function showToast(type,msg){
+  const t=document.createElement('div');
+  const ic={success:'bi-check-circle-fill text-ok',warning:'bi-exclamation-triangle-fill',error:'bi-exclamation-triangle-fill',info:'bi-info-circle-fill'}[type]||'bi-info-circle-fill';
+  t.className=`toast ${type}`;
+  t.innerHTML=`<i class="bi ${ic.split(' ')[0]}" style="color:${type==='error'?'var(--red)':type==='warning'?'var(--amber)':type==='info'?'var(--blue)':'var(--teal)'}"></i><span>${esc(msg)}</span>`;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},4000);
+}
 
-        // ----- display student info (بدون أي بيانات مالية) -----
-        function displayStudentInfo(student, classInfo = null, attendance = null) {
-            const resultDiv = document.getElementById('scanResult');
-            const status = attendance?.status || 'present';
-            const statusText = status === 'present' ? 'حاضر' : status === 'late' ? 'متأخر' : 'غائب';
-            const statusClass = status === 'present' ? 'success' : status === 'late' ? 'warning' : 'danger';
-            const statusIcon = status === 'present' ? 'bi-check-circle-fill' : status === 'late' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill';
+/* ===== Controls ===== */
+function focusScanner(){$('cardInput').focus();showToast('info','الماسح الضوئي جاهز')}
+function manualEntry(){$('cardInput').focus();showToast('info','أدخل رقم البطاقة ثم اضغط Enter')}
+function clearScanner(){
+  clearTimeout(privacyTimer);privacyTimer=null;
+  $('cardInput').value='';showIdle();$('cardInput').focus();ready();
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>showToast('error','تعذر تكبير الشاشة'));
+  else document.exitFullscreen?.();
+}
+document.addEventListener('fullscreenchange',()=>{
+  const f=!!document.fullscreenElement;$('fullscreenIcon').className=f?'bi bi-fullscreen-exit':'bi bi-arrows-fullscreen';$('fsLabel').textContent=f?'إنهاء ملء الشاشة':'ملء الشاشة';
+});
 
-            let classHtml = '';
-            if (classInfo) {
-                classHtml = `
-                    <div class="info-item">
-                        <div class="info-label">الحصة</div>
-                        <div class="info-value">${classInfo.name||'غير محدد'}</div>
-                        <div class="info-label mt-1">المادة</div>
-                        <div class="info-value">${classInfo.subject||'غير محدد'}</div>
-                        ${classInfo.teacher ? `<div class="info-label mt-1">الأستاذ</div><div class="info-value">${classInfo.teacher.name||classInfo.teacher}</div>` : ''}
-                    </div>
-                `;
-            }
+/* ===== Scanner input ===== */
+function setupScanner(){
+  const input=$('cardInput');let buffer='',timeout=null;
+  input.addEventListener('keypress',e=>{
+    if(e.key==='Enter'){e.preventDefault();const v=e.target.value.trim();if(v.length>=4)processCard(v)}
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')clearScanner();
+    if((e.key==='f'||e.key==='F')&&e.target.tagName!=='INPUT')toggleFullscreen();
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+    if(e.key>='0'&&e.key<='9'){
+      e.preventDefault();buffer+=e.key;input.value=buffer;
+      clearTimeout(timeout);
+      timeout=setTimeout(()=>{if(buffer.length>=4)processCard(buffer);buffer='';input.value=''},80);
+    }
+  });
+  document.addEventListener('click',e=>{if(!e.target.closest('button'))input.focus()});
+}
 
-            resultDiv.innerHTML = `
-                <div class="animate__animated animate__fadeIn">
-                    ${displayVirtualStudentCard(student)}
-                    <div class="row mt-2 g-2">
-                        <div class="col-6">
-                            <div class="attendance-panel">
-                                <div class="icon-wrap bg-${statusClass} bg-opacity-10 text-${statusClass} mx-auto">
-                                    <i class="bi ${statusIcon}"></i>
-                                </div>
-                                <h6 class="mb-0 text-${statusClass} fw-bold">${statusText}</h6>
-                                ${attendance?.time ? `<small class="text-muted d-block mt-1">${new Date(attendance.time).toLocaleTimeString('it-IT')}</small>` : ''}
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            ${classHtml || `
-                                <div class="attendance-panel">
-                                    <div class="icon-wrap bg-info bg-opacity-10 text-info mx-auto">
-                                        <i class="bi bi-info-circle-fill"></i>
-                                    </div>
-                                    <h6 class="mb-0 text-info fw-bold">لا توجد حصص حالياً</h6>
-                                </div>
-                            `}
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="info-item">
-                                <h6 class="mb-2 fw-bold" style="font-size:0.85rem;"><i class="bi bi-telephone-fill text-primary"></i> معلومات الاتصال</h6>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="info-label">ولي الأمر</div>
-                                        <div class="info-value">${student.parentName||'غير محدد'}</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="info-label">رقم الهاتف</div>
-                                        <div class="info-value">${student.parentPhone||'غير محدد'}</div>
-                                    </div>
-                                    <div class="col-12 mt-1">
-                                        <div class="info-label">السنة الدراسية</div>
-                                        <div class="info-value">${getAcademicYearName(student.academicYear)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            startPrivacyTimer();
-        }
+/* ===== School logo ===== */
+async function fetchSchoolLogo(){
+  const box=$('schoolLogoBox'),fb='<i class="bi bi-building"></i>';
+  const id=getSchoolId();
+  if(!id||!/^[0-9a-fA-F]{24}$/.test(id)){box.innerHTML=fb;return}
+  box.classList.add('loading');box.innerHTML='';
+  try{
+    const res=await fetch(`/api/school/${id}/logo`,{headers:{Accept:'application/json'}});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    box.classList.remove('loading');
+    if(data.success&&data.data&&data.data.logo){
+      const img=document.createElement('img');
+      img.alt='شعار المدرسة';img.onerror=()=>{box.innerHTML=fb};img.src=data.data.logo;
+      box.innerHTML='';box.appendChild(img);logoRetryCount=0;
+    }else box.innerHTML=fb;
+  }catch(err){
+    box.classList.remove('loading');box.innerHTML=fb;
+    if(++logoRetryCount<MAX_LOGO_RETRIES)setTimeout(fetchSchoolLogo,3000*logoRetryCount);
+  }
+}
 
-        // ----- virtual card -----
-        function displayVirtualStudentCard(student, cardUid = null) {
-            const avatarUrl = student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=667eea&color=fff&size=100&bold=true&length=2`;
-            const expiry = new Date(); expiry.setFullYear(expiry.getFullYear()+2);
-            const expiryStr = `${expiry.getMonth()+1}/${expiry.getFullYear().toString().slice(-2)}`;
-            const cardNum = cardUid || student.cardUid || '**** **** **** ' + (student.studentId?.slice(-4)||'0000');
-            const formatted = cardNum.match(/.{1,4}/g)?.join(' ') || cardNum;
-            return `
-                <div class="virtual-student-card animate__animated animate__fadeInUp" id="studentCard">
-                    <div class="card-chip"><i class="bi bi-wifi"></i></div>
-                    <div class="text-center">
-                        <div class="student-avatar-large mx-auto" id="studentAvatar">
-                            <img src="${avatarUrl}" alt="${student.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=667eea&color=fff&size=100&bold=true'">
-                        </div>
-                        <h3 class="student-name-card mt-1" id="studentName">${student.name}</h3>
-                        <div class="student-id-card" id="studentId">رقم الطالب: ${student.studentId||'غير محدد'}</div>
-                        <div class="card-number"><i class="bi bi-credit-card-2-front"></i> ${formatted}</div>
-                        <div class="card-expiry">
-                            <span><i class="bi bi-calendar-check"></i> صالحة حتى: ${expiryStr}</span>
-                            <span><i class="bi bi-shield-check"></i> بطاقة ذكية</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ----- process card (بدون فحص الدفعات) -----
-        async function processCard(cardUid) {
-            if (isScanning) return;
-            try {
-                isScanning = true;
-                const clean = cardUid.toString().trim();
-                if (clean.length < 4) throw new Error('رقم البطاقة غير مكتمل');
-                updateStatus('جاري التعرف على البطاقة...', 'status-scanning', 'bi-arrow-repeat');
-                playScanSound();
-                document.getElementById('scanResult').innerHTML = `
-                    <div class="text-center py-5">
-                        <div class="loading-spinner"></div>
-                        <h5 class="mt-3 fw-bold">جاري المعالجة...</h5>
-                        <p class="text-muted mb-0">يرجى الانتظار</p>
-                    </div>
-                `;
-
-                const res = await fetch('/api/attendance/card-scan-enhanced', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cardUid: clean,
-                        sendSMS: false,
-                        checkPayments: false,
-                        checkRegistration: false
-                    })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    const student = data.data?.student;
-                    const classInfo = data.data?.class;
-                    const attendance = data.data?.attendance;
-
-                    if (student) {
-                        displayStudentInfo(student, classInfo, attendance);
-                        updateStatus('تم التسجيل بنجاح', 'status-success', 'bi-check-circle-fill');
-                        playSuccessSound();
-                        showToast('success', `تم تسجيل حضور الطالب ${student.name} بنجاح`);
-                    } else {
-                        showErrorResult('بيانات الطالب غير مكتملة');
-                    }
-                } else {
-                    if (data.error && data.error.includes('بطاقة غير مسجلة')) handleUnknownCard(clean);
-                    else handleFailedAttendance(data);
-                }
-            } catch (err) {
-                console.error(err);
-                handleUnknownCard(cardUid);
-            } finally {
-                isScanning = false;
-                setTimeout(() => {
-                    const cur = document.getElementById('scannerStatus');
-                    if (!cur.classList.contains('status-overdue') && !cur.classList.contains('status-warning')) {
-                        updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle-fill');
-                    }
-                }, 2000);
-                document.getElementById('cardInput').value = '';
-                document.getElementById('cardInput').focus();
-            }
-        }
-
-        // ----- error handlers -----
-        function handleUnknownCard(cardUid) {
-            document.getElementById('scanResult').innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shakeX" style="background: linear-gradient(135deg, #e63946, #9d0208);">
-                    <div class="text-center">
-                        <i class="bi bi-exclamation-triangle-fill display-1"></i>
-                        <h3 class="mt-2 fw-bold">بطاقة غير معروفة</h3>
-                        <div class="card-number">${cardUid}</div>
-                        <p class="mt-2">هذه البطاقة غير مسجلة في النظام</p>
-                        <button class="btn btn-light mt-2 fw-bold" onclick="clearScanner()">
-                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
-                        </button>
-                    </div>
-                </div>
-            `;
-            updateStatus('بطاقة غير معروفة', 'status-error', 'bi-exclamation-triangle-fill');
-            playErrorSound();
-        }
-
-        function handleFailedAttendance(data) {
-            showErrorResult(data.error || 'حدث خطأ أثناء التسجيل');
-            playErrorSound();
-            updateStatus('فشل التسجيل', 'status-error', 'bi-exclamation-triangle-fill');
-        }
-
-        function showErrorResult(msg) {
-            document.getElementById('scanResult').innerHTML = `
-                <div class="virtual-student-card animate__animated animate__shakeX" style="background: linear-gradient(135deg, #e63946, #9d0208);">
-                    <div class="text-center">
-                        <i class="bi bi-x-circle-fill display-1"></i>
-                        <h3 class="mt-2 fw-bold">حدث خطأ</h3>
-                        <p>${msg}</p>
-                        <button class="btn btn-light mt-2 fw-bold" onclick="clearScanner()">
-                            <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ----- toast -----
-        function showToast(type, msg) {
-            const toast = document.createElement('div');
-            const cls = type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : type === 'error' ? 'alert-error' : 'alert-info';
-            const icon = type === 'success' ? 'bi-check-circle-fill' : type === 'warning' ? 'bi-exclamation-triangle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill';
-            toast.className = `alert-message ${cls} animate__animated animate__fadeInDown`;
-            toast.innerHTML = `<i class="bi ${icon}"></i><span>${msg}</span>`;
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, 4000);
-        }
-
-        // ----- helpers -----
-        function getAcademicYearName(code) {
-            const map = {
-                '1AS':'الأولى ثانوي','2AS':'الثانية ثانوي','3AS':'الثالثة ثانوي',
-                '1MS':'الأولى متوسط','2MS':'الثانية متوسط','3MS':'الثالثة متوسط','4MS':'الرابعة متوسط',
-                '5MS':'الخامسة متوسط','1AP':'الأولى ابتدائي','2AP':'الثانية ابتدائي',
-                '3AP':'الثالثة ابتدائي','4AP':'الرابعة ابتدائي','5AP':'الخامسة ابتدائي','NS':'غير محدد'
-            };
-            return map[code] || code || 'غير محدد';
-        }
-
-        function focusScanner() { document.getElementById('cardInput').focus(); showToast('info', 'الماسح الضوئي جاهز'); }
-        function manualEntry() { document.getElementById('cardInput').focus(); showToast('info', 'أدخل رقم البطاقة ثم اضغط Enter'); }
-
-        function clearScanner() {
-            if (privacyTimer) { clearTimeout(privacyTimer); privacyTimer = null; }
-            document.getElementById('cardInput').value = '';
-            document.getElementById('scanResult').innerHTML = '';
-            document.getElementById('cardInput').focus();
-            updateStatus('جاهز لمسح البطاقة', 'status-ready', 'bi-check-circle-fill');
-            removePrivacyBlur();
-        }
-
-        // ----- fullscreen -----
-        function toggleFullscreen() {
-            const icon = document.getElementById('fullscreenIcon');
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
-                    if (icon) icon.className = 'bi bi-fullscreen-exit';
-                }).catch(() => showToast('error', 'تعذر تكبير الشاشة'));
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().then(() => {
-                        if (icon) icon.className = 'bi bi-arrows-fullscreen';
-                    });
-                }
-            }
-        }
-
-        document.addEventListener('fullscreenchange', function() {
-            const icon = document.getElementById('fullscreenIcon');
-            if (document.fullscreenElement) {
-                if (icon) icon.className = 'bi bi-fullscreen-exit';
-            } else {
-                if (icon) icon.className = 'bi bi-arrows-fullscreen';
-            }
-        });
-
-        // ----- setup scanner -----
-        function setupScanner() {
-            const input = document.getElementById('cardInput');
-            let buffer = '', timeout = null;
-
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const val = e.target.value.trim();
-                    if (val.length >= 4) processCard(val);
-                }
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                if (e.key >= '0' && e.key <= '9') {
-                    e.preventDefault();
-                    buffer += e.key;
-                    input.value = buffer;
-                    if (timeout) clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        if (buffer.length >= 4) processCard(buffer);
-                        buffer = '';
-                        input.value = '';
-                        timeout = null;
-                    }, 80);
-                }
-            });
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') clearScanner();
-            });
-        }
-
-        // ----- School Logo Upload -----
-        function setupSchoolLogo() {
-            const box = document.getElementById('schoolLogoBox');
-            const icon = document.getElementById('schoolLogoIcon');
-            if (!box) return;
-
-            // استرجاع الشعار المحفوظ
-            try {
-                const saved = localStorage.getItem('schoolLogo');
-                if (saved) {
-                    box.innerHTML = `<img src="${saved}" alt="شعار المدرسة">`;
-                }
-            } catch (err) { /* ignore */ }
-
-            box.addEventListener('click', function() {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = function(e) {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        box.innerHTML = `<img src="${ev.target.result}" alt="شعار المدرسة">`;
-                        try { localStorage.setItem('schoolLogo', ev.target.result); } catch (err) { /* ignore */ }
-                        showToast('success', 'تم تحميل شعار المدرسة بنجاح');
-                    };
-                    reader.readAsDataURL(file);
-                };
-                input.click();
-            });
-
-            // إعادة تعيين الشعار عند الضغط مطولاً
-            let pressTimer;
-            box.addEventListener('mousedown', () => {
-                pressTimer = setTimeout(() => {
-                    try { localStorage.removeItem('schoolLogo'); } catch (e) {}
-                    box.innerHTML = `<i class="bi bi-building" id="schoolLogoIcon"></i><span class="logo-label">شعار المدرسة</span>`;
-                    showToast('info', 'تم إزالة شعار المدرسة');
-                }, 1200);
-            });
-            box.addEventListener('mouseup', () => clearTimeout(pressTimer));
-            box.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-        }
-
-        // ----- init -----
-        function initApp() {
-            console.log('نظام تسجيل الطلاب — نسخة احترافية');
-
-            const name = getSchoolName().trim();
-            const el = document.getElementById('schoolName');
-            if (name) {
-                el.textContent = name;
-                document.title = `${name} | Redox`;
-            } else {
-                el.textContent = 'اسم المدرسة غير محدد';
-            }
-
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            setupScanner();
-            setupSchoolLogo();
-            setTimeout(playWelcomeSound, 500);
-        }
-
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+/* ===== Init ===== */
+function initApp(){
+  const name=getSchoolName().trim();
+  $('schoolName').textContent=name||'اسم المدرسة غير محدد';
+  if(name)document.title=`${name} | Redox`;
+  updateDateTime();setInterval(updateDateTime,1000);
+  setupScanner();showIdle();fetchSchoolLogo();
+  setTimeout(playWelcomeSound,500);
+}
+document.addEventListener('DOMContentLoaded',initApp);
+</script>
 </body>
 </html>
